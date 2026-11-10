@@ -1,6 +1,6 @@
 'use client'
 
-import { Skeleton } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { TEAM_TODAY_H, TEAM_TODAY_H_SM, TeamTodayInfo } from '@/components/kintai/KintaiInfographics'
 import { InfoPanelLoading } from '@/components/ds/infographic'
 import { PageTitle } from '@/components/kintai/ui-next'
@@ -234,11 +234,13 @@ export default function AdminAttendancePage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={80} height={80} className="bear-wiggle" />
-                        <p className="text-slate-400 font-medium">データがありません</p>
-                      </div>
+                    <td colSpan={8} className="px-4 py-6">
+                      <EmptyState
+                        art="/kintai/empty-records.webp"
+                        title="この日の勤怠の記録はありません"
+                        description={deptFilter ? '選んでいる部署に、この日の記録がありません。部署の絞り込みを外すと、全員が見えます。' : '日付を変えると、ほかの日の記録を見られます。'}
+                        action={deptFilter ? <Button onClick={() => setDeptFilter('')} icon="Users">全部署を見る</Button> : undefined}
+                      />
                     </td>
                   </tr>
                 ) : (

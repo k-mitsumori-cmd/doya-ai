@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { aioGet } from '@/lib/aio/client'
+import { Button, EmptyState } from '@/components/ds'
 import type { ScanCoverageCounts } from '@/lib/aio/coverage'
 
 type ScanRow = {
@@ -59,7 +60,14 @@ export default function AioHistoryPage() {
     </div>
     {loading && items.length === 0 ? <p role="status">履歴を読み込み中…</p> : null}
     {error && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">{error}<button type="button" className="ml-3 font-bold underline" onClick={() => void load(cursor || undefined)}>再試行</button></div>}
-    {!loading && !error && items.length === 0 && <p className="rounded-xl border bg-white p-6 text-slate-600">保存済みのスキャンはありません。</p>}
+    {!loading && !error && items.length === 0 && (
+      <EmptyState
+        title="まだ保存されたスキャンがありません"
+        description="スキャンを1回実行すると、その結果がここに新しい順で残ります。"
+        art="/aio/empty-scans.webp"
+        action={<Button href={`${base}/scan`} icon="Search">スキャンを始める</Button>}
+      />
+    )}
     <ol className="space-y-3">{items.map(row => <li key={row.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><p className="font-bold text-slate-900">{new Date(row.createdAt).toLocaleString('ja-JP')}</p><p className="mt-1 text-sm text-slate-600">{row.status === 'done' ? `言及率 ${metric(row.awarenessPct)} ・ SoV ${metric(row.shareOfVoice)} ・ 自社引用 ${metric(row.ownCitationPct)}` : row.status === 'failed' ? '測定失敗' : '処理中'}</p>{row.status === 'done' && <p className={`mt-1 text-xs font-bold ${row.coverage?.failed ? 'text-amber-700' : 'text-slate-500'}`}>{row.coverage ? row.coverage.failed > 0 ? `一部未測定：${row.coverage.succeeded}/${row.coverage.attempted} 回成功。数値は成功分のみ` : '全件測定済み' : '測定範囲の記録なし（過去の結果）'}</p>}</div>
