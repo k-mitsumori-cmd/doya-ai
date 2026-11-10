@@ -95,8 +95,7 @@ export const SERVICE_SEO = {
   // ポータル
   portal: {
     // 切り替え後は、しばらく「ドヤバディ（旧ドヤAI）｜…」にする（検索で「ドヤAI」を打った人にも届くように）
-    // 2026-11-10: 「AI SaaSサービス群」は利用者に伝わりにくいので、何に使うかの言い方にした
-    title: `${brandNameWithFormer()} | マーケティング・営業・採用・経理のAIツール`,
+    title: `${brandNameWithFormer()} | AI SaaSサービス群`,
     description: brandText('ドヤAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。'),
     keywords: [...(brandName() !== 'ドヤAI' ? [brandName()] : []), 'ドヤAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'], // brand-keep: 旧名の検索の受け皿（切り替え後も残す）
     ogImage: ogp('portal'),

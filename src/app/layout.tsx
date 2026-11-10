@@ -50,7 +50,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.portal.ogImage,
         width: 1200,
         height: 630,
-        alt: 'ドヤAI - マーケティング・営業・採用・経理のAIツール',
+        alt: 'ドヤAI - AI SaaSサービス群',
       },
     ],
   },
