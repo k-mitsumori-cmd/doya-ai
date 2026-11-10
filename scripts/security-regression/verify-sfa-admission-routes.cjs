@@ -25,6 +25,10 @@ const shared = {
 const transactional = prisma => {
   const tx = { ...prisma,
     $queryRaw: async (sql, organizationId) => {
+      if (sql.join('?').replace(/\s+/g, ' ').trim() === 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') {
+        assert.deepEqual(organizationId.values, ['invitee']);
+        return [{ id: 'invitee' }];
+      }
       assert.match(sql.join('?'), /SELECT id FROM sfa_organizations WHERE id = \? FOR UPDATE/);
       assert.equal(organizationId, 'org');
       return [{ id: 'org' }];

@@ -90,22 +90,28 @@ export default function AdminLoginPage() {
 
   // 既にログインしている場合はダッシュボードにリダイレクト
   useEffect(() => {
+    let active = true
+    const controller = new AbortController()
     const checkSession = async () => {
       try {
         const response = await fetch('/api/admin/auth/session', {
           credentials: 'include',
+          cache: 'no-store',
+          signal: controller.signal,
         })
-        if (response.ok) {
-          const data = await response.json()
-          if (data.authenticated) {
-            router.push('/admin')
-          }
+        if (!active) return
+        const data = await response.json()
+        if (!active) return
+        if ((response.ok && data.authenticated === true) ||
+            (response.status === 401 && data.googleRequired === true)) {
+          router.push('/admin')
         }
       } catch (error) {
         // エラーは無視（未ログイン状態）
       }
     }
     checkSession()
+    return () => { active = false; controller.abort() }
   }, [router])
 
   // ロックアウトカウントダウン
@@ -185,7 +191,7 @@ export default function AdminLoginPage() {
       }
 
       // ログイン成功
-      toast.success('管理者としてログインしました')
+      toast.success(data.googleRequired ? '続けてGoogleでログインしてください' : '管理者としてログインしました')
       router.push('/admin')
       router.refresh()
     } catch (error) {

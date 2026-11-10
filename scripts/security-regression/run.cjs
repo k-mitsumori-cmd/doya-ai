@@ -1591,3 +1591,30 @@ if (adminContractPrice.error || adminContractPrice.status !== 0) process.exit(ad
 
 // Pricing uses the verified server identity even when an outer client session is stale.
 { const result = require('node:child_process').spawnSync(process.execPath, [require('node:path').join(__dirname, 'verify-pricing-server-session-mounted.cjs')], {stdio:'inherit',timeout:60000}); if (result.error || result.status !== 0) process.exit(result.status || 1); }
+
+// Both independent admin sessions are required; bootstrap must not loop or expose children.
+for (const file of ['verify-admin-google-dual-session.cjs', 'verify-admin-google-bootstrap-mounted.cjs', 'verify-admin-google-login-client-mounted.cjs']) {
+  const r = spawnSync(process.execPath, [path.join(__dirname, file)], { stdio: 'inherit', timeout: 60000 });
+  if (r.error || r.status !== 0) process.exit(r.status || 1);
+}
+
+// Keep authentication failure diagnostics useful without logging private metadata.
+const authClientFetchDiagnostic = spawnSync(process.execPath, [path.join(__dirname, 'verify-auth-client-fetch-diagnostic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (authClientFetchDiagnostic.status !== 0) {
+  console.error('Security regression failed: verify-auth-client-fetch-diagnostic.cjs');
+  process.exit(authClientFetchDiagnostic.status || 1);
+}
+
+// Public landing pricing must use the same canonical contract verdict as /pricing.
+const publicTopPricing = spawnSync(process.execPath, [path.join(__dirname, 'verify-public-top-pricing-mounted.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (publicTopPricing.error || publicTopPricing.status !== 0) {
+  console.error('Security regression failed: verify-public-top-pricing-mounted.cjs');
+  process.exit(publicTopPricing.status || 1);
+}
+
+// Verify the installed NextAuth log intake cannot inject text through code identifiers.
+const authLogCodeValidation = spawnSync(process.execPath, [path.join(__dirname, 'verify-auth-log-code-validation.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (authLogCodeValidation.error || authLogCodeValidation.status !== 0) {
+  console.error('Security regression failed: verify-auth-log-code-validation.cjs');
+  process.exit(authLogCodeValidation.status || 1);
+}

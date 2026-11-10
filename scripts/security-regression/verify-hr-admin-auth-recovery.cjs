@@ -5,6 +5,7 @@ const vm = require('node:vm')
 const ts = require('typescript')
 const { load, check, results } = require('./load-typescript.cjs')
 const callbacks = load('src/lib/safe-signin-callback.ts')
+const adminGooglePolicy = load('src/lib/admin-google-policy.ts')
 const tick = () => new Promise(resolve => setImmediate(resolve))
 const info = { success: true, invitation: { status: 'PENDING', email: 'qa@example.invalid', organization: { id: 'org', name: 'Synthetic org' } } }
 const ok = data => ({ status: 200, ok: true, json: async () => data })
@@ -22,7 +23,7 @@ function fixture(kind, { get = () => ok(kind === 'hr' ? info : { authenticated: 
   const hook = load('src/lib/use-navigation-submission.ts', { react, '@/lib/safe-signin-callback': callbacks, 'next-auth/react': { signIn, signOut }, 'react-hot-toast': { error: text => errors.push(text) } }, { window })
   const router = { push: url => navigation.push(url) }
   const jsx = (type, props, key) => ({ type, props, key })
-  const mocks = { react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'next/navigation': { useParams: () => ({ token }), usePathname: () => pathname, useRouter: () => router }, 'next-auth/react': { signIn, signOut, useSession: () => ({ data: email ? { user: { email } } : null, status: email ? 'authenticated' : 'unauthenticated' }) }, '@/lib/use-navigation-submission': hook, 'framer-motion': { motion: new Proxy({}, { get: (_, name) => 'motion.' + name }), AnimatePresence: 'div' } }
+  const mocks = { react, 'react/jsx-runtime': { jsx, jsxs: jsx }, 'next/navigation': { useParams: () => ({ token }), usePathname: () => pathname, useRouter: () => router }, 'next-auth/react': { signIn, signOut, useSession: () => ({ data: email ? { user: { email } } : null, status: email ? 'authenticated' : 'unauthenticated' }) }, '@/lib/use-navigation-submission': hook, '@/lib/admin-google-policy': adminGooglePolicy, 'framer-motion': { motion: new Proxy({}, { get: (_, name) => 'motion.' + name }), AnimatePresence: 'div' } }
   const file = kind === 'hr' ? 'src/app/(shell)/hr/invite/[token]/page.tsx' : 'src/components/AdminAuthWrapper.tsx'
   const baseline = process.env.DOYA_TEST_BASELINE && path.join(process.env.DOYA_TEST_BASELINE, file)
   const source = fs.readFileSync(baseline && fs.existsSync(baseline) ? baseline : file, 'utf8'), exports = {}

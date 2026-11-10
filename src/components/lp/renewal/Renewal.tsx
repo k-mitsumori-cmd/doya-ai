@@ -8,6 +8,9 @@ import React, {
   useState,
 } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useNewPricing } from "@/components/pricing/useNewPricing";
+import { FREE_MAX_MEMBERS, TEAM_MIN_SEATS, teamMonthly, withTax } from "@/lib/pricing-v2/plans";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -23,6 +26,7 @@ import {
 } from "lucide-react";
 import { SERVICES, HIDDEN_SERVICE_IDS, getListedServices } from "@/lib/services";
 import { SHELL_GROUPS } from "@/components/shell/tools";
+import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { FREE_LINE, PUBLIC_PRICE, yen } from "@/lib/pricing-v2/public-copy";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
@@ -648,28 +652,44 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
 // 2026-11-10: 料金の節を /pricing のチームの料金にそろえた（三森さんの決定）。数は public-copy.ts（plans.ts）から出す。
 // ⚠️ 前からの契約者の ¥9,980 は、ログイン前のページに出さない（ログイン後の /pricing だけで案内する）
 export function PriceSummary() {
+  const { data: session, status: authStatus } = useSession();
+  const newPricing = useNewPricing(JSON.stringify([
+    authStatus, session?.user?.id, session?.user?.email, session?.user?.plan,
+  ]));
+  // 1人いくらの言い方は、旗が両方 all のときだけ（public-copy.ts）。off のあいだは基本料ありの今の言い方
+  const perSeat = PUBLIC_PRICE.isPerSeat;
+  const minimumTeamMonthly = teamMonthly(TEAM_MIN_SEATS, perSeat ? "per_seat" : "base_plus_seat");
+  const legacy = newPricing === false;
+  const team = newPricing === true && minimumTeamMonthly !== null;
+
   return (
     <section className="doya-pricing">
       <div className="doya-section-inner">
         <div>
-          <span className="doya-eyebrow">ONE COMPANY, ONE PLAN</span>
-          <h2>料金は会社ごと。全ツールを使えます。</h2>
+          <span className="doya-eyebrow">{team ? "ONE COMPANY, ONE PLAN" : legacy ? "ONE ACCOUNT, ONE PLAN" : "PRICING"}</span>
+          <h2>ひとつの契約で、 仕事の可能性が広がります。</h2>
           <p>
-            {PUBLIC_PRICE.isPerSeat
-              ? `${PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。ドヤパワーが足りないときや、${PUBLIC_PRICE.freeMembers + 1}人以上で使うときは、有料のチームに切り替えます。`
-              : `${PUBLIC_PRICE.freeMembers}人までの会社は、無料のフリーで使えます。人数が増えたら、有料のチームに切り替えます。`}
+            {legacy
+              ? "まずは無料プランで。継続して使うなら、全サービス共通のプロプランをご利用ください。"
+              : team
+                ? perSeat
+                  ? `フリーは${FREE_MAX_MEMBERS}人まで無料。もっと使いたいときや、${FREE_MAX_MEMBERS + 1}人以上で使うときは、使う人数分の料金でチームに切り替えます。`
+                  : `フリーは${FREE_MAX_MEMBERS}人まで無料。チームは会社の基本料に、使う人数分の料金を加えます。`
+                : "ご契約内容に応じた料金をご案内します。最新の料金は、料金プランでご確認ください。"}
           </p>
         </div>
         <div className="doya-price-card">
-          <span>チーム（{PUBLIC_PRICE.exampleSeats}人の場合）/ 月額（税抜）</span>
-          <strong>{yen(PUBLIC_PRICE.exampleMonthly)}</strong>
-          <p>
-            {PUBLIC_PRICE.isPerSeat
-              ? <>税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。</>
-              : <>税込 {yen(PUBLIC_PRICE.exampleMonthlyWithTax)}。基本料 {yen(PUBLIC_PRICE.base)}＋1人 {yen(PUBLIC_PRICE.perSeat)} × {PUBLIC_PRICE.exampleSeats}人。{FREE_LINE}です。</>}
-          </p>
+          <span>{legacy ? "プロプラン / 月額（税込）" : team ? `チーム / ${TEAM_MIN_SEATS}人利用時の月額（税込）` : "料金とご契約の確認"}</span>
+          {legacy ? (
+            <strong>¥{UNIFIED_PRO_PRICE.toLocaleString("ja-JP")}</strong>
+          ) : team ? (
+            <strong>¥{withTax(minimumTeamMonthly).toLocaleString("ja-JP")}〜</strong>
+          ) : (
+            <strong aria-hidden="true">—</strong>
+          )}
+          <p>{legacy ? "各サービスの利用上限があります。" : team ? (perSeat ? `1人あたりの料金です。11人目からは、1人あたりがもっと安くなります。` : `会社の基本料と${TEAM_MIN_SEATS}人分の料金を含みます。人数により変わります。`) : "現在の料金とご契約内容は、料金プランでご確認ください。"}</p>
           <Link className="doya-button" href="/pricing">
-            人数ごとの料金を見る <ArrowRight size={18} />
+            料金・利用枠を確認する <ArrowRight size={18} />
           </Link>
         </div>
       </div>

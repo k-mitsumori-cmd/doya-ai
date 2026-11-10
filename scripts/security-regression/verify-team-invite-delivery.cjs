@@ -1,4 +1,11 @@
 const assert = require('node:assert/strict');
+
+// The real pricing-off guard now pins the actor before existing domain locks.
+function pinnedFixtureUser(sql, values, expected) {
+  if (sql.join('?').replace(/\s+/g, ' ').trim() !== 'SELECT id FROM "User" WHERE id IN (?) ORDER BY id FOR UPDATE') return null;
+  assert.deepEqual(values.values, expected);
+  return expected.map(id => ({ id }));
+}
 const { load } = require('./load-typescript.cjs');
 
 function fixture(service, { deliverySuccess = true, role = 'owner', currentRole = role, expiredInvite = false } = {}) {
@@ -15,9 +22,9 @@ function fixture(service, { deliverySuccess = true, role = 'owner', currentRole 
       create: async ({ data }) => { creations++; return { id: 'member', ...data }; },
     },
     [orgModel]: { findUnique: async () => ({ name: 'Acme' }) },
-    $queryRaw: async sql => ['aio', 'shodan', 'sfa'].includes(service) && sql.join('?').includes(`FROM ${service}_members`)
+    $queryRaw: async (sql, values) => pinnedFixtureUser(sql, values, ['user']) || (['aio', 'shodan', 'sfa'].includes(service) && sql.join('?').includes(`FROM ${service}_members`)
       ? ['owner', 'admin'].includes(currentRole) ? [{ role: currentRole }] : []
-      : [{ id: 'org' }],
+      : [{ id: 'org' }]),
     $transaction: async (fn) => fn(prisma),
   };
   const api = load(`src/app/api/${service}/members/route.ts`, {

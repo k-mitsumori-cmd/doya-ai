@@ -56,6 +56,17 @@ export async function pinToolSeatPrincipals(tx: Prisma.TransactionClient, scope:
   }
 }
 
+
+/** Identity checks must stay serialized even when pricing is disabled or its
+ * company scope cannot be resolved. This does not enable seat billing. */
+async function pinAdmissionActors(tx: Prisma.TransactionClient, actorUserId: string, additionalUserIds: readonly string[] = []) {
+  const ids = [...new Set([actorUserId, ...additionalUserIds])].sort()
+  const rows = await tx.$queryRaw<Array<{ id: string }>>
+    `SELECT id FROM "User" WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`
+  if (!rows.some(row => row.id === actorUserId)) throw new ToolSeatAdmissionError(403, 'INVALID_TOOL_MEMBERSHIP', 'contact-owner')
+  if (additionalUserIds.some(id => !rows.some(row => row.id === id))) throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
+}
+
 /** SQL-only composition point. Invoke before taking domain/User row locks.
  * Lock order: shared company/virtual-owner fence -> sorted User rows -> real
  * Company row -> domain organization/role/invitation locks. authorizeDomain
@@ -88,6 +99,8 @@ export async function withToolSeatAdmissionInTransaction<T, Domain>(
       await pinToolSeatPrincipals(tx, initial.scope, input.actorUserId, input.additionalUserIds)
       const pinned = await resolveToolUnionScope(input, tx)
       if (toolUnionScopeIdentity(pinned) !== toolUnionScopeIdentity(initial)) throw new ToolSeatAdmissionError(409, 'SEAT_CONTEXT_CHANGED', 'retry')
+    } else {
+      await pinAdmissionActors(tx, input.actorUserId, input.additionalUserIds)
     }
     // Company authority is read before the callback locks its domain org.
     // The real role server pins current User/Company/Link/role rows in this tx.
