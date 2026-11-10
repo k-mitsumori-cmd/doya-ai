@@ -737,7 +737,6 @@ function HrSettingsForActor({ actor }: { actor: string }) {
             </div>
           ) : (
             <EmptyState
-              art="/hr/empty-members.webp"
               title="まだ部署が作成されていません"
               description={canManageMembers ? '部署を作ると、従業員を部署ごとに分けて、組織図に出せます。' : '部署は、組織の管理者が作成します。'}
               action={canManageMembers ? <Button icon="Plus" onClick={() => setShowDeptModal(true)}>部署を追加する</Button> : undefined}
