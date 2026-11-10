@@ -17,6 +17,7 @@ import Sym from '@/components/doyalist/Sym'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt, ToolNextStep, type NextStepView } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
+import ToolProgressNext from '@/components/ToolProgressNext'
 import { Check, Circle, X } from 'lucide-react'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
@@ -711,6 +712,14 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   <><img src={CHARS.jump} alt="" className="w-6 h-6" />リストを抽出する</>
                 )}
               </button>
+              {/* 抽出は1分前後かかる。どの段階か・あとどれくらいかを出す */}
+              <ToolProgressNext
+                active={generating}
+                title="企業を抽出しています"
+                stages={['条件を検索の形に直しています', '国の法人データから企業を探しています', '重複を除いて並べています']}
+                estimateSec={90}
+                className="mt-3"
+              />
 
               {extractionIntent && (
                 <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
