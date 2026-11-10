@@ -315,6 +315,8 @@
   .tab[aria-current='page'] { color: var(--blue); }
   .tab { position: relative; }
   /* 下のタブの選択中の印（上の細い棒）。別のタブへ移ると滑って動く */
+  /* 選んだタブのアイコンが弾む（M10。選んだ印と同時。transform だけ） */
+  .tab[aria-current='page'] > :nth-child(2) { animation: tabBounce var(--m-dur-slow, 420ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
   .tabMark { position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--blue); pointer-events: none; }
 }
 
@@ -354,3 +356,8 @@
 }
 @keyframes shell-scrim { from { opacity: 0; } to { opacity: 1; } }
 @keyframes shell-palette { from { opacity: 0; transform: translateY(-12px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+@keyframes tabBounce { 0% { transform: translateY(3px) scale(0.78); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tab[aria-current='page'] > :nth-child(2) { animation: none; }
+}

@@ -19,7 +19,7 @@ import ds from '@/components/ds/tokens.module.css'
 import '@/components/ds/app-motion.css'
 import PressMotion from './PressMotion'
 import { NavMark } from './NavMark'
-import { MotionConfig } from 'framer-motion'
+import { MotionConfig, motion } from 'framer-motion'
 import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
@@ -172,13 +172,14 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false, w
         <ul className={styles.paletteList} role="listbox">
           {results.length ? results.map((t, i) => {
             return (
-              <li key={t.key} role="option" aria-selected={i === index}>
+              // 絞り込みで並びが変わったとき、残った項目が新しい場所へ滑る（M15。transform だけ。動きを減らす設定では MotionConfig が止める）
+              <motion.li key={t.key} role="option" aria-selected={i === index} layout="position" transition={{ type: 'spring', stiffness: 520, damping: 38, mass: 0.8 }}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
                   <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : t.key.startsWith('product:') ? <ShellIcon name={t.icon ?? 'LayoutGrid'} size={16} strokeWidth={2} /> : <ToolBearIcon id={t.key} icon={t.icon ?? 'LayoutGrid'} size={28} iconSize={16} />}</span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
-              </li>
+              </motion.li>
             )
           }) : <li className={styles.paletteEmpty}>見つかりませんでした</li>}
         </ul>

@@ -134,7 +134,7 @@
   .markFresh, .allDone { animation: none; }
   .badgeDone::after { display: none; }
 }
-.page[data-motion='off'] .meterFill { animation: none; }
+.page[data-motion='off'] .meterFill, .page[data-motion='off'] .badgeDone::after { animation: none; }
 
 /* 暗い設定（prefers-color-scheme: dark）。枠が明るいままでも読めるよう、この画面の中で色をそろえる（文字と背景の比は 4.5:1 以上） */
 @media (prefers-color-scheme: dark) {

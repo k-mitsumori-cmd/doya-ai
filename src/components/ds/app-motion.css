@@ -61,6 +61,25 @@
 .m-toast-in { animation: m-toast-in var(--m-dur-base) var(--m-ease-spring) both !important; }
 .m-toast-out { animation: m-toast-out var(--m-dur-fast) var(--m-ease-out) both !important; }
 
+/* 入力の欄（M13）。フォーカスの輪がふわっと広がる。エラーのときは小さく揺れる。
+   枠（data-ui-next）の中の input / textarea / select だけ。輪の色は各欄が持っている色のまま（spread 0 から広がるだけ）。
+   ⚠️ 輪の広がりは色と影だけで、位置・大きさは動かさない（CLS なし） */
+@keyframes m-focus { from { box-shadow: 0 0 0 0 transparent; outline-color: transparent; } }
+[data-ui-next='true'] :is(input, textarea, select):focus { animation: m-focus var(--m-dur-fast) var(--m-ease-out); }
+[data-ui-next='true'] :is(input, textarea, select)[aria-invalid='true'] { animation: m-shake var(--m-dur-slow) var(--m-ease-out); }
+[data-ui-next='true'] :is(input, textarea, select)[aria-invalid='true']:focus { animation: m-shake var(--m-dur-slow) var(--m-ease-out), m-focus var(--m-dur-fast) var(--m-ease-out); }
+
+/* 一覧のカード（M14）。ホバーで少し持ち上がり、押すと沈む（沈みは PressMotion）。全ツールで同じ値。
+   リンク・ボタンで、class 名に card を含むものだけ。持ち上げは translate（transform とは別なので、押したときの scale とぶつからない） */
+@media (hover: hover) {
+  [data-ui-next='true'] :is(a[href], button, [role='button'], [data-lift])[class*='card' i]:not([class*='cardHead' i]):not(:disabled),
+  [data-ui-next='true'] [data-lift] {
+    transition: translate var(--m-dur-fast) var(--m-ease-out);
+  }
+  [data-ui-next='true'] :is(a[href], button, [role='button'])[class*='card' i]:not([class*='cardHead' i]):not(:disabled):hover,
+  [data-ui-next='true'] [data-lift]:hover { translate: 0 -3px; }
+}
+
 /* 使い方: 要素に data-motion を付ける。付けた要素が最初に出るときに1回だけ動く */
 [data-motion='pop'] { animation: m-pop var(--m-dur-slow) var(--m-ease-spring) both; }
 [data-motion='rise'] { animation: m-rise var(--m-dur-base) var(--m-ease-out) both; }
@@ -69,4 +88,6 @@
 @media (prefers-reduced-motion: reduce) {
   [data-motion] { animation: none !important; }
   .m-toast-in, .m-toast-out { animation: none !important; }
+  [data-ui-next='true'] :is(input, textarea, select) { animation: none !important; }
+  [data-ui-next='true'] [class*='card' i], [data-ui-next='true'] [data-lift] { transition: none !important; translate: none !important; }
 }
