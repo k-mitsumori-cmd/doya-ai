@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { isAdminGoogleEmail } from '@/lib/admin-google-policy'
 import { startGoogleSignIn, switchGoogleAccount, useNavigationSubmission } from '@/lib/use-navigation-submission'
 
 const ALLOWED_DOMAIN = 'surisuta.jp'
@@ -17,6 +18,7 @@ function AdminAuthContent({ children, pathname }: { children: React.ReactNode; p
   const router = useRouter()
   const { data: session, status: googleStatus } = useSession()
   const [isAdminAuth, setIsAdminAuth] = useState<boolean | null>(null)
+  const [serverGoogleRequired, setServerGoogleRequired] = useState(false)
 
   const { busy: loginBusy, run: submitLogin } = useNavigationSubmission('ログインを開始できませんでした。もう一度お試しください。')
 
@@ -39,9 +41,15 @@ function AdminAuthContent({ children, pathname }: { children: React.ReactNode; p
           signal: controller.signal,
         })
         if (!active) return
+        const data = await response.json()
+        if (!active) return
+        if (response.status === 401 && data?.googleRequired === true) {
+          setServerGoogleRequired(true)
+          setIsAdminAuth(true)
+          return
+        }
+        setServerGoogleRequired(false)
         if (response.ok) {
-          const data = await response.json()
-          if (!active) return
           setIsAdminAuth(data.authenticated === true)
           if (data.authenticated !== true) router.push('/admin/login')
         } else {
@@ -78,9 +86,9 @@ function AdminAuthContent({ children, pathname }: { children: React.ReactNode; p
 
   // Step 2: Google account check (@surisuta.jp only)
   const googleEmail = session?.user?.email
-  const isDomainValid = googleEmail?.endsWith(`@${ALLOWED_DOMAIN}`)
+  const isDomainValid = isAdminGoogleEmail(googleEmail)
 
-  if (!googleEmail || !isDomainValid) {
+  if (!googleEmail || !isDomainValid || serverGoogleRequired) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
         <div className="bg-white/[0.03] border border-white/10 rounded-3xl p-10 max-w-md text-center space-y-6">

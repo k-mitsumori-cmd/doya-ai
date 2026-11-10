@@ -279,15 +279,17 @@ export async function POST(request: NextRequest) {
       path: '/',
     })
 
+    const { hasAdminGoogleSession } = await import('@/lib/admin-google-session.server')
+    const googleVerified = await hasAdminGoogleSession()
     return NextResponse.json({
       success: true,
-      adminUser: {
+      ...(googleVerified ? { adminUser: {
         id: adminUser.id,
         username: adminUser.username,
         email: adminUser.email,
         name: adminUser.name,
-      },
-    })
+      } } : { googleRequired: true }),
+    }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   } catch (error) {
     console.error('Admin login error:')
     // 例外文やスタックには認証情報が含まれ得るため記録しない。

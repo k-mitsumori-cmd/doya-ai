@@ -132,6 +132,7 @@ export async function recordLoginAttempt(
 export async function verifyAdminSession(token: string | null): Promise<{
   valid: boolean
   adminUser?: { id: string; username: string; email: string | null; name: string | null }
+  googleRequired?: true
 }> {
   if (!token) {
     return { valid: false }
@@ -164,6 +165,12 @@ export async function verifyAdminSession(token: string | null): Promise<{
   if (!session) {
     return { valid: false }
   }
+
+  // Both independent sessions are required for every consumer of this guard.
+  // Keep a valid password session during the Google login step; do not expose
+  // administrator details until the second session has also been verified.
+  const { hasAdminGoogleSession } = await import('./admin-google-session.server')
+  if (!await hasAdminGoogleSession()) return { valid: false, googleRequired: true }
 
   return {
     valid: true,
