@@ -7,7 +7,6 @@ import { LpShell, ProductHero, FeatureShowcase, HowItWorks, UseCases, FaqSection
 import { getServiceById } from '@/lib/services'
 
 const SVC = getServiceById('tenjikai')!
-const ACCENT = '#0066ff'
 const CTA = '/auth/signin?callbackUrl=/tenjikai'
 
 const ROWS: ShowcaseRow[] = [
@@ -49,7 +48,7 @@ const FAQ: Faq[] = [
 
 export default function TenjikaiLp() {
   return (
-    <LpShell serviceName={SVC.name} icon="storefront" ctaHref={CTA} ctaLabel="ログインしてはじめる" accent={ACCENT}>
+    <LpShell serviceName={SVC.name} icon="storefront" ctaHref={CTA} ctaLabel="ログインしてはじめる">
       <ProductHero
         eyebrow="ドヤAI（開発中）"
         title="URLを入れるだけで、"
