@@ -138,6 +138,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   .total-box .value { font-size: 20pt; font-weight: 800; color: #0066ff; }
   table.items { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
   table.items th { background: #16233d; color: #fff; font-size: 9.5pt; font-weight: 600; padding: 2.5mm 3mm; text-align: left; }
+  table.items tbody tr { break-inside: avoid; }
   table.items td { border-bottom: 1px solid #dbe3f2; padding: 3mm; vertical-align: top; font-size: 10pt; }
   table.items td.num { text-align: right; white-space: nowrap; }
   table.items td.unit { text-align: center; white-space: nowrap; color: #5a678a; }
