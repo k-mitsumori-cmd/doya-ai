@@ -12,12 +12,12 @@ import { useEffect, useRef } from 'react'
 import { PREFILL_KEY_PARAM, normalizeValue, takePrefill } from '@/lib/agent-router/prefill'
 import type { AgentFieldType } from '@/lib/agent-router/types'
 
-export function useDoyaPrefill(apply: (read: (key: string, type?: AgentFieldType) => string) => void): void {
+export function useDoyaPrefill(apply: (read: (key: string, type?: AgentFieldType) => string) => void, enabled = true): void {
   const done = useRef(false)
   const applyRef = useRef(apply)
   applyRef.current = apply
   useEffect(() => {
-    if (done.current || typeof window === 'undefined') return
+    if (!enabled || done.current || typeof window === 'undefined') return
     done.current = true
     let url: URL
     try { url = new URL(window.location.href) } catch { return }
@@ -31,5 +31,5 @@ export function useDoyaPrefill(apply: (read: (key: string, type?: AgentFieldType
     const values = takePrefill(key, storage)
     if (!Object.keys(values).length) return
     applyRef.current((k, type = 'text') => normalizeValue(type, values[k]))
-  }, [])
+  }, [enabled])
 }
