@@ -30,11 +30,29 @@ export default function InvoicesPage() {
       <Gate res={res} skeleton={<ListSkeleton />}>
         {(rows) =>
           rows.length === 0 ? (
-            <EmptyState
-              image="/income/empty-invoices.webp"
-              message={status === '' ? '請求書がまだありません。月次売上から作るか、手入力で作成できます。' : 'この状態の請求書はありません。'}
-              action={status === '' ? { label: '請求書を作成する', href: '/income/invoices/new' } : { label: 'すべての請求書を見る', onClick: () => setStatus('') }}
-            />
+            <>
+              <EmptyState
+                image="/income/empty-invoices.webp"
+                message={status === '' ? '請求書がまだありません。月次売上から作るか、手入力で作成できます。' : 'この状態の請求書はありません。'}
+                action={status === '' ? { label: '請求書を作成する', href: '/income/invoices/new' } : { label: 'すべての請求書を見る', onClick: () => setStatus('') }}
+              />
+              {status === '' && (
+                <Card className="mt-4">
+                  <details>
+                    <summary className={s.link}>請求書のレイアウト見本</summary>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/income/invoice-sample.webp"
+                      alt="宛先、請求明細、合計欄を配置した請求書のイメージ"
+                      width={1200}
+                      height={1600}
+                      loading="lazy"
+                      className="mt-4 h-auto w-full max-w-xs"
+                    />
+                  </details>
+                </Card>
+              )}
+            </>
           ) : (
             <Card flush>
               <div className={s.tableWrap}>
