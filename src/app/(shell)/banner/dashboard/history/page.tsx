@@ -161,11 +161,11 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
     }
   }, [])
 
-  const fetchFullImage = async (id: string): Promise<string> => {
-    const res = await fetch(`/api/banner/history/image?id=${encodeURIComponent(id)}`)
+  const fetchFullImage = async (id: string, signal: AbortSignal): Promise<string> => {
+    const res = await fetch(`/api/banner/history/image?id=${encodeURIComponent(id)}`, { signal })
     const json = await res.json()
     if (!res.ok) throw new Error(json?.error || '画像の取得に失敗しました')
-    const image = String(json?.image || '')
+    const image = typeof json?.image === 'string' ? json.image : ''
     if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
     return image
   }
@@ -347,9 +347,11 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
   }, [status])
 
   const handleDownload = async (genId: string, index: number) => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
     try {
       toast.loading('高画質画像を準備中...', { id: 'dl' })
-      const imageUrl = await fetchFullImage(genId)
+      const imageUrl = await fetchFullImage(genId, controller.signal)
       const link = document.createElement('a')
       link.href = imageUrl
       link.download = `doya_banner_${Date.now()}_${index}.png`
@@ -357,8 +359,13 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       link.click()
       document.body.removeChild(link)
       toast.success('ダウンロード開始', { id: 'dl' })
-    } catch (e: any) {
-      toast.error('ダウンロードできませんでした。通信を確かめて、もう一度お試しください。', { id: 'dl' })
+    } catch {
+      const message = controller.signal.aborted
+        ? '画像の取得がタイムアウトしました。通信状況をご確認のうえ、再試行してください。'
+        : 'ダウンロードできませんでした。通信を確かめて、もう一度お試しください。'
+      toast.error(message, { id: 'dl' })
+    } finally {
+      window.clearTimeout(timeout)
     }
   }
 
