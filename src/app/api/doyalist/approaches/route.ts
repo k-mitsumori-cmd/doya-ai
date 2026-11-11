@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -20,19 +21,19 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const params = new URL(req.url).searchParams
     const type = params.get('type') || undefined
     if (type && !['form', 'email', 'phone'].includes(type)) {
-      return NextResponse.json({ error: '履歴の種類が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '履歴の種類が正しくありません' }, { status: 400 })
     }
     const search = params.get('search')?.trim() || ''
-    if (search.length > 200) return NextResponse.json({ error: '検索語は200文字以内にしてください' }, { status: 400 })
+    if (search.length > 200) return privateApiJson({ error: '検索語は200文字以内にしてください' }, { status: 400 })
     const cursor = params.get('cursor')
     if (params.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
     const owner = { project: { userId } }
     const where = {
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
       ] } : {}),
     }
     if (cursor && !await prisma.doyalistApproach.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
     const [rows, total, typeCounts, thisMonth] = await Promise.all([
       prisma.doyalistApproach.findMany({
@@ -68,16 +69,16 @@ export async function GET(req: NextRequest) {
     const approaches = rows.slice(0, PAGE_SIZE)
     const countsByType = Object.fromEntries(typeCounts.map((row) => [row.type, row._count._all]))
     const allTotal = typeCounts.reduce((sum, row) => sum + row._count._all, 0)
-    return NextResponse.json({
+    return privateApiJson({
       success: true,
       approaches,
       total,
       nextCursor: rows.length > PAGE_SIZE ? approaches[PAGE_SIZE - 1].id : null,
       summary: { allTotal, thisMonth, countsByType },
-    }, { headers: { 'Cache-Control': 'private, no-store' } })
+    })
   } catch {
     console.error('[doyalist/approaches][GET] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '履歴の取得に失敗しました' },
       { status: 500 }
     )
@@ -92,12 +93,12 @@ export async function DELETE(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const id = req.nextUrl.searchParams.get('id')
     if (!id) {
-      return NextResponse.json({ error: 'idは必須です' }, { status: 400 })
+      return privateApiJson({ error: 'idは必須です' }, { status: 400 })
     }
 
     const approach = await prisma.doyalistApproach.findUnique({
@@ -105,17 +106,17 @@ export async function DELETE(req: NextRequest) {
       include: { project: { select: { userId: true } } },
     })
     if (!approach) {
-      return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+      return privateApiJson({ error: '見つかりません' }, { status: 404 })
     }
     if (approach.project.userId !== userId) {
-      return NextResponse.json({ error: 'アクセス権がありません' }, { status: 403 })
+      return privateApiJson({ error: 'アクセス権がありません' }, { status: 403 })
     }
 
     await prisma.doyalistApproach.delete({ where: { id } })
-    return NextResponse.json({ success: true })
+    return privateApiJson({ success: true })
   } catch {
     console.error('[doyalist/approaches][DELETE] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: '削除に失敗しました' },
       { status: 500 }
     )
