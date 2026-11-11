@@ -4,6 +4,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { test } from 'node:test'
 import sharp from 'sharp'
 import { generateQuotePdf, type QuotePdfInput } from '../../src/lib/quote/pdf'
+import { generateReportPdf, type ReportPdfInput } from '../../src/lib/mensetsu/pdf'
+
 
 test('updated native image dependency decodes and resizes a synthetic image', async () => {
   const image = await sharp({ create: { width: 32, height: 20, channels: 4, background: '#123456' } }).png().toBuffer()
@@ -83,4 +85,51 @@ test('quote pagination keeps the footer with content and preserves long estimate
   const approvedText = execFileSync('pdftotext', ['-raw', '-', '-'], { input: approvedPdf }).toString().replace(/\s/g, '')
   assert.equal(approvedText.includes('社内確認用'), false, 'Approved documents must not gain a draft watermark')
   writeFileSync('/tmp/doya-native-pdf-audit/pagination-approved.pdf', approvedPdf)
+})
+
+test('interview PDF preserves Japanese criteria and includes transcripts only on request', { skip: process.platform !== 'linux', timeout: 90000 }, async () => {
+  const transcript = '逐語ログ検証用の発言です。'
+  const rationale = '判断の根拠を検証しました。'
+  const input: ReportPdfInput = {
+    companyName: '検証用組織', jobTitle: '開発担当', levelLabel: '中途',
+    candidateName: '検証用応募者', interviewedAt: new Date('2026-11-10T00:00:00Z'),
+    durationMin: 30, verdict: 'recommend', average: 4,
+    overallComment: '評価全体の確認です。', recruiterReport: '採用担当者向けの所見です。',
+    criteria: Array.from({ length: 24 }, (_, index) => ({
+      name: `評価項目${String(index + 1).padStart(2, '0')}`,
+      description: '本人の役割と具体例です。', score: 4, insufficient: false,
+      rationale, quotes: ['業務経験を説明しました。'],
+    })),
+    turns: [{ speaker: 'candidate', text: transcript }],
+    includeTranscript: false,
+  }
+
+  let defaultPageCount = 0
+  for (const includeTranscript of [false, true]) {
+    const pdf = Buffer.from(await generateReportPdf({ ...input, includeTranscript }))
+    assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
+    const pages = execFileSync('pdftotext', ['-layout', '-', '-'], { input: pdf })
+      .toString().split('\f').filter(page => page.trim()).map(page => page.replace(/\s/g, ''))
+    const text = pages.join('')
+    const fonts = execFileSync('pdffonts', ['-'], { input: pdf }).toString()
+    assert.ok(fonts.split('\n').some(line => /NotoSansJP.*\byes\s+yes\s+yes\b/.test(line)), 'Noto Sans JP must be embedded with a Unicode mapping')
+    assert.deepEqual(text.match(/評価項目\d{2}/g), input.criteria.map(criterion => criterion.name))
+    for (const page of pages) {
+      const headings = page.match(/評価項目\d{2}/g) ?? []
+      assert.equal(page.split(rationale).length - 1, headings.length, 'Each criterion and rationale must stay on the same page')
+    }
+    for (const expected of [input.companyName, input.candidateName, input.recruiterReport]) {
+      assert.ok(expected && text.includes(expected))
+    }
+    assert.equal(text.includes(transcript), includeTranscript)
+    if (includeTranscript) {
+      assert.equal(pages.length, defaultPageCount + 1)
+      assert.ok(pages.at(-1)?.includes(transcript))
+    } else {
+      assert.ok(pages.length > 1)
+      defaultPageCount = pages.length
+    }
+    mkdirSync('/tmp/doya-native-pdf-audit', { recursive: true })
+    writeFileSync(`/tmp/doya-native-pdf-audit/mensetsu-${includeTranscript ? 'transcript' : 'default'}.pdf`, pdf)
+  }
 })
