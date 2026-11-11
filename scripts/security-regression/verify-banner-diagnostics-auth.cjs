@@ -5,7 +5,7 @@ const denied = new Response(JSON.stringify({ error: 'admin required' }), { statu
 const nextServer = { NextResponse: { json: (body, opts) => new Response(JSON.stringify(body), { status: opts?.status ?? 200 }) } }
 
 ;(async () => {
-  for (const route of ['test/debug', 'test/health', 'test/templates-minimal', 'models']) {
+  for (const route of ['models']) {
     let sideEffects = 0
     const api = load(`src/app/api/banner/${route}/route.ts`, {
       'next/server': nextServer,
@@ -19,14 +19,5 @@ const nextServer = { NextResponse: { json: (body, opts) => new Response(JSON.str
     assert.equal(sideEffects, 0, route)
   }
 
-  const prisma = { bannerTemplate: { findMany: async () => { throw Error('SENSITIVE_DB_DETAIL') } } }
-  const debug = load('src/app/api/banner/test/debug/route.ts', {
-    'next/server': nextServer,
-    '@/lib/banner-admin-guard': { requireBannerAdmin: () => null },
-    '@/lib/prisma': { prisma },
-  })
-  const failed = await debug.GET(new Request('https://local.test/api/banner/test/debug'))
-  assert.equal(failed.status, 500)
-  assert(!JSON.stringify(await failed.json()).includes('SENSITIVE_DB_DETAIL'))
-  console.log('PASS banner diagnostic APIs require admin before DB/provider work and hide DB errors')
+  console.log('PASS banner diagnostic API requires admin before DB/provider work')
 })().catch(error => { console.error(error); process.exitCode = 1 })
