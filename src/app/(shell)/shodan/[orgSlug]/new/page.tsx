@@ -59,8 +59,6 @@ export default function ShodanNewPage() {
   const attempt = useRef<'idle' | 'pending' | 'unknown' | 'confirmed' | 'limited'>('idle')
   const draft = useRef('')
   const [url, setUrl] = useState('')
-  // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
-  useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) { draft.current = u; setUrl(u) } })
   const [phase, setPhase] = useState<Phase>('input')
   const [tick, setTick] = useState(0)
   const [research, setResearch] = useState<CompanyResearch | null>(null)
@@ -74,6 +72,14 @@ export default function ShodanNewPage() {
     setLimitMessage(null); setLimitAction(null); setHasProfile(null)
     setUnknown(false); setOperationError(''); setRetryable(false); attempt.current = 'idle'
   }, [guard.identity])
+  // 組織が確定し、前の組織の入力を消してから依頼のURLを入れる。
+  useDoyaPrefill((read) => {
+    const incomingUrl = read('url', 'url')
+    if (incomingUrl) {
+      draft.current = incomingUrl
+      setUrl(incomingUrl)
+    }
+  }, guard.allowed && owner === guard.identity)
   useEffect(() => {
     if (attempt.current === 'pending') {
       attempt.current = 'unknown'; setUnknown(true); setPhase('input')
