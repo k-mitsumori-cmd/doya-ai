@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤ社内インタビュー LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -23,7 +23,7 @@ export const BENEFITS: Benefit[] = [
 export function faq(): Faq[] {
   const svc = getServiceById('shanai')!
   return [
-    { q: '無料で使えますか？', a: `無料プランは${svc.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${svc.pricing.pro.limit}。1つの契約で全サービスのプロプランが使えます。` },
+    { q: '無料で使えますか？', a: `無料の枠は${svc.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
     { q: '録音とアンケート、どちらがいいですか？', a: '対面で話を聞けるなら録音がおすすめです。忙しい社員には、アンケートのURLを送って後から書いてもらえます。アンケートは設問ごとに最低文字数があり、足りない設問にはAIが追加質問をします。' },
     { q: '記事に事実と違うことが書かれませんか？', a: '記事は、録音・回答・会社サイトから抜き出した事実だけを材料に書きます。抜き出した事実はすべて原文と照らし合わせ、原文に無いものは捨てています。それでも、公開前には必ずご本人と担当者で内容をご確認ください。' },
     { q: 'サムネ画像はAIが作るのですか？', a: 'いいえ。アップロードしたご本人の写真に、記事の一言とお名前を重ねて作ります。画像生成AIは使いません。' },

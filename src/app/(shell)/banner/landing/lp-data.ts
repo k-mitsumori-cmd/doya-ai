@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤバナーAI ランディング（/banner/landing）LP コンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -18,7 +18,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('banner')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('banner')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('banner')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: 'デザインの知識がなくても作れますか？', a: 'はい。業界テンプレートを選び、ブランドカラーとテキストを入れるだけでAIが3案を生成します。専門知識は不要です。' },
   { q: 'どんなサイズに対応していますか？', a: '6種類のサイズプリセットに対応し、SNS広告など媒体別の主要サイズをカバーします。高品質PNGで書き出せます。' },
   { q: '生成された画像は商用利用できますか？', a: '作成したバナーはご自身の広告・販促にご利用いただけます。詳細は利用規約をご確認ください。' },

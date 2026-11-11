@@ -5,7 +5,7 @@
 // 数はここに書かない（読むだけ）。料金ページ・設計書・テストが、同じ値を見るために使う。
 import {
   ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, LEGACY_PRO_MONTHLY_POINTS, LEGACY_PRO_PRICE_TAX_INCLUDED, POWER_PACK,
-  TEAM_BASE_MONTHLY, TEAM_MONTHLY_POINTS_BASE, TEAM_MONTHLY_POINTS_PER_SEAT, TEAM_SEAT_TIERS, YEARLY_FREE_MONTHS,
+  YEARLY_FREE_MONTHS, planConfig, type PricingModel,
 } from './plans'
 import { STARTER_POWER } from './starter-welcome'
 import { DAILY_RECOVERY_AMOUNT, DAILY_RECOVERY_CAP, MONTHLY_BONUS_CAP, MONTHLY_CARRYOVER_MONTHS, PURCHASE_MAX_MONTHS } from '../doya-power/rules'
@@ -37,7 +37,19 @@ export interface PlanRow {
 
 const yen = (n: number) => `${n.toLocaleString('ja-JP')}円`
 
-export const PLAN_MATRIX: readonly PlanRow[] = [
+/**
+ * プランの一覧。model を省くと今の本番（基本料あり）。'per_seat' は 1人いくらの料金（旗 PER_SEAT_PRICING_ROLLOUT が on のとき）。
+ * チームの行だけが料金の形で変わる。
+ */
+export function planMatrix(model: PricingModel = 'base_plus_seat'): readonly PlanRow[] {
+  const plan = planConfig(model)
+  const teamPrice = model === 'per_seat'
+    ? `基本料なし。${plan.tiers.map((t, i) => `${i === 0 ? 1 : plan.tiers[i - 1]!.upTo + 1}〜${t.upTo}人目は1人 ${yen(t.unitMonthly)}`).join('、')}／月。年払いは ${12 - YEARLY_FREE_MONTHS}か月分`
+    : `基本料 ${yen(plan.baseMonthly)} ＋ 1人 ${yen(plan.tiers[0]!.unitMonthly)}（11人目から ${yen(plan.tiers[1]!.unitMonthly)}）／月。年払いは ${12 - YEARLY_FREE_MONTHS}か月分`
+  const teamMonthly = model === 'per_seat'
+    ? plan.tiers.map((t, i) => `${i === 0 ? 1 : plan.tiers[i - 1]!.upTo + 1}〜${t.upTo}人目は1人 ${plan.pointsPerSeatTiers[i]}`).join('、')
+    : `${plan.pointsBase.toLocaleString('ja-JP')} ＋ 1人 ${plan.pointsPerSeat}`
+  return [
   {
     id: 'free', name: 'フリー', price: '0円',
     members: `${FREE_MAX_MEMBERS}人まで`,
@@ -46,9 +58,9 @@ export const PLAN_MATRIX: readonly PlanRow[] = [
   },
   {
     id: 'team', name: 'チーム',
-    price: `基本料 ${yen(TEAM_BASE_MONTHLY)} ＋ 1人 ${yen(TEAM_SEAT_TIERS[0]!.unitMonthly)}（11人目から ${yen(TEAM_SEAT_TIERS[1]!.unitMonthly)}）／月。年払いは ${12 - YEARLY_FREE_MONTHS}か月分`,
+    price: teamPrice,
     members: `1〜${ENTERPRISE_MIN_SEATS - 1}人（買った人数まで）`,
-    starter: STARTER_POWER, monthly: `${TEAM_MONTHLY_POINTS_BASE.toLocaleString('ja-JP')} ＋ 1人 ${TEAM_MONTHLY_POINTS_PER_SEAT}`,
+    starter: STARTER_POWER, monthly: teamMonthly,
     dailyRecovery: 0, recoveryCap: 0, carryoverMonths: MONTHLY_CARRYOVER_MONTHS,
     pack: { points: POWER_PACK.points, price: POWER_PACK.price, months: PURCHASE_MAX_MONTHS }, bonusCap: MONTHLY_BONUS_CAP,
   },
@@ -65,7 +77,11 @@ export const PLAN_MATRIX: readonly PlanRow[] = [
     dailyRecovery: 0, recoveryCap: 0, carryoverMonths: MONTHLY_CARRYOVER_MONTHS,
     pack: { points: POWER_PACK.points, price: POWER_PACK.price, months: PURCHASE_MAX_MONTHS }, bonusCap: MONTHLY_BONUS_CAP,
   },
-]
+  ]
+}
+
+/** 今の本番（基本料あり）の一覧 */
+export const PLAN_MATRIX: readonly PlanRow[] = planMatrix('base_plus_seat')
 
 export function planRow(id: PlanRowId): PlanRow {
   return PLAN_MATRIX.find((r) => r.id === id)!

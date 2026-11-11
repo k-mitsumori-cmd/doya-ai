@@ -25,6 +25,78 @@ export const TEAM_SEAT_TIERS: readonly { upTo: number; unitMonthly: number }[] =
   { upTo: 49, unitMonthly: 2480 },
 ]
 
+/**
+ * 料金の形（2026-11-10 追加）。
+ *   base_plus_seat … 今の本番。基本料 ＋ 人数の分（11人目から安くなる）。ドヤパワーは 1,500 ＋ 1人 300
+ *   per_seat       … 1人いくら。基本料なし。人数による値引きなし。ドヤパワーは 1人 400（基本の分なし）
+ * 旗 PER_SEAT_PRICING_ROLLOUT が off のあいだは、いつも base_plus_seat（rollout.ts の isPerSeatPricingFor）。
+ * ⚠️ 関数の引数 model を省くと base_plus_seat。今の本番の動きを変えないための既定値。
+ */
+export type PricingModel = 'base_plus_seat' | 'per_seat'
+
+/**
+ * 1人いくらの料金（2026-11-10 三森さんの決定。あとで変えるときはここだけを直す）。
+ * 基本料なし。人数の段ごとに積み上げる（値下げは、その段に入る追加の人にだけ。全員が安くなる形にしない）。
+ * ドヤパワーの毎月の付与も、段ごとに積み上げる（例: 12人なら 500×10 ＋ 400×2）。
+ * 設計書: docs/architecture/management-agent/PRICING-NEW-2026-10-25.md 16章
+ */
+export const PER_SEAT_PLAN = {
+  /** 基本料（なし） */
+  baseMonthly: 0,
+  /** 基本のドヤパワー（なし） */
+  monthlyPointsBase: 0,
+  /** 人数の段。upTo は「この人数目まで」。unitMonthly は月額・税抜、pointsPerSeat は毎月のドヤパワー（どちらも1人あたり） */
+  tiers: [
+    { upTo: 10, unitMonthly: 3980, pointsPerSeat: 500 },
+    { upTo: 30, unitMonthly: 2980, pointsPerSeat: 400 },
+    { upTo: 49, unitMonthly: 2480, pointsPerSeat: 350 },
+  ],
+} as const
+
+/** 1人目の月額（税抜）。「1人 月 ¥3,980」の言い方に使う */
+export const PER_SEAT_FIRST_MONTHLY = PER_SEAT_PLAN.tiers[0].unitMonthly
+/** 安くなり始める人数（11人目） */
+export const PER_SEAT_DISCOUNT_FROM = PER_SEAT_PLAN.tiers[0].upTo + 1
+
+/** 料金の形ごとの設定。表示・請求・付与は、すべてここから読む */
+export function planConfig(model: PricingModel = 'base_plus_seat'): {
+  baseMonthly: number
+  tiers: readonly { upTo: number; unitMonthly: number }[]
+  pointsBase: number
+  /** 毎月のドヤパワー（1人あたり）。段ごとに違うときは、各段の値（人数の段と同じ順） */
+  pointsPerSeatTiers: readonly number[]
+  /** 1人目の段の毎月のドヤパワー（基本料ありの形では、全員同じ） */
+  pointsPerSeat: number
+} {
+  if (model === 'per_seat') {
+    return {
+      baseMonthly: PER_SEAT_PLAN.baseMonthly,
+      tiers: PER_SEAT_PLAN.tiers,
+      pointsBase: PER_SEAT_PLAN.monthlyPointsBase,
+      pointsPerSeatTiers: PER_SEAT_PLAN.tiers.map((t) => t.pointsPerSeat),
+      pointsPerSeat: PER_SEAT_PLAN.tiers[0].pointsPerSeat,
+    }
+  }
+  return {
+    baseMonthly: TEAM_BASE_MONTHLY, tiers: TEAM_SEAT_TIERS, pointsBase: TEAM_MONTHLY_POINTS_BASE,
+    pointsPerSeatTiers: TEAM_SEAT_TIERS.map(() => TEAM_MONTHLY_POINTS_PER_SEAT), pointsPerSeat: TEAM_MONTHLY_POINTS_PER_SEAT,
+  }
+}
+
+/** n 人目（1 から数える）の月額（税抜）。範囲外は 0 */
+export function seatUnitMonthly(seatNo: number, model: PricingModel = 'base_plus_seat'): number {
+  if (!Number.isInteger(seatNo) || seatNo < 1) return 0
+  return planConfig(model).tiers.find((t) => seatNo <= t.upTo)?.unitMonthly ?? 0
+}
+
+/** n 人目（1 から数える）の毎月のドヤパワー。範囲外は 0 */
+export function seatMonthlyPoints(seatNo: number, model: PricingModel = 'base_plus_seat'): number {
+  const c = planConfig(model)
+  if (!Number.isInteger(seatNo) || seatNo < 1) return 0
+  const i = c.tiers.findIndex((t) => seatNo <= t.upTo)
+  return i < 0 ? 0 : c.pointsPerSeatTiers[i]!
+}
+
 /** この人数から個別見積（請求書払い・年契約が基本） */
 export const ENTERPRISE_MIN_SEATS = 50
 
@@ -84,11 +156,11 @@ export function isEnterpriseSeatCount(seats: number): boolean {
 }
 
 /** 人数の内訳（段階ごと）。範囲外は空 */
-export function seatBreakdown(seats: number): SeatLine[] {
+export function seatBreakdown(seats: number, model: PricingModel = 'base_plus_seat'): SeatLine[] {
   if (!isTeamSeatCount(seats)) return []
   const out: SeatLine[] = []
   let from = 1
-  for (const t of TEAM_SEAT_TIERS) {
+  for (const t of planConfig(model).tiers) {
     if (from > seats) break
     const to = Math.min(seats, t.upTo)
     const n = to - from + 1
@@ -99,26 +171,26 @@ export function seatBreakdown(seats: number): SeatLine[] {
 }
 
 /** 人数の分の月額（税抜） */
-export function seatsMonthly(seats: number): number | null {
+export function seatsMonthly(seats: number, model: PricingModel = 'base_plus_seat'): number | null {
   if (!isTeamSeatCount(seats)) return null
-  return seatBreakdown(seats).reduce((s, l) => s + l.subtotalMonthly, 0)
+  return seatBreakdown(seats, model).reduce((s, l) => s + l.subtotalMonthly, 0)
 }
 
 /** チームの月額（税抜）＝基本料＋人数の分。範囲外は null（50人以上は個別見積） */
-export function teamMonthly(seats: number): number | null {
-  const s = seatsMonthly(seats)
-  return s === null ? null : TEAM_BASE_MONTHLY + s
+export function teamMonthly(seats: number, model: PricingModel = 'base_plus_seat'): number | null {
+  const s = seatsMonthly(seats, model)
+  return s === null ? null : planConfig(model).baseMonthly + s
 }
 
 /** チームの年額（税抜）＝月額 × (12 − 2) */
-export function teamYearly(seats: number): number | null {
-  const m = teamMonthly(seats)
+export function teamYearly(seats: number, model: PricingModel = 'base_plus_seat'): number | null {
+  const m = teamMonthly(seats, model)
   return m === null ? null : m * (12 - YEARLY_FREE_MONTHS)
 }
 
 /** 請求の単位ごとの額（税抜） */
-export function teamPrice(seats: number, interval: BillingInterval): number | null {
-  return interval === 'yearly' ? teamYearly(seats) : teamMonthly(seats)
+export function teamPrice(seats: number, interval: BillingInterval, model: PricingModel = 'base_plus_seat'): number | null {
+  return interval === 'yearly' ? teamYearly(seats, model) : teamMonthly(seats, model)
 }
 
 /** 税込の額（円未満は切り捨て） */
@@ -127,9 +199,11 @@ export function withTax(amount: number): number {
 }
 
 /** チームの毎月の付与ポイント */
-export function teamMonthlyPoints(seats: number): number | null {
+export function teamMonthlyPoints(seats: number, model: PricingModel = 'base_plus_seat'): number | null {
   if (!isTeamSeatCount(seats)) return null
-  return TEAM_MONTHLY_POINTS_BASE + TEAM_MONTHLY_POINTS_PER_SEAT * seats
+  let sum = planConfig(model).pointsBase
+  for (let n = 1; n <= seats; n++) sum += seatMonthlyPoints(n, model)
+  return sum
 }
 
 /** 粗利率の見込み（0〜1）。usage は付与ポイントのうち使う割合、costPerPoint は1ポイントの原価 */
@@ -150,6 +224,8 @@ export const PLAN_COPY = {
   team: {
     name: 'チーム',
     lead: '基本料に、使う人数の分を足した料金です。11人目からは1人あたりが安くなります。',
+    /** 1人いくらの料金のとき（数は PER_SEAT_PLAN から） */
+    leadPerSeat: `1人 月 ¥${PER_SEAT_FIRST_MONTHLY.toLocaleString('ja-JP')}（税抜）の料金です。基本料はなく、使う人数の分だけです。${PER_SEAT_DISCOUNT_FROM}人目からは1人あたりが安くなります。`,
   },
   enterprise: {
     name: '個別見積',

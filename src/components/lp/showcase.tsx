@@ -74,7 +74,7 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
     <section className="relative py-20 md:py-28">
       <div className="max-w-6xl mx-auto px-5">
         <SectionHeading eyebrow={eyebrow} title={title} lead={lead} />
-        <div className="space-y-16 md:space-y-24">
+        <div className="space-y-10 md:space-y-24">
           {rows.map((r, i) => (
             <div key={i} className="doya-feature-row grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               {/* テキスト（偶数は左、奇数は右） */}
@@ -98,8 +98,8 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
                   </ul>
                 )}
               </div>
-              {/* 製品モック */}
-              <ProductPreview className={i % 2 === 1 ? 'md:order-1' : ''} src={r.image?.src} alt={`${r.title}の画面`}>
+              {/* 製品モック。スマホでは隠す（同じ画面が「使い方」の節と重なり、ページが長くなっていた。2026-11-10 メインの指摘 F） */}
+              <ProductPreview className={`doya-feature-visual ${i % 2 === 1 ? 'md:order-1' : ''}`} src={r.image?.src} alt={`${r.title}の画面`}>
                 {r.visual ? r.visual : r.image ? (
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_rgba(10,15,60,0.14)]">
                     <Image

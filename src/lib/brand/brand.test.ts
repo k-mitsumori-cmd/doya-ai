@@ -50,7 +50,7 @@ test('旗が off（既定）の間は、サイト名・トップのタイトル�
   else process.env.NEXT_PUBLIC_BRAND_RENAME_ROLLOUT = saved
   assert.equal(SITE_CONFIG.name, 'ドヤAI')
   assert.equal(SITE_CONFIG.tagline, 'ドヤAIのサービス群')
-  assert.equal(SERVICE_SEO.portal.title, 'ドヤAI | AI SaaSサービス群')
+  assert.equal(SERVICE_SEO.portal.title, 'ドヤAI | マーケティング・営業・採用・経理のAIツール')
   assert.ok(SERVICE_SEO.portal.description.startsWith('ドヤAIは、'))
   assert.equal(SERVICE_SEO.portal.keywords[0], 'ドヤAI')
   assert.equal(SITE_ALTERNATE_NAMES[0], 'ドヤマーケAI')

@@ -10,7 +10,7 @@ import { confirmDialog } from '@/components/ds'
 import { decideUpsell, type UpsellAction, type UpsellKind, type UpsellTrigger } from '@/lib/pricing-v2/upsell'
 import styles from '@/components/doya-power/doya-power.module.css'
 
-export type UpsellInfo = { kind: UpsellKind; isOwner: boolean; seats: number | null; canBuyPack: boolean; canCheckoutTeam: boolean; starter?: { amount: number; at: string } | null }
+export type UpsellInfo = { kind: UpsellKind; isOwner: boolean; seats: number | null; canBuyPack: boolean; canCheckoutTeam: boolean; perSeat?: boolean; starter?: { amount: number; at: string } | null }
 
 let cached: Promise<UpsellInfo | null> | null = null
 /** 区分を1回だけ読む（同じ画面の中で使い回す）。旗が off・失敗なら null */

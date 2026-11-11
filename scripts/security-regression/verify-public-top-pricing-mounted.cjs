@@ -7,20 +7,22 @@ const dom=new JSDOM('<body></body>',{url:'https://synthetic.invalid/'});global.w
 const {createRoot}=dep('react-dom/client'),{renderToStaticMarkup}=dep('react-dom/server');
 let modules,sourceHashes={},actor,status,plan,serverUser,rollout,serverReads,handler,requests,container,reactRoot;const results=[];
 const componentFile='src/components/lp/renewal/Renewal.tsx';
-const unused={'@/lib/services':{SERVICES:[],HIDDEN_SERVICE_IDS:new Set(),getListedServices:()=>[]},'@/components/shell/tools':{SHELL_GROUPS:[]},'./ProductPreview':{},'./HeroMotion':{MotionContext:React.createContext(false)},'./OperationDemo':{DEMOS:{}},'./ServiceCinematicHero':{},'./cinematic-scenes':{CINEMATIC_SCENES:{}},'./OpeningCurtain':{OPENING_COPY:{}},'./renewal.css':{},'./hero-motion.css':{}};
+const unused={'@/lib/services':{SERVICES:[],HIDDEN_SERVICE_IDS:new Set(),getListedServices:()=>[]},'@/components/shell/tools':{SHELL_GROUPS:[]},'./ProductPreview':{},'./HeroMotion':{MotionContext:React.createContext(false)},'./OperationDemo':{DEMOS:{}},'./ServiceCinematicHero':{},'./cinematic-scenes':{CINEMATIC_SCENES:{}},'./OpeningCurtain':{OPENING_COPY:{}},'./renewal.css':{},'./hero-motion.css':{},'./motion-2026-11.css':{},'./TopExtras':{CountUp:({value})=>String(value),LP_CARD_IO:{}},'framer-motion':{AnimatePresence:({children})=>children,LayoutGroup:({children})=>children,MotionConfig:({children})=>children,motion:new Proxy({},{get:(_,tag)=>({children,...p})=>React.createElement(String(tag),null,children)})},'@/lib/brand':{brandNameEn:()=>'Doya Buddy',brandName:()=>'ドヤバディ'}};
 function load(file){if(modules.has(file))return modules.get(file);const preferred=file===componentFile&&process.env.PUBLIC_TOP_PRICING_COMPONENT_SOURCE?process.env.PUBLIC_TOP_PRICING_COMPONENT_SOURCE:path.join(root,file);const full=fs.existsSync(preferred)?preferred:path.join(base,file);const bytes=fs.readFileSync(full);sourceHashes[file]=crypto.createHash('sha256').update(bytes).digest('hex');const exports={};modules.set(file,exports);const js=ts.transpileModule(bytes.toString(),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText;vm.runInNewContext(js,{exports,require:n=>{
  if(n==='react'||n==='react/jsx-runtime')return dep(n);
  if(n==='next/link')return{__esModule:true,default:({href,children,...props})=>React.createElement('a',{href,...props},children)};
  if(n==='next/image')return{__esModule:true,default:()=>null};
- if(n==='lucide-react')return Object.fromEntries(['ArrowRight','Check','ChevronDown','FileText','Layers','Play','Pause','Sparkles','MousePointer2','ShieldCheck'].map(k=>[k,()=>React.createElement('svg',{'aria-hidden':true})]));
+ if(n==='lucide-react')return new Proxy({},{get:(_,k)=>k==='__esModule'?false:()=>React.createElement('svg',{'aria-hidden':true})});
  if(n==='next-auth/react')return{useSession:()=>({status,data:status==='unauthenticated'?null:{user:{id:actor,email:actor+'@synthetic.invalid',plan}}})};
  if(n==='@/components/pricing/useNewPricing')return load('src/components/pricing/useNewPricing.ts');
  if(n==='@/lib/unified-plan')return load('src/lib/unified-plan.ts');
  if(n==='@/lib/pricing-v2/plans')return load('src/lib/pricing-v2/plans.ts');
+ if(n==='./plans')return load('src/lib/pricing-v2/plans.ts');
+ if(n==='@/lib/pricing-v2/public-copy')return load('src/lib/pricing-v2/public-copy.ts');
  if(n==='next/server')return{NextResponse:{json:(data,init)=>Response.json(data,init)}};
  if(n==='next-auth')return{getServerSession:async()=>status==='unauthenticated'?null:{user:{email:actor+'@synthetic.invalid'}}};
  if(n==='@/lib/auth')return{authOptions:{synthetic:true}};
- if(n==='@/lib/pricing-v2/rollout'||n==='./rollout')return{isNewPricingEnabledFor:()=>rollout};
+ if(n==='@/lib/pricing-v2/rollout'||n==='./rollout')return{isNewPricingEnabledFor:()=>rollout,isPerSeatPricingPublic:()=>false};
  if(n==='@/lib/prisma')return{prisma:{user:{findUnique:async args=>{serverReads++;assert.equal(args.where.email,actor+'@synthetic.invalid');return serverUser}}}};
  if(n==='@/lib/pricing-v2/view.server')return load('src/lib/pricing-v2/view.server.ts');
  if(n==='./view')return load('src/lib/pricing-v2/view.ts');

@@ -14,7 +14,7 @@ import { stripe, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
 import { LEGACY_PRO_MONTHLY_POINTS, teamMonthlyPoints } from './plans'
-import { newPricingPriceIds, teamPriceConfig, TEAM_PLAN_ID } from './prices'
+import { contractPricingModel, newPricingPriceIds, seatItemInterval, seatItemPriceIds, teamPricingOperable, TEAM_PLAN_ID } from './prices'
 import { findSeatItem, isSeatCacheFresh, memberLimit } from './team'
 import { subscriberKind } from './view'
 import { readCompanyOperatingSeatUsage } from './company-seat-minimum.server'
@@ -22,7 +22,7 @@ import { seatCacheRevision, saveSeatCacheAtRevision, withSeatMonthlyGrantInTrans
 
 /** 新しい表を使ってよいか（旗が off でなく、新しい料金の価格がそろっている）。人を問わない入口の判定。人ごとは teamTablesAllowedFor */
 export function teamTablesAllowed(): boolean {
-  return newPricingRollout() !== 'off' && teamPriceConfig().ok
+  return newPricingRollout() !== 'off' && teamPricingOperable()
 }
 
 /** この人（会社なら持ち主）について、新しい表を使ってよいか（preview なら許可した人だけ） */
@@ -46,11 +46,12 @@ async function readTeamSubscriptionFromStripe(owner: { id: string; email: string
   const team = live.find((s) => s.planId === TEAM_PLAN_ID)
   if (!team) return null
   const sub = await stripe.subscriptions.retrieve(team.id)
-  const c = teamPriceConfig()
-  if (!c.ok) return null
-  const seatItem = findSeatItem(sub.items.data as any[], new Set([c.seat.monthly, c.seat.yearly]))
+  // 人数の明細は、基本料ありの人数の価格か、1人いくらの価格（STRIPE_PRICE_SEAT_ONLY_*）のどちらか
+  const seatIds = seatItemPriceIds()
+  if (seatIds.size === 0) return null
+  const seatItem = findSeatItem(sub.items.data as any[], seatIds)
   if (!seatItem || !seatItem.quantity) return null
-  const interval = seatItem.price.id === c.seat.yearly ? 'year' : 'month'
+  const interval = seatItemInterval(seatItem.price.id) ?? 'month'
   return { companyId, subscriptionId: sub.id, seatItemId: seatItem.id, seats: seatItem.quantity, interval, status: String(sub.status) }
 }
 
@@ -143,7 +144,9 @@ export async function newPricingMonthlyGrant(companyId: string): Promise<number 
     const isTeam = !!owner.stripePriceId && newPricingPriceIds().has(owner.stripePriceId)
     if (!isTeam) return LEGACY_PRO_MONTHLY_POINTS
     const seats = await teamSeatsForCompany(companyId).catch(() => null)
-    return (typeof seats === 'number' ? teamMonthlyPoints(seats) : null) ?? LEGACY_PRO_MONTHLY_POINTS
+    // 付与の量は、この契約の価格で決める（1人いくらの契約は 1人 400、基本料ありの契約は 1,500 ＋ 1人 300）
+    const model = contractPricingModel(owner.stripePriceId)
+    return (typeof seats === 'number' ? teamMonthlyPoints(seats, model) : null) ?? LEGACY_PRO_MONTHLY_POINTS
   } catch {
     console.error('[team] could not decide the monthly grant; using the current amount')
     return null
@@ -169,7 +172,7 @@ export async function newPricingMonthlyGrantInTransaction(companyId: string, tx:
     const cached = await tx.accountCompanyBilling.findUnique({ where: { companyId } })
     // Preserve the documented cached/legacy fallback during a Stripe outage,
     // but never grant from it while a durable seat mutation is unresolved.
-    return cached ? teamMonthlyPoints(cached.seats) ?? LEGACY_PRO_MONTHLY_POINTS : LEGACY_PRO_MONTHLY_POINTS
+    return cached ? teamMonthlyPoints(cached.seats, contractPricingModel(owner.stripePriceId)) ?? LEGACY_PRO_MONTHLY_POINTS : LEGACY_PRO_MONTHLY_POINTS
   })
 }
 

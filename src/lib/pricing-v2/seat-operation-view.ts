@@ -12,7 +12,7 @@ export type PendingSeatChange = {
 }
 export type TeamSeatsView =
   | { kind: 'pending'; pending: PendingSeatChange }
-  | { kind: 'ready'; seats: number; used: number; interval: 'month' | 'year' }
+  | { kind: 'ready'; seats: number; used: number; interval: 'month' | 'year'; /** 1人いくらの契約のときだけ true（基本料ありの契約では付けない） */ perSeat?: true }
 
 const seats = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 49
 const record = (x: unknown): Record<string, unknown> | null => x !== null && typeof x === 'object' && !Array.isArray(x) ? x as Record<string, unknown> : null
@@ -27,9 +27,11 @@ export function parseTeamSeatsView(value: unknown): TeamSeatsView | null {
     return { kind: 'pending', pending: { operationKey: pending.operationKey, requested: pending.requested,
       previousSeats: pending.previousSeats, action: pending.action as PendingSeatChange['action'] } }
   }
+  // 料金の形は、サーバーが契約の価格から決めて渡す（1人いくらの契約だけ perSeat: true）
+  const model = data.perSeat === true ? 'per_seat' as const : 'base_plus_seat' as const
   if (!seats(data.seats) || typeof data.used !== 'number' || !Number.isSafeInteger(data.used) || data.used < 1 ||
-    !['month', 'year'].includes(String(data.interval)) || data.monthly !== teamMonthly(data.seats) || data.points !== teamMonthlyPoints(data.seats)) return null
+    !['month', 'year'].includes(String(data.interval)) || data.monthly !== teamMonthly(data.seats, model) || data.points !== teamMonthlyPoints(data.seats, model)) return null
   // Historical over-capacity is displayable so the owner can correct it. The
   // server remains the authority for admitting members or changing quantities.
-  return { kind: 'ready', seats: data.seats, used: data.used, interval: data.interval as 'month' | 'year' }
+  return { kind: 'ready', seats: data.seats, used: data.used, interval: data.interval as 'month' | 'year', ...(model === 'per_seat' ? { perSeat: true as const } : {}) }
 }

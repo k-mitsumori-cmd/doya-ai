@@ -1,5 +1,6 @@
 // ドヤ広告バナーAI LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 export const ACCENT = '#f97316' // オレンジ＝広告の差し色
 export const CTA = '/adbanner/dashboard/new'
@@ -19,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 
 export const FAQ: Faq[] = [
   { q: '無料で試せますか？', a: 'ログイン不要のゲストで1日3枚までお試しいただけます。無料プランにご登録いただくと1日9枚まで生成できます。' },
-  { q: 'プロプランでは何が変わりますか？', a: 'プロプラン（月額9,980円）では1日60枚まで生成でき、全媒体サイズと採点・改善機能をフル活用できます。' },
+  { q: 'プロプランでは何が変わりますか？', a: `有料のチームでは1日60枚まで生成でき、全媒体サイズと採点・改善機能をフル活用できます。${PUBLIC_PRICE_SENTENCE}` },
   { q: 'どんな媒体サイズに対応していますか？', a: 'Meta・Google・LINE・X など、主要な広告媒体のサイズに対応しています。配信先に合わせてまとめて量産できます。' },
   { q: 'ロゴはきれいに入りますか？', a: 'AIにロゴを描かせず、アップロードいただいた実際のロゴ画像を原寸で正確に合成します。ブランドの見え方が崩れません。' },
   { q: 'AIの採点はどんな基準ですか？', a: '視認性・訴求・CTA・媒体適合・ブランド整合の5観点で採点し、具体的な改善提案を提示します。提案は1クリックで反映して再生成できます。' },
