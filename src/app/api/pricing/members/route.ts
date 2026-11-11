@@ -130,6 +130,10 @@ export async function POST(req: NextRequest) {
           return { ok: true as const, row, token, used: final?.used ?? null }
         })
       } catch (e) {
+        if (e instanceof CompanyMembershipSeatError && e.code === 'NO_SEAT') {
+          out = { ok: false, status: 409, code: 'NO_SEAT' }
+          continue
+        }
         const code = (e as { code?: string })?.code
         if (code !== 'P2034' && code !== 'P2002') throw e
       }
