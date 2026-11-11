@@ -67,11 +67,12 @@ export default function ShodanNewPage() {
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
 
   useEffect(() => {
+    if (owner === guard.identity) return
     setOwner(guard.identity); setUrl(''); draft.current = ''; setPhase('input')
     setResearch(null); setConfirmedId(null)
     setLimitMessage(null); setLimitAction(null); setHasProfile(null)
     setUnknown(false); setOperationError(''); setRetryable(false); attempt.current = 'idle'
-  }, [guard.identity])
+  }, [guard.identity, owner])
   // 組織が確定し、前の組織の入力を消してから依頼のURLを入れる。
   useDoyaPrefill((read) => {
     const incomingUrl = read('url', 'url')
