@@ -13,7 +13,7 @@ import { BillingResponseError, readBillingResponse } from '@/lib/billing-respons
 import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/seat-operation-view'
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
-import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
+import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamPrice, withTax, type BillingInterval } from '@/lib/pricing-v2/plans'
 import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
 import PaymentThanks from './PaymentThanks'
 import { COMPANY_ROLE_LABEL, isMemberRowRole } from '@/lib/company-roles/roles'
@@ -65,6 +65,7 @@ export function TeamManage({ membershipOnly = false }: { membershipOnly?: boolea
 
 function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; membershipOnly: boolean }) {
   const [seats, setSeats] = useState<number | null>(null)
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [used, setUsed] = useState<number | null>(null)
   const [draft, setDraft] = useState(1)
   const [pending, setPending] = useState<PendingSeatChange | null>(null)
@@ -110,6 +111,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
         setSeats(null); setPending(null)
         setLoadFailed(usage === null)
       } else if (view?.kind === 'ready') {
+        setBillingInterval(view.interval === 'year' ? 'yearly' : 'monthly')
         setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
       } else if (view?.kind === 'pending') {
         setSeats(null); setUsed(null); setDraft(view.pending.requested); setPending(view.pending); setLoadFailed(false)
@@ -129,6 +131,10 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
     return () => { disposed.current = true; for (const controller of requests) controller.abort(); requests.clear() }
   }, [reload])
 
+  const priceLabel = billingInterval === 'yearly' ? '年額' : '月額'
+  const diff = seats === null ? 0 : (teamPrice(draft, billingInterval) ?? 0) - (teamPrice(seats, billingInterval) ?? 0)
+  const recurringChange = `${priceLabel}（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）`
+
   const clearInvitePreview = () => { setInviteUrl(null); setInviteLabel(null); setCopied(false) }
   const beginAction = () => {
     if (disposed.current || mutating.current) return false
@@ -143,8 +149,8 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
       const approved = await confirmDialog({
         title: `人数を${requested}人に${up ? '増やします' : '減らします'}`,
         message: up
-          ? `今日から次の請求日までの日割りの額を、いま請求します。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(requested - from) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
-          : '減らした分の返金はありません。人数はすぐに減ります。',
+          ? `${recurringChange}。今回の請求は今日から次の請求日までの日割りです。日割りの金額はこの画面には表示されません。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(requested - from) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
+          : `${recurringChange}。減らした分の返金はありません。人数はすぐに減ります。`,
         confirmLabel: up ? '増やして請求する' : '減らす',
       })
       if (!approved || disposed.current) return
@@ -215,7 +221,6 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
       if (!disposed.current) setCopied(true)
     } catch { if (!disposed.current) setMessage('コピーできませんでした。リンク欄を選択してコピーしてください。') }
   }
-  const diff = seats !== null ? (teamMonthly(draft) ?? 0) - (teamMonthly(seats) ?? 0) : 0
   const editingBlocked = busy || loading || loadFailed || pending !== null || seats === null
   const invitationBlocked = busy || loading || membersFailed || (inviteRole !== 'guest' && (loadFailed || pending !== null))
   return (
@@ -238,7 +243,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
                 <span className={styles.seatValue}><span className={styles.seatNum}>{seats === null ? '—' : draft}</span><span>人</span></span>
                 <button type="button" className={styles.stepBtn} aria-label="1人増やす" onClick={() => setDraft(d => Math.min(49, d + 1))} disabled={editingBlocked || draft >= 49}><Plus size={18} /></button>
               </div>
-              <p className={styles.manageSub}>{seats !== null && draft !== seats ? `月額（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）` : '50人以上は個別にお見積りします。'}</p>
+              <p className={styles.manageSub}>{seats !== null && draft !== seats ? recurringChange : '50人以上は個別にお見積りします。'}</p>
               <button type="button" className={base.primary} onClick={changeSeats} disabled={editingBlocked || draft === seats}>人数を変える</button>
             </>
           )}
