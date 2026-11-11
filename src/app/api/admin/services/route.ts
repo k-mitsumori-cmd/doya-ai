@@ -5,20 +5,19 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { summarizeRegisteredPlans } from '@/lib/admin-registered-plan-stats'
+
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
 
 export async function GET() {
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get(COOKIE_NAME)?.value
     const { valid } = await verifyAdminSession(token || null)
-    if (!valid) return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
-
-    const safe = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
-      try { return await fn() } catch { return fallback }
-    }
+    if (!valid) return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401, headers: privateHeaders })
 
     const [
-      totalUsers, proUsers,
+      planRows,
       seoArticles, seoJobs,
       bannerGenerations,
       interviewProjects, interviewTranscriptions,
@@ -31,26 +30,27 @@ export async function GET() {
       tenkaiProjects,
       adSimProjects,
     ] = await Promise.all([
-      safe(() => prisma.user.count(), 0),
-      safe(() => prisma.user.count({ where: { plan: { in: ['PRO', 'LIGHT', 'ENTERPRISE', 'BUNDLE', 'STARTER'] } } }), 0),
-      safe(() => prisma.seoArticle.count(), 0),
-      safe(() => prisma.seoJob.count(), 0),
-      safe(() => prisma.generation.count({ where: { serviceId: 'banner' } }), 0),
-      safe(() => prisma.interviewProject.count(), 0),
-      safe(() => prisma.interviewTranscription.count(), 0),
-      safe(() => prisma.copyProject.count(), 0),
-      safe(() => prisma.copyItem.count(), 0),
-      safe(() => prisma.lpProject.count(), 0),
-      safe(() => prisma.voiceProject.count(), 0),
-      safe(() => prisma.movieProject.count(), 0),
-      safe(() => prisma.kintaiOrganization.count(), 0),
-      safe(() => prisma.kintaiEmployee.count(), 0),
-      safe(() => prisma.kintaiClockRecord.count(), 0),
-      safe(() => prisma.hrOrganization.count(), 0),
-      safe(() => prisma.hrEmployee.count(), 0),
-      safe(() => prisma.tenkaiProject.count(), 0),
-      safe(() => prisma.adSimProject.count(), 0),
+      prisma.user.groupBy({ by: ['plan'], _count: { _all: true } }),
+      prisma.seoArticle.count(),
+      prisma.seoJob.count(),
+      prisma.generation.count({ where: { serviceId: 'banner' } }),
+      prisma.interviewProject.count(),
+      prisma.interviewTranscription.count(),
+      prisma.copyProject.count(),
+      prisma.copyItem.count(),
+      prisma.lpProject.count(),
+      prisma.voiceProject.count(),
+      prisma.movieProject.count(),
+      prisma.kintaiOrganization.count(),
+      prisma.kintaiEmployee.count(),
+      prisma.kintaiClockRecord.count(),
+      prisma.hrOrganization.count(),
+      prisma.hrEmployee.count(),
+      prisma.tenkaiProject.count(),
+      prisma.adSimProject.count(),
     ])
+
+    const { totalUsers, paidPlanUsers: proUsers, otherPlanUsers: freeUsers } = summarizeRegisteredPlans(planRows)
 
     const services = [
       { id: 'seo', name: 'ドヤ記事作成', icon: '✍️', path: '/seo', status: 'active', stats: { articles: seoArticles, jobs: seoJobs }, color: 'emerald' },
@@ -69,11 +69,11 @@ export async function GET() {
     return NextResponse.json({
       totalUsers,
       proUsers,
-      freeUsers: totalUsers - proUsers,
+      freeUsers,
       services,
-    })
-  } catch (e) {
+    }, { headers: privateHeaders })
+  } catch {
     console.error('[admin/services]')
-    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500, headers: privateHeaders })
   }
 }
