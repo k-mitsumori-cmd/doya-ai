@@ -57,7 +57,10 @@ export default function DashboardPage() {
 
   const today = todayYmd()
   const limit = new Date(Date.parse(today) + 14 * 86400000).toISOString().slice(0, 10)
-  const upcoming = [...(thisM.data?.schedules ?? []), ...(nextM.data?.schedules ?? [])]
+  const thisMonthSchedules = thisM.data?.schedules
+  const nextMonthSchedules = nextM.data?.schedules
+  const schedulesReady = Array.isArray(thisMonthSchedules) && Array.isArray(nextMonthSchedules)
+  const upcoming = (schedulesReady ? [...thisMonthSchedules, ...nextMonthSchedules] : [])
     .filter((s) => s.status !== 'paid' && s.status !== 'skipped' && s.plannedPayDate >= today && s.plannedPayDate <= limit)
     .sort((a, b) => a.plannedPayDate.localeCompare(b.plannedPayDate))
 
@@ -130,6 +133,14 @@ export default function DashboardPage() {
         <h2 className="mb-3 text-[18px] font-bold text-[var(--ink)]">今後14日の支払</h2>
         {thisM.loading || nextM.loading ? (
           <Loading rows={2} />
+        ) : thisM.error || nextM.error || !schedulesReady ? (
+          <ErrorBox
+            forbidden={thisM.forbidden || nextM.forbidden}
+            onRetry={() => {
+              thisM.reload()
+              nextM.reload()
+            }}
+          />
         ) : upcoming.length === 0 ? (
           <EmptyState image="/expense/empty-calendar.webp" alt="今後14日の支払予定は空です" text="今後14日に払う予定はありません。" actionLabel="支払予定を見る" href={`${base}/payables`} />
         ) : (
