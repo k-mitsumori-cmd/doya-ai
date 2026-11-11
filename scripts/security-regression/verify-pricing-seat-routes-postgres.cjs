@@ -47,7 +47,7 @@ const view = load('src/lib/pricing-v2/view.ts', { '@/lib/unified-plan': unified 
 const powerRules = load('src/lib/doya-power/rules.ts', {}, globals);
 const core = load('src/lib/pricing-v2/seat-operation.ts', { 'node:crypto': crypto, '@/lib/prisma': { prisma: db }, './team': team }, globals);
 const rollout = { isNewPricingEnabledFor: () => true, newPricingRollout: () => 'all' };
-const subscription = () => ({ id: 'sub_synthetic', object: 'subscription', customer: 'cus_synthetic', livemode: false, status: state.currentStatus || 'active', pending_update: null, latest_invoice: state.latestInvoice, items: { has_more: false, data: [{ id: 'si_synthetic', quantity: state.purchased, price: { id: state.currentInterval === 'year' ? 'price_seat_y' : 'price_seat_m', currency: 'jpy' } }] } });
+const subscription = () => ({ id: 'sub_synthetic', object: 'subscription', customer: 'cus_synthetic', livemode: false, status: state.currentStatus || 'active', collection_method: state.collectionMethod || 'charge_automatically', pending_update: null, latest_invoice: state.latestInvoice, items: { has_more: false, data: [{ id: 'si_synthetic', quantity: state.purchased, price: { id: state.currentInterval === 'year' ? 'price_seat_y' : 'price_seat_m', currency: 'jpy' } }] } });
 const stripe = { subscriptions: {
   retrieve: async id => ({ ...subscription(), id }),
   update: async (_, params, options) => {
@@ -309,6 +309,22 @@ async function check(name, fn) { await reset(); await fn(); assert(await used() 
       assert.equal(response.status, 409); assert.equal((await response.json()).code, 'SEAT_OPERATION_RECONCILE');
       assert.equal(state.stripeAttempts, 0); assert.equal(state.effectiveStripeWrites, 0); assert.equal(await cacheSeats(), 5);
       assert.equal((await invite()).status, 409);
+    });
+    await check('invoice-collection-upgrade-does-not-reserve-or-charge', async () => {
+      state.collectionMethod = 'send_invoice';
+      const response = await change(6);
+      assert.equal(response.status, 409);
+      assert.equal((await response.json()).code, 'SEAT_COLLECTION_METHOD');
+      assert.equal(state.stripeAttempts, 0);
+      assert.equal(await cacheSeats(), 5);
+      assert.equal((await invite()).status, 201);
+    });
+    await check('invoice-collection-downgrade-does-not-prorate', async () => {
+      state.collectionMethod = 'send_invoice';
+      assert.equal((await change(3)).status, 200);
+      assert.equal(state.stripeAttempts, 1);
+      assert.equal(await cacheSeats(), 3);
+      assert.equal(state.notifications, 0);
     });
     await check('decrease-before-invite', async () => { assert.equal((await change()).status, 200); const response = await invite(); assert.equal(response.status, 409); assert.equal((await response.json()).code, 'NO_SEAT'); });
     await check('invite-before-decrease', async () => { assert.equal((await invite()).status, 201); const response = await change(); assert.equal(response.status, 409); assert.equal((await response.json()).code, 'BELOW_USED'); });
