@@ -1618,3 +1618,10 @@ if (authLogCodeValidation.error || authLogCodeValidation.status !== 0) {
   console.error('Security regression failed: verify-auth-log-code-validation.cjs');
   process.exit(authLogCodeValidation.status || 1);
 }
+
+// Keep GET callback parameter parsing compatible with the installed NextAuth flow.
+const nextAuthCallbackParams = spawnSync(process.execPath, [path.join(__dirname, 'verify-next-auth-callback-params.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (nextAuthCallbackParams.error || nextAuthCallbackParams.status !== 0) {
+  console.error('Security regression failed: verify-next-auth-callback-params.cjs');
+  process.exit(nextAuthCallbackParams.status || 1);
+}
