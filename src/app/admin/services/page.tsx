@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import type { ServiceStatus } from '@/lib/services'
 
 interface ServiceInfo {
   id: string
   name: string
   icon: string
   path: string
-  status: string
+  status: ServiceStatus
+  limited?: boolean
   stats: Record<string, number>
   color: string
 }
@@ -16,13 +18,19 @@ interface ServiceInfo {
 const STAT_LABELS: Record<string, string> = {
   articles: '記事数',
   jobs: 'ジョブ数',
-  generations: '生成数',
+  generations: '利用・生成記録',
   projects: 'プロジェクト',
   transcriptions: '文字起こし',
-  items: 'アイテム',
   organizations: '組織',
   employees: '従業員',
   clockRecords: '打刻',
+}
+
+const STATUS_LABELS: Record<ServiceStatus, string> = {
+  active: '稼働中',
+  beta: 'ベータ版',
+  coming_soon: '準備中',
+  maintenance: 'メンテナンス中',
 }
 
 interface ServicesData {
@@ -43,7 +51,8 @@ function isCount(value: unknown): value is number {
 function isServiceInfo(value: unknown): value is ServiceInfo {
   return isRecord(value) && typeof value.id === 'string' && typeof value.name === 'string'
     && typeof value.icon === 'string' && typeof value.path === 'string'
-    && typeof value.status === 'string' && typeof value.color === 'string'
+    && typeof value.status === 'string' && Object.hasOwn(STATUS_LABELS, value.status)
+    && (value.limited === undefined || typeof value.limited === 'boolean') && typeof value.color === 'string'
     && isRecord(value.stats) && Object.values(value.stats).every(isCount)
 }
 
@@ -172,6 +181,7 @@ export default function AdminServicesPage() {
             orange: { bg: 'from-orange-500/15', border: 'border-orange-500/20', text: 'text-orange-400' },
           }
           const c = colorMap[service.color] || colorMap.violet
+          const stats = Object.entries(service.stats)
 
           return (
             <div key={service.id} className={`bg-gradient-to-br ${c.bg} to-transparent border ${c.border} rounded-2xl p-5 hover:scale-[1.02] transition-transform`}>
@@ -181,9 +191,9 @@ export default function AdminServicesPage() {
                   <div>
                     <p className="text-white font-bold text-sm">{service.name}</p>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                      service.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                      service.status === 'active' && !service.limited ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
                     }`}>
-                      {service.status === 'active' ? '稼働中' : '準備中'}
+                      {service.limited ? '限定公開' : STATUS_LABELS[service.status]}
                     </span>
                   </div>
                 </div>
@@ -193,7 +203,9 @@ export default function AdminServicesPage() {
               </div>
 
               <div className="space-y-2">
-                {Object.entries(service.stats).map(([key, val]) => (
+                {stats.length === 0 ? (
+                  <p className="text-sm text-white/60">未集計</p>
+                ) : stats.map(([key, val]) => (
                   <div key={key} className="flex items-center justify-between">
                     <span className="text-xs text-white/40">{STAT_LABELS[key] || key}</span>
                     <span className="text-sm font-bold text-white">{val.toLocaleString()}</span>
