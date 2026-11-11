@@ -32,6 +32,7 @@ function route(file, prisma, session = identity) {
 async function expectSafe(promise, expected) {
   const response = await promise
   assert.equal(response.status, 500)
+  expectPrivate(response)
   const data = await response.json()
   assert.equal(data.error, expected)
   assert(!JSON.stringify(data).includes(secret))
@@ -41,22 +42,30 @@ function expectPrivate(response) {
   assert.match(response.headers.get('vary'), /(?:^|,)\s*cookie\s*(?:,|$)/i)
 }
 ;(async () => {
-  await check('Doyalist project endpoints mark anonymous replies private and do not read projects', async () => {
-    const api = route('src/app/api/doyalist/projects/route.ts', {
-      doyalistProject: { findMany: failure, create: failure },
-    }, null)
-    for (const response of [await api.GET(), await api.POST(request({ name: 'valid' }))]) {
-      assert.equal(response.status, 401)
-      expectPrivate(response)
+  await check('Doyalist list, detail and approach APIs mark all anonymous replies private', async () => {
+    const prisma = {
+      doyalistProject: { findMany: failure, findUnique: failure, create: failure },
+      doyalistApproach: { findMany: failure, delete: failure },
+    }
+    const cases = [
+      ['projects', ['GET', 'POST']],
+      ['projects/[id]', ['GET', 'PATCH', 'DELETE']],
+      ['approaches', ['GET', 'DELETE']],
+    ]
+    for (const [endpoint, methods] of cases) {
+      const api = route(`src/app/api/doyalist/${endpoint}/route.ts`, prisma, null)
+      for (const method of methods) {
+        const response = await api[method](request({ name: 'valid' }))
+        assert.equal(response.status, 401)
+        expectPrivate(response)
+      }
     }
   })
   await check('Doyalist project list keeps database errors private and legacy creation stops before writes', async () => {
     const api = route('src/app/api/doyalist/projects/route.ts', {
       doyalistProject: { findMany: failure, create: failure },
     })
-    const failed = await api.GET()
-    expectPrivate(failed)
-    await expectSafe(failed, 'プロジェクトの取得に失敗しました')
+    await expectSafe(api.GET(), 'プロジェクトの取得に失敗しました')
     const denied = await api.POST(request({ name: 'valid' }))
     assert.equal(denied.status, 409)
     expectPrivate(denied)
@@ -164,6 +173,7 @@ function expectPrivate(response) {
     })
     const response = await api.GET({}, { params: Promise.resolve({ id: 'p' }) })
     assert.equal(response.status, 200)
+    expectPrivate(response)
     const data = await response.json()
     assert.deepEqual(data.companies.map((company) => company.id), ['one', 'two'])
     assert.equal(data.summary.companyCount, 2)
