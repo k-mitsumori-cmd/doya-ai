@@ -4,6 +4,8 @@
 // ⚠️ ここで確認した項目（approved）だけが記事の「会社の事実」になる
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { SaveLabel } from '@/components/ds/save-label'
+import { useSaveState } from '@/components/ds/use-save-state'
 import { ExternalLink, Globe, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { ActionError, api, Button, Card, describeError, EmptyState, ErrorState, Field, inputCls, Notice, PageSkeleton, ProgressSteps, SectionTitle, useLeaveGuard, useTimedStep, PageTitle } from '@/components/shanai/ui'
 import { DEFAULT_BRAND_COLOR, PROFILE_CATEGORY_LABELS, SOURCE_KIND_LABELS, type ProfileCategory, type SourceKind } from '@/lib/shanai/types'
@@ -44,6 +46,7 @@ export default function ShanaiCompanyPage() {
   const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR)
   const [sources, setSources] = useState<Source[]>([])
   const [saving, setSaving] = useState(false)
+  const saveMark = useSaveState() // 保存できたときのチェックの印（見た目だけ）
   const [crawling, setCrawling] = useState(false)
   // err: 失敗の中身（status 付き）。新しい見た目では text（生の文）ではなく、ここから伝える文を組み立てる
   const [message, setMessage] = useState<{ tone: 'info' | 'error' | 'warn'; text: string; err?: unknown } | null>(null)
@@ -87,8 +90,10 @@ export default function ShanaiCompanyPage() {
       const d = await api<{ company: Company }>('/api/shanai/company', { method: 'PUT', json: { name, brandColor, sources: sources.filter((s) => s.url.trim()) } })
       apply(d.company)
       toast.success('保存しました', { duration: 3000 })
+      saveMark.set('saved')
       return true
     } catch (e) {
+      saveMark.set('error')
       setMessage({ tone: 'error', text: (e as Error).message, err: e })
       return false
     } finally {
@@ -196,7 +201,7 @@ export default function ShanaiCompanyPage() {
           )}
           <div className="ml-auto flex flex-wrap justify-end gap-2">
             <Button variant="secondary" onClick={save} loading={saving} disabled={crawling}>
-              保存
+              <SaveLabel state={saveMark.state} tone="plain">保存</SaveLabel>
             </Button>
             <Button onClick={crawl} loading={crawling} disabled={saving}>
               <RefreshCw className="h-4 w-4" />

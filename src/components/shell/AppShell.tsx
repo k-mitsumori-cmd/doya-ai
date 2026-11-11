@@ -16,6 +16,10 @@ import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
+import '@/components/ds/app-motion.css'
+import PressMotion from './PressMotion'
+import { NavMark } from './NavMark'
+import { MotionConfig, motion } from 'framer-motion'
 import { ShellIcon, type ShellIconName } from './icons'
 import { ToolBearIcon } from './ToolBearIcon'
 import { ShellUsageProvider } from './ShellUsage'
@@ -75,6 +79,8 @@ function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: Shell
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
   return (
     <Link href={href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(href)} title={tool.name} prefetch={prefetch}>
+      {/* 選択中の印。別のツールへ移ると、この印が滑って動く（layoutId） */}
+      {active && !mirror ? <NavMark kind="side" className={styles.navMark} /> : null}
       <ToolBearIcon id={tool.id} icon={tool.icon} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
@@ -166,13 +172,14 @@ function CommandPalette({ open, onClose, withIntents, withDepartments = false, w
         <ul className={styles.paletteList} role="listbox">
           {results.length ? results.map((t, i) => {
             return (
-              <li key={t.key} role="option" aria-selected={i === index}>
+              // 絞り込みで並びが変わったとき、残った項目が新しい場所へ滑る（M15。transform だけ。動きを減らす設定では MotionConfig が止める）
+              <motion.li key={t.key} role="option" aria-selected={i === index} layout="position" transition={{ type: 'spring', stiffness: 520, damping: 38, mass: 0.8 }}>
                 <button type="button" className={styles.paletteItem} data-active={i === index} onMouseEnter={() => setIndex(i)} onClick={() => go(t)}>
                   <span className={styles.paletteIcon}>{t.intent ? <Sparkles size={16} aria-hidden /> : t.key.startsWith('product:') ? <ShellIcon name={t.icon ?? 'LayoutGrid'} size={16} strokeWidth={2} /> : <ToolBearIcon id={t.key} icon={t.icon ?? 'LayoutGrid'} size={28} iconSize={16} />}</span>
                   <span className={styles.paletteText}><b>{t.name}</b><small>{t.hint}</small></span>
                   {t.beta ? <span className={styles.beta}>開発中</span> : null}
                 </button>
-              </li>
+              </motion.li>
             )
           }) : <li className={styles.paletteEmpty}>見つかりませんでした</li>}
         </ul>
@@ -455,11 +462,15 @@ export default function AppShell({ children, userName, initialRecent, department
 
   return (
     <InShellContext.Provider value={true}>
+    {/* framer-motion の動きは、動きを減らす設定の人には位置・大きさの動きを止める（枠の中すべて） */}
+    <MotionConfig reducedMotion="user">
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>
+      {/* 押したときの縮みと弾み（枠の中の押せる部品すべて） */}
+      <PressMotion />
       <a href="#shell-main" className={styles.skip}>本文へ移動</a>
       <header className={styles.topbar}>
         <button type="button" className={styles.iconButton} onClick={() => setOpen(true)} aria-label="メニューを開く">
@@ -585,6 +596,7 @@ export default function AppShell({ children, userName, initialRecent, department
         {[productsOn ? productHome : SHELL_HOME, ...tabTools].map((t) => {
           return (
             <Link key={t.id} href={toHref(t.href)} className={styles.tab} aria-current={isActive(pathname, t) ? 'page' : undefined}>
+              {isActive(pathname, t) ? <NavMark kind="tab" className={styles.tabMark} /> : null}
               <ToolBearIcon id={t.id} icon={t.icon} size={26} iconSize={20} />
               <span>{t.id === 'home' || t.id.startsWith('hub-') ? 'ホーム' : t.name}</span>
             </Link>
@@ -603,6 +615,7 @@ export default function AppShell({ children, userName, initialRecent, department
       <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn && !productsOn} withProducts={productsOn} />
     </div>
     </ShellUsageProvider>
+    </MotionConfig>
     </InShellContext.Provider>
   )
 }

@@ -10,6 +10,7 @@ import { MONTH_END, describePaymentTerms, weekdayJa } from '@/lib/income/dates'
 import { TAX_RATES, computeInvoiceTotals } from '@/lib/income/tax'
 import { hasMinRole, type IncomeRole } from '@/lib/income/roles'
 import { Button, EmptyState, FORBIDDEN_MESSAGE, s } from './ds'
+import { Reveal } from '@/components/ds/reveal'
 
 export {
   Button, Card, DetailSkeleton, EmptyState, ListSkeleton, PageHeader, PageShell, Skeleton, StatTile, StatsSkeleton, buttonClass, toast, useToast,
@@ -193,8 +194,9 @@ export function useResource<T>(loader: () => Promise<T>, key: string): Resource<
 export function Gate<T>({
   res, skeleton, listHref, listLabel, children,
 }: { res: Resource<T>; skeleton: ReactNode; listHref?: string; listLabel?: string; children: (data: T) => ReactNode }) {
-  if (res.data !== null) return <>{children(res.data)}</>
+  // 骨組みから中身へは、重ねて薄く入れ替える（ds/Reveal。骨組みを出していなければ、そのまま中身）
   const e = res.error
+  if (res.data !== null || !e) return <Reveal loading={res.data === null} skeleton={res.slow ? skeleton : null}>{res.data !== null ? children(res.data) : null}</Reveal>
   if (e) {
     if (e.status === 403) return <EmptyState variant="forbidden" message={FORBIDDEN_MESSAGE} />
     if (e.status === 401) return <EmptyState variant="unauth" message="ログインの有効期限が切れました。もう一度ログインしてください。" />
@@ -203,7 +205,7 @@ export function Gate<T>({
     }
     return <EmptyState variant="error" message="読み込めませんでした。通信状態を確認して、もう一度お試しください。" action={{ label: 'もう一度', onClick: () => { void res.retry() } }} />
   }
-  return res.slow ? <>{skeleton}</> : null
+  return null
 }
 
 // ---------- 入力中の離脱確認 ----------

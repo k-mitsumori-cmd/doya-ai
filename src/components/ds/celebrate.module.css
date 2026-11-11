@@ -1,0 +1,21 @@
+/* お祝い。時間と曲線は app-motion.css の変数（無い環境でも動く既定値つき） */
+.burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+.dot {
+  position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--cel-color);
+  opacity: 0; animation: cel-dot var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) calc(var(--cel-delay, 0ms) + var(--cel-i) * 12ms) both;
+}
+.ring {
+  position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--blue, #0066ff); opacity: 0;
+  animation: m-ring var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) var(--cel-delay, 0ms) both;
+}
+@keyframes cel-dot {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .burst { display: none; }
+}
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-ring { 0% { opacity: 0.55; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.9); } }

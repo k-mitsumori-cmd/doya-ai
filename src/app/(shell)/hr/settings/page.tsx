@@ -11,6 +11,8 @@ import { useHrDepartmentCreation, type DepartmentCreationResult } from '@/lib/hr
 import { motion } from 'framer-motion'
 import rawToast from 'react-hot-toast'
 import { ArrowRight, X } from 'lucide-react'
+import { SaveLabel } from '@/components/ds/save-label'
+import { useSaveState } from '@/components/ds/use-save-state'
 import { confirmDialog } from '@/components/ds/dialog'
 import { hrUserMessage } from '@/lib/hr/user-message'
 
@@ -162,6 +164,7 @@ function HrSettingsForActor({ actor }: { actor: string }) {
   const [auditLogsError, setAuditLogsError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const [saving, setSaving] = useState(false)
+  const saveMark = useSaveState() // 保存できたときのチェックの印（見た目だけ）
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [inviteLimitNotice, setInviteLimitNotice] = useState<{ message: string; upgradeUrl?: string; contactUrl?: string; canManageBilling: boolean } | null>(null)
@@ -399,7 +402,9 @@ function HrSettingsForActor({ actor }: { actor: string }) {
       })
       if (!res.ok) throw new Error('設定を保存できませんでした。時間をおいて、もう一度お試しください。')
       toast.success('設定を保存しました')
+      saveMark.set('saved')
     } catch (e: unknown) {
+      saveMark.set('error')
       toast.error(hrUserMessage(e, '設定を保存できませんでした。時間をおいて、もう一度お試しください。'))
     } finally {
       setSaving(false)
@@ -1075,8 +1080,10 @@ function HrSettingsForActor({ actor }: { actor: string }) {
               disabled={saving}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">save</span>
-              {saving ? '保存中...' : '保存する'}
+              <SaveLabel state={saveMark.state}>
+                <span className="material-symbols-outlined text-lg">save</span>
+                {saving ? '保存中...' : '保存する'}
+              </SaveLabel>
             </button>
           </div>
         </div>

@@ -13,6 +13,7 @@ import { BillingResponseError, readBillingResponse } from '@/lib/billing-respons
 import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/seat-operation-view'
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
+import { CountUp } from '@/components/ds/motion'
 import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamMonthly, withTax } from '@/lib/pricing-v2/plans'
 import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
 import PaymentThanks from './PaymentThanks'
@@ -235,10 +236,10 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
               <p className={styles.manageSub}>{seats === null ? (loadFailed ? '人数を読み込めませんでした。' : '読み込んでいます…') : `今の人数 ${seats}人・使っている人数 ${used ?? '—'}人（操作メンバーと有効な操作招待。持ち主を含み、閲覧専用ゲストは除きます）`}</p>
               <div className={styles.stepper}>
                 <button type="button" className={styles.stepBtn} aria-label="1人減らす" onClick={() => setDraft(d => Math.max(minSeats, d - 1))} disabled={editingBlocked || draft <= minSeats}><Minus size={18} /></button>
-                <span className={styles.seatValue}><span className={styles.seatNum}>{seats === null ? '—' : draft}</span><span>人</span></span>
+                <span className={styles.seatValue}><span className={styles.seatNum}>{seats === null ? '—' : <CountUp value={draft} duration={280} initial="value" />}</span><span>人</span></span>
                 <button type="button" className={styles.stepBtn} aria-label="1人増やす" onClick={() => setDraft(d => Math.min(49, d + 1))} disabled={editingBlocked || draft >= 49}><Plus size={18} /></button>
               </div>
-              <p className={styles.manageSub}>{seats !== null && draft !== seats ? `月額（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）` : '50人以上は個別にお見積りします。'}</p>
+              <p className={styles.manageSub}>{seats !== null && draft !== seats ? <>月額（税抜）が {diff > 0 ? '+' : '−'}<CountUp value={Math.abs(diff)} format={yen} duration={420} initial="value" /> 変わります（税込 <CountUp value={withTax(Math.abs(diff))} format={yen} duration={420} initial="value" />）</> : '50人以上は個別にお見積りします。'}</p>
               <button type="button" className={base.primary} onClick={changeSeats} disabled={editingBlocked || draft === seats}>人数を変える</button>
             </>
           )}

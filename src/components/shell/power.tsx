@@ -9,9 +9,10 @@
 // - ボタンの減る量は、操作の名前（例: 'banner.generate'）で src/lib/doya-power/costs.ts の表から引く（仮・2026-10-23）
 //   ⚠️ 数はここに書かない。サーバーから costs を渡したときだけ、そちらを先に使う
 import Link from 'next/link'
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Zap } from 'lucide-react'
 import { CostBadge } from '@/components/ds/cost-badge'
+import { CountUp } from '@/components/ds/motion'
 import { useDoyaPower } from '@/components/doya-power/doya-power-context'
 import { doyaPowerCost, type DoyaPowerAction } from '@/lib/doya-power/costs'
 import { halfAmount } from '@/lib/doya-power/retry'
@@ -50,9 +51,22 @@ export function ShellPowerMeter({ className, href = '/home/doya-power', variant 
 }) {
   const enabled = useDoyaPower()
   const { balance } = useContext(ShellPowerContext)
+  const max = Math.max(0, balance?.limit ?? 0)
+  const value = Math.min(Math.max(0, balance?.remaining ?? 0), max)
+  // 減ったとき、減った量（−10 など）が小さく浮いて消える（M7）。増えたとき・最初の表示では出さない
+  const prev = useRef<number | null>(null)
+  const [drop, setDrop] = useState<{ n: number; id: number } | null>(null)
+  useEffect(() => {
+    if (!enabled || !balance) { prev.current = null; return }
+    const p = prev.current
+    prev.current = value
+    if (p === null || value >= p) return
+    const id = Date.now()
+    setDrop({ n: p - value, id })
+    const t = setTimeout(() => setDrop((d) => (d && d.id === id ? null : d)), 1300)
+    return () => clearTimeout(t)
+  }, [enabled, balance, value])
   if (!enabled || !balance) return null
-  const max = Math.max(0, balance.limit)
-  const value = Math.min(Math.max(0, balance.remaining), max)
   const ratio = max > 0 ? value / max : 0
   const low = ratio < 0.2
   return (
@@ -64,9 +78,10 @@ export function ShellPowerMeter({ className, href = '/home/doya-power', variant 
       title={`ドヤパワーの残り ${fmt(value)} / 上限 ${fmt(max)}`}
     >
       <Zap size={14} strokeWidth={2.25} aria-hidden className={styles.icon} />
-      <span className={styles.num} aria-hidden>{fmt(value)}</span>
+      {/* 使ったとき、数字が転がって減る（CountUp。幅は最後の値で決めるので CLS を増やさない） */}
+      <span className={styles.num} aria-hidden><CountUp value={Math.max(0, Math.round(value))} duration={700} format={(n) => fmt(n)} initial="value" />{drop ? <span key={drop.id} className={styles.drop} aria-hidden>−{fmt(drop.n)}</span> : null}</span>
       {/* 幅を決めた棒（あとから幅が変わらない。CLS を増やさない） */}
-      <span className={styles.track} aria-hidden><span className={styles.fill} style={{ width: `${Math.round(ratio * 100)}%` }} /></span>
+      <span className={styles.track} aria-hidden><span className={styles.fill} style={{ transform: `scaleX(${Math.round(ratio * 100) / 100})` }} /></span>
     </Link>
   )
 }

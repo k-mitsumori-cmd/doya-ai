@@ -210,3 +210,22 @@ test('新規と編集の入力の画面を見分ける（知らせで入力欄�
   for (const p of ['/income/invoices/new', '/income/contracts/new', '/expense/acme/contracts/new', '/kintai/requests/new', '/promane/acme/projects/new', '/seo/new', '/hr/employees/x/edit', '/copy/new/']) assert.equal(isEntryScreen(p), true, p)
   for (const p of ['/income', '/income/invoices', '/income/contracts/abc', '/news', '/renew', '/seo/news/new-year', '/home']) assert.equal(isEntryScreen(p), false, p)
 })
+
+// ---- F16: 通信が切れた帯を、実際に届かないと確かめたときだけ出す ----
+import { confirmOffline } from './offline'
+test('1回でも届けば、通信が切れたとは言わない', async () => {
+  let n = 0
+  const r = await confirmOffline(async () => ++n >= 2, { sleep: async () => {} })
+  assert.equal(r, false)
+  assert.equal(n, 2)
+})
+test('すべて届かなかったときだけ、通信が切れたと判定する', async () => {
+  let n = 0
+  const r = await confirmOffline(async () => { n++; return false }, { attempts: 3, sleep: async () => {} })
+  assert.equal(r, true)
+  assert.equal(n, 3)
+})
+test('確かめの途中で例外が出ても、届かなかった扱いにする', async () => {
+  const r = await confirmOffline(async () => { throw new Error('x') }, { attempts: 2, sleep: async () => {} })
+  assert.equal(r, true)
+})

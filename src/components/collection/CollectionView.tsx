@@ -138,10 +138,10 @@ function ScoreCard({ score, areas, isProvisional, canEdit, onSave }: {
         <div className={styles.ring} role="img" aria-label={score.percent === null ? '活用度はまだ出ていません' : `活用度 ${score.percent}%`}>
           <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden>
             <circle cx="60" cy="60" r={R} className={styles.ringTrack} />
-            <circle cx="60" cy="60" r={R} className={styles.ringFill} strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} />
+            <circle cx="60" cy="60" r={R} className={styles.ringFill} strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} style={{ ['--ring-c' as string]: C }} />
           </svg>
           <span className={styles.ringValue}>
-            {score.percent === null ? <span className={styles.ringNone}>未設定</span> : <>{score.percent}<small>%</small></>}
+            {score.percent === null ? <span className={styles.ringNone}>未設定</span> : <span className={styles.ringNum}>{score.percent}<small>%</small></span>}
           </span>
         </div>
         <div className={styles.scoreText}>

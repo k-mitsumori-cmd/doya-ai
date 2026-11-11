@@ -8,6 +8,8 @@ import {
   Button, Card, DetailSkeleton, ErrorText, Field, Gate, PageHeader, PageShell, PaymentTermsFields,
   errMsg, fetchJson, inputCls, s, toast, useResource, useUnsavedGuard, type Terms,
 } from '@/components/income/ui'
+import { SaveLabel } from '@/components/ds/save-label'
+import { useSaveState } from '@/components/ds/use-save-state'
 
 type Org = { id: string; name: string; slug: string; promaneWorkspaceId: string | null; expenseSourceId?: string | null; expenseOrganizationId?: string | null }
 type ExpenseSourceInfo = { id: string; label: string; available: boolean; options: { id: string; name: string }[] }
@@ -60,6 +62,9 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
   const [issuerBusy, setIssuerBusy] = useState(false)
   const [issuerError, setIssuerError] = useState<string | null>(null)
   const [orgBusy, setOrgBusy] = useState(false)
+  // 保存できたときのチェックの印（見た目だけ。保存の処理は変えない）
+  const issuerSave = useSaveState()
+  const orgSave = useSaveState()
   const [orgError, setOrgError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [tried, setTried] = useState<{ issuer: boolean; org: boolean }>({ issuer: false, org: false })
@@ -94,8 +99,10 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
       await fetchJson('/api/income/issuer', { method: 'PUT', body: { ...issuer, ...terms } })
       issuerGuard.markClean()
       toast('請求元を保存しました')
+      issuerSave.set('saved')
     } catch (err) {
       setIssuerError(errMsg(err))
+      issuerSave.set('error')
     } finally {
       setIssuerBusy(false)
     }
@@ -116,8 +123,10 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
       })
       orgGuard.markClean()
       toast('組織の設定を保存しました')
+      orgSave.set('saved')
     } catch (err) {
       setOrgError(errMsg(err))
+      orgSave.set('error')
     } finally {
       setOrgBusy(false)
     }
@@ -172,7 +181,7 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
           </Card>
         </fieldset>
         <ErrorText message={issuerError} />
-        {canEdit && <Button type="submit" variant="primary" loading={issuerBusy}>請求元を保存する</Button>}
+        {canEdit && <Button type="submit" variant="primary" loading={issuerBusy}><SaveLabel state={issuerSave.state}>請求元を保存する</SaveLabel></Button>}
       </form>
 
       <form onSubmit={saveOrg} noValidate>
@@ -196,7 +205,7 @@ function SettingsForms({ org, issuer: loadedIssuer }: Loaded) {
         </fieldset>
         <div className="mt-4 space-y-3">
           <ErrorText message={orgError} />
-          {canEdit && <Button type="submit" loading={orgBusy}>組織の設定を保存する</Button>}
+          {canEdit && <Button type="submit" loading={orgBusy}><SaveLabel state={orgSave.state}>組織の設定を保存する</SaveLabel></Button>}
         </div>
       </form>
     </>

@@ -22,3 +22,29 @@
 /* 「足りない」の知らせ。右下に出す（スマホでは下のタブとプレビューの札の上） */
 .lowPower { position: fixed; right: 16px; bottom: 24px; z-index: 70; width: min(420px, calc(100vw - 32px)); }
 @media (max-width: 767px) { .lowPower { right: 12px; left: 12px; width: auto; bottom: calc(128px + env(safe-area-inset-bottom, 0px)); } }
+
+/* 残りわずかのときは札が小さく揺れる（出たときに1回）。足りない知らせは下から出る */
+.meter[data-low='true'] { animation: m-shake var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) 400ms both; }
+.lowPower { animation: m-rise var(--m-dur-slow, 420ms) var(--m-ease-emphasized, cubic-bezier(0.32, 0.72, 0, 1)) both; }
+.fill { width: 100%; transform-origin: left center; transition: transform var(--m-dur-slow, 420ms) var(--m-ease-emphasized, cubic-bezier(0.32, 0.72, 0, 1)); }
+@media (prefers-reduced-motion: reduce) { .meter[data-low='true'], .lowPower { animation: none; } .fill { transition: none; } }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }
+@keyframes m-shake { 0%, 100% { transform: translateX(0); } 18% { transform: translateX(-6px); } 36% { transform: translateX(5px); } 54% { transform: translateX(-3px); } 72% { transform: translateX(2px); } }
+
+/* 減ったときの「−10」。数字の上へ小さく浮いて消える（transform と opacity だけ。場所は取らない） */
+.num { position: relative; }
+.drop {
+  position: absolute; right: 0; top: 50%; margin-top: -9px; font-size: 12px; font-weight: 800; line-height: 1; color: var(--poor, #e5254d);
+  pointer-events: none; animation: pw-drop 1200ms var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+}
+@keyframes pw-drop {
+  0% { opacity: 0; transform: translateY(2px) scale(0.8); }
+  15% { opacity: 1; transform: translateY(-6px) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .drop { animation: none; opacity: 0; }
+}

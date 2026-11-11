@@ -6,7 +6,11 @@
 // ⚠️ 新しい見た目（src/lib/ui-next.ts）のときだけ出す。判定はページ（サーバー）が行う。
 // ⚠️ 演出は控えめ（ゲージが伸びるだけ）。prefers-reduced-motion では動かさない（CSS 側）。
 // ⚠️ ドヤパワーの数は、台帳（ui-next/doyapower-ledger）ができるまでは記録から出した見込み。画面にもそう書く。
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { Burst } from '@/components/ds/celebrate'
+import { CheckMark } from '@/components/ds/check-mark'
+import { doneIds, newlyDoneQuests, parseSeenIds } from '@/lib/missions/celebrate'
 import { UiIcon } from '@/components/icons'
 import { formatMinutes, formatYen } from '@/lib/missions/achievements'
 import type { MissionsView } from '@/lib/missions/view'
@@ -29,10 +33,33 @@ function monthLabel(monthKey: string) {
   return m ? `${m}月` : '今月'
 }
 
-function Mark({ done }: { done: boolean }) {
+function Mark({ done, fresh = false, big = false }: { done: boolean; fresh?: boolean; big?: boolean }) {
+  // fresh: 手順がいま済んだとき。印が弾んで現れ、小さな点が広がる（transform と opacity だけ）
   return done
-    ? <span className={`${styles.mark} ${styles.markDone}`}><UiIcon name="check" size={14} strokeWidth={2.5} /></span>
+    ? (
+      <span className={`${styles.mark} ${styles.markDone} ${fresh ? styles.markFresh : ''}`} style={fresh ? { ['--cel-delay' as string]: '320ms' } : undefined}>
+        <UiIcon name="check" size={14} strokeWidth={2.5} />
+        {fresh ? <Burst big={big} delay={320} /> : null}
+      </span>
+    )
     : <span className={styles.mark} />
+}
+
+/** 前に見たときから新しく済んだ手順を調べる（ブラウザに、済んだ手順の記録を1つだけ持つ。初めて見るときは祝わない） */
+const SEEN_KEY = 'doya-quests-done-v1'
+function useFreshQuests(quests: { id: string; done: boolean }[], enabled: boolean) {
+  const [state, setState] = useState<{ fresh: ReadonlySet<string>; all: boolean }>({ fresh: new Set(), all: false })
+  const sig = quests.map((q) => `${q.id}:${q.done ? 1 : 0}`).join(',')
+  useEffect(() => {
+    if (!enabled) return
+    let prev: string[] | null = null
+    try { prev = parseSeenIds(window.localStorage.getItem(SEEN_KEY)) } catch { /* 保存できない環境では、祝わずに済ませる */ }
+    const r = newlyDoneQuests(prev, quests)
+    if (r.fresh.length > 0) setState({ fresh: new Set(r.fresh), all: r.allJustDone })
+    try { window.localStorage.setItem(SEEN_KEY, JSON.stringify(doneIds(quests))) } catch { /* 同上 */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig, enabled])
+  return state
 }
 
 export default function MissionsBoard({ view, fx, canEditOrgFx = false, sample = false }: { view: MissionsView; fx?: DoyaPowerFx; canEditOrgFx?: boolean; sample?: boolean }) {
@@ -51,6 +78,7 @@ function MissionsBody({ view, canEditOrgFx, sample }: { view: MissionsView; canE
   const ratio = power.cap > 0 ? Math.min(1, power.thisMonth / power.cap) : 0
   const questsDone = quests.filter((q) => q.done).length
   const questsLeft = quests.filter((q) => !q.done).reduce((s, q) => s + q.reward, 0)
+  const celebrate = useFreshQuests(quests, motion && !sample)
   const toolReady = (href: string) => (href.startsWith('/quote') ? view.tools.quote : href.startsWith('/sfa') ? view.tools.sfa : true)
 
   return (
@@ -123,11 +151,18 @@ function MissionsBody({ view, canEditOrgFx, sample }: { view: MissionsView; canE
               <h2 id="quest-h" className={styles.cardTitle}>はじめの手順</h2>
             </div>
             {questsLeft > 0 && <span className={styles.badge}>残り +{questsLeft}</span>}
+            {celebrate.all && motion ? (
+              // 全部済んだときの、少し大きなお祝い（枠の幅は取らない）
+              <span className={styles.allDone} aria-hidden>
+                <CheckMark size={32} burst />
+                <Burst big delay={500} />
+              </span>
+            ) : null}
           </div>
           <ul className={styles.list}>
             {quests.map((q) => (
               <li key={q.id} className={q.done ? `${styles.item} ${styles.itemDone}` : styles.item}>
-                <Mark done={q.done} />
+                <Mark done={q.done} fresh={celebrate.fresh.has(q.id)} big={celebrate.all} />
                 <div className={styles.itemBody}>
                   <p className={styles.itemTitle}>{q.title}</p>
                   <p className={styles.itemSub}>{q.condition}</p>

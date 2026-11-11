@@ -53,7 +53,10 @@
   background: var(--blue-soft); color: var(--blue);
   font-variant-numeric: tabular-nums;
 }
-.badgeDone { background: var(--ok-bg); color: var(--ok-ink); }
+.badgeDone { position: relative; background: var(--ok-bg); color: var(--ok-ink); }
+/* 達成の印から光の輪が1回広がる（M12） */
+.badgeDone::after { content: ''; position: absolute; inset: 0; border-radius: inherit; border: 2px solid var(--ok-ink); opacity: 0; pointer-events: none; animation: badgeRing 700ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms both; }
+@keyframes badgeRing { 0% { opacity: 0.6; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.5); } }
 
 .list { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
 .item {
@@ -72,6 +75,14 @@
   display: inline-flex; align-items: center; justify-content: center;
 }
 .markDone { border-color: var(--ok-ink); background: var(--ok-ink); color: var(--paper); }
+.mark { position: relative; }
+/* 手順がいま済んだとき: 印が弾んで現れる（点は ds/Burst）。app-motion.css の曲線に合わせる */
+.markFresh { animation: markPop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--cel-delay, 0ms) both; }
+@keyframes markPop { 0% { opacity: 0; transform: scale(0.4); } 100% { opacity: 1; transform: none; } }
+/* 全部済んだときのお祝い。見出しの右に置き、場所は取らない（absolute） */
+.cardHead { position: relative; }
+.allDone { position: absolute; right: 4px; top: -6px; display: inline-flex; pointer-events: none; animation: allPop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 400ms both; }
+@keyframes allPop { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: none; } }
 
 .go {
   flex: none; align-self: center; display: inline-flex; align-items: center; min-height: 36px;
@@ -120,8 +131,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .meterFill { animation: none; }
+  .markFresh, .allDone { animation: none; }
+  .badgeDone::after { display: none; }
 }
-.page[data-motion='off'] .meterFill { animation: none; }
+.page[data-motion='off'] .meterFill, .page[data-motion='off'] .badgeDone::after { animation: none; }
 
 /* 暗い設定（prefers-color-scheme: dark）。枠が明るいままでも読めるよう、この画面の中で色をそろえる（文字と背景の比は 4.5:1 以上） */
 @media (prefers-color-scheme: dark) {

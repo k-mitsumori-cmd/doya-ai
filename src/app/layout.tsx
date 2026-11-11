@@ -1,7 +1,7 @@
 import RuntimeErrorReporter from '@/components/RuntimeErrorReporter';
 import MaterialSymbolsReady from '@/components/MaterialSymbolsReady';
 import type { Metadata, Viewport } from 'next'
-import { Toaster } from 'react-hot-toast'
+import DoyaToaster from '@/components/ds/doya-toaster'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import ClearArtifactsOnSignOut from '@/components/notice/ClearArtifactsOnSignOut'
@@ -181,20 +181,7 @@ export default function RootLayout({
           {/* Stripe決済からの戻りを全サービス共通で検知してプランを即時反映（Webhook不達の保険） */}
           <StripeSuccessSync />
           {/* containerClassName: ドヤくんの知らせ（旗 GUIDE_POPUPS_ROLLOUT）が出ている画面では、この Toaster を隠して同じトーストを知らせの見た目で出す（src/components/notice/HotToastBridge.tsx） */}
-          <Toaster
-            containerClassName="doya-hot-toaster"
-            position="top-center"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#fff',
-                color: '#333',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                borderRadius: '12px',
-                padding: '16px',
-              },
-            }}
-          />
+          <DoyaToaster />
         </Providers>
       </body>
     </html>

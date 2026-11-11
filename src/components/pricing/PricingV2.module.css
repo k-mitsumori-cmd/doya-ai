@@ -9,10 +9,13 @@
 .toggle { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
 .toggleItem {
   display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 0; border-radius: 999px;
-  background: transparent; color: var(--sub); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
-  transition: background 160ms var(--ease), color 160ms var(--ease);
+  position: relative; background: transparent; color: var(--sub); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: color 160ms var(--ease);
 }
-.toggleItem[data-active='true'] { background: var(--paper); color: var(--ink); box-shadow: var(--shadow); }
+/* 選んだ印（白い面）は .toggleThumb が滑って動く。色だけここで切り替える */
+.toggleItem[data-active='true'] { color: var(--ink); }
+.toggleThumb { position: absolute; inset: 0; z-index: 0; border-radius: 999px; background: var(--paper); box-shadow: var(--shadow); pointer-events: none; }
+.toggleLabel { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; }
 .toggleItem:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .toggleSave { padding: 2px 8px; border-radius: 999px; background: var(--blue-soft); color: var(--blue); font-size: 11px; font-weight: 800; }
 

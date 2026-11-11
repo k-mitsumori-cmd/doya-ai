@@ -5,7 +5,16 @@
  */
 
 /* ---- Card ---- */
+/* 結果のカードが上から順に現れる（M5）。枠の中（app-motion.css が読まれる所）でだけ効く。動かすのは transform と opacity。
+   兄弟の順に 40ms ずつ遅らせる（8枚目以降は同じ遅れ） */
+.card:nth-child(2) { animation-delay: calc(var(--m-stagger, 40ms) * 1); }
+.card:nth-child(3) { animation-delay: calc(var(--m-stagger, 40ms) * 2); }
+.card:nth-child(4) { animation-delay: calc(var(--m-stagger, 40ms) * 3); }
+.card:nth-child(5) { animation-delay: calc(var(--m-stagger, 40ms) * 4); }
+.card:nth-child(6) { animation-delay: calc(var(--m-stagger, 40ms) * 5); }
+.card:nth-child(n+7) { animation-delay: calc(var(--m-stagger, 40ms) * 6); }
 .card {
+  animation: m-rise var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: var(--r);
@@ -98,7 +107,13 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
   .statValue { font-size: 26px; }
 }
 
+/* 空の状態の絵は、ゆっくり浮き沈みする（最初に弾んで現れてから） */
+.empty > :first-child { animation: m-pop var(--m-dur-slow, 420ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both, ds-float 3.2s ease-in-out 600ms infinite; }
+@keyframes ds-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
 @media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .empty > :first-child { animation: none; }
   .skeleton { animation: none; }
   .stat, .button { transition: none; }
   a.stat:hover { transform: none; }
@@ -124,3 +139,7 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
   .heroArt { width: 120px; justify-self: end; margin-top: -8px; }
   .heroTitle { font-size: 20px; }
 }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-pop { 0% { opacity: 0; transform: scale(0.82); } 100% { opacity: 1; transform: none; } }
+@keyframes m-rise { 0% { opacity: 0; transform: translateY(14px); } 100% { opacity: 1; transform: none; } }

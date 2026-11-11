@@ -16,3 +16,10 @@
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* 足りないときは札が小さく揺れる（出たときに1回） */
+.badge[data-short='true'] { animation: m-shake var(--m-dur-slow, 420ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) 200ms both; }
+@media (prefers-reduced-motion: reduce) { .badge[data-short='true'] { animation: none; } }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-shake { 0%, 100% { transform: translateX(0); } 18% { transform: translateX(-6px); } 36% { transform: translateX(5px); } 54% { transform: translateX(-3px); } 72% { transform: translateX(2px); } }

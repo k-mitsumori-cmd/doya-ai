@@ -153,8 +153,11 @@
 .title { margin: 0; font-size: 17px; line-height: 1.5; font-weight: 800; color: var(--ink, #101633); }
 .caption { margin: 0; font-size: 14px; line-height: 1.6; font-weight: 600; color: var(--sub, #4a5375); }
 /* 一言は2行ぶんの高さを先に取る（入れ替わっても下が動かない） */
-.step { margin: 4px 0 0; min-height: 3em; font-size: 14px; line-height: 1.5; font-weight: 700; color: var(--blue-deep, #0047d6); animation: dw-step 0.5s ease-out both; }
-@keyframes dw-step { from { opacity: 0.2; } to { opacity: 1; } }
+.step { margin: 4px 0 0; min-height: 3em; font-size: 14px; line-height: 1.5; font-weight: 700; color: var(--blue-deep, #0047d6); animation: dw-step var(--m-dur-base, 280ms) var(--m-ease-out, cubic-bezier(0.2, 0.8, 0.2, 1)) both; }
+/* 一行ずつ、下から入れ替わる（段階の表示） */
+@keyframes dw-step { from { opacity: 0.2; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+/* できたら、文字の欄が弾んで現れる */
+.root[data-state='done'] .text { animation: m-pop var(--m-dur-slow, 420ms) var(--m-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)) both; }
 
 .compact { padding: 12px; gap: 10px; }
 .compact .stage { width: min(100%, 300px); }
@@ -167,9 +170,12 @@
 
 /* 動きを減らす設定: 動かさず、塗り終わった形で止める */
 @media (prefers-reduced-motion: reduce) {
-  .root .paint, .root .roller, .root .bear, .root .bearA, .root .bearB, .root .drop, .root .spark, .root .step { animation: none !important; transition: none !important; }
+  .root .paint, .root .roller, .root .bear, .root .bearA, .root .bearB, .root .drop, .root .spark, .root .step, .root .text { animation: none !important; transition: none !important; }
   .root[data-mode='loop'] .paint { clip-path: inset(0 0 0 0); opacity: 1; }
   .root[data-mode='loop'] .roller { opacity: 0; }
   .root[data-state='working'] .bearA { opacity: 1; }
   .root[data-state='working'] .bearB { opacity: 0; }
 }
+
+/* CSS Modules はアニメーション名を局所化するため、app-motion.css の共通の動きと同じ定義をここにも置く（置かないと動かない） */
+@keyframes m-pop { 0% { opacity: 0; transform: scale(0.82); } 100% { opacity: 1; transform: none; } }

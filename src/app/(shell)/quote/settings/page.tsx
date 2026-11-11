@@ -10,6 +10,8 @@ import Link from 'next/link'
 import { useQuoteIssuerSettings } from '@/lib/quote/use-issuer-settings'
 import MemberPanel from '@/components/org/MemberPanel'
 import { ErrorNotice } from '@/components/ds'
+import { SaveLabel } from '@/components/ds/save-label'
+import { useSaveFlash } from '@/components/ds/use-save-state'
 import { quoteErrorCopy, quoteErrorKind, quoteReadErrorKind } from '@/components/quote/error-copy'
 
 // 新しい見た目で、キーボードで移ったときに見える枠（UI 品質 a11y）
@@ -32,6 +34,8 @@ const TEXTAREAS = [
 
 export default function QuoteSettingsPage() {
   const { form, loading, loaded, saving, error, errorStatus, message, unknown, canEdit, update, load, save } = useQuoteIssuerSettings()
+  // 保存できたときのチェックの印。保存が終わった瞬間に「保存しました」の知らせが出ていれば成功（見た目だけ）
+  const saveMark = useSaveFlash(saving, !error && message === '保存しました')
 
 
   return (
@@ -108,7 +112,7 @@ export default function QuoteSettingsPage() {
           disabled={!canEdit || saving || unknown || !form.companyName?.trim()}
           className={`min-h-11 ${FOCUS} w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400`}
         >
-          {saving ? '保存中...' : '保存する'}
+          <SaveLabel state={saveMark}>{saving ? '保存中...' : '保存する'}</SaveLabel>
         </button>
 
         {/* メンバー招待。トップ（見積書一覧の上）にあったものをここへ移した。 */}
