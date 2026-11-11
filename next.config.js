@@ -4,7 +4,7 @@ const APP_ONLY_PREFIXES = [
   '/auth',
   '/seo/articles', '/seo/create', '/seo/dashboard', '/seo/images',
   '/seo/jobs', '/seo/new', '/seo/settings', '/seo/swipe', '/seo/template',
-  '/banner/dashboard', '/banner/gallery', '/banner/test', '/banner/url',
+  '/banner/dashboard', '/banner/gallery', '/banner/url',
   '/adbanner/dashboard',
   '/persona/history',
   '/interview/projects', '/interview/recipes', '/interview/settings',
