@@ -326,7 +326,19 @@ async function check(name, fn) { await reset(); await fn(); assert(await used() 
       assert.equal(await cacheSeats(), 3);
       assert.equal(state.notifications, 0);
     });
-    await check('decrease-before-invite', async () => { assert.equal((await change()).status, 200); const response = await invite(); assert.equal(response.status, 409); assert.equal((await response.json()).code, 'NO_SEAT'); });
+    for (const [kind, ownerUpdate, guidance] of [
+      ['legacy', { stripePriceId: null }, '今のご契約は1人用です。メンバーを増やしたいときは、お問い合わせください。'],
+      ['free', { plan: 'FREE', stripePriceId: null }, 'フリーは3人までです。チームプランにすると人数を増やせます。'],
+    ]) await check('full-' + kind + '-invite-returns-plan-guidance-and-leaves-no-reservation', async () => {
+      await raw.user.update({ where: { id: owner.id }, data: ownerUpdate });
+      const response = await invite();
+      assert.equal(response.status, 409);
+      assert.deepEqual(await response.json(), { code: 'NO_SEAT', error: guidance });
+      assert.equal(await raw.accountCompanyMember.count({ where: { companyId, email: 'new@example.invalid' } }), 0);
+      assert.equal(await cacheSeats(), 5);
+      assert.equal(state.stripeAttempts, 0);
+    });
+    await check('decrease-before-invite', async () => { assert.equal((await change()).status, 200); const response = await invite(); assert.equal(response.status, 409); assert.deepEqual(await response.json(), { code: 'NO_SEAT', error: '人数（3人）がいっぱいです。人数を増やしてから招待してください。' }); });
     await check('invite-before-decrease', async () => { assert.equal((await invite()).status, 201); const response = await change(); assert.equal(response.status, 409); assert.equal((await response.json()).code, 'BELOW_USED'); });
     await check('body-paused-invite-rechecks-current-capacity', async () => {
       const reached = deferred(), resume = deferred();
