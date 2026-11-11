@@ -70,6 +70,11 @@ test('quote pagination keeps the footer with content and preserves long estimate
     for (let page = 1; page <= pageCount; page++) {
       const pageText = execFileSync('pdftotext', ['-raw', '-f', String(page), '-l', String(page), '-', '-'], { input: pdf }).toString().replace(/\s/g, '')
       assert.ok(pageText.includes('社内確認用'), `Draft watermark must be present on page ${page}/${pageCount}`)
+      if (long) {
+        const itemNames = pageText.match(/検査明細\d{3}/g) ?? []
+        const descriptions = pageText.match(/明細の説明です。内容を省略せず次のページへ続けます。/g) ?? []
+        assert.equal(descriptions.length, itemNames.length, `Each line item and description must stay on the same page (${page}/${pageCount})`)
+      }
     }
     assert.ok(text.includes(long ? '49,500' : '330,000'), 'Totals must remain correct')
     for (const item of fixture.lineItems) assert.ok(text.includes(item.itemName), `Missing item ${item.itemName}`)
