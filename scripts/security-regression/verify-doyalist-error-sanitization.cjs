@@ -12,13 +12,13 @@ const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, U
 const projectInput = load('src/lib/doyalist/project-input.ts')
 const request = (body) => new Request('https://doya.test/api/doyalist/projects', { method: 'POST', body: JSON.stringify(body) })
 
-function route(file, prisma) {
+function route(file, prisma, session = identity) {
   const exportStream = load('src/lib/doyalist/export-stream.ts', {
     '@/lib/prisma': { prisma }, '@/lib/doyalist/export-csv': exportCsv,
   })
   return load(file, {
     'next/server': { NextResponse: Response },
-    'next-auth': { getServerSession: async () => identity },
+    'next-auth': { getServerSession: async () => session },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
     '@/lib/doyalist/stream-json': streamJson,
@@ -36,14 +36,30 @@ async function expectSafe(promise, expected) {
   assert.equal(data.error, expected)
   assert(!JSON.stringify(data).includes(secret))
 }
+function expectPrivate(response) {
+  assert.equal(response.headers.get('cache-control'), 'private, no-store')
+  assert.match(response.headers.get('vary'), /(?:^|,)\s*cookie\s*(?:,|$)/i)
+}
 ;(async () => {
+  await check('Doyalist project endpoints mark anonymous replies private and do not read projects', async () => {
+    const api = route('src/app/api/doyalist/projects/route.ts', {
+      doyalistProject: { findMany: failure, create: failure },
+    }, null)
+    for (const response of [await api.GET(), await api.POST(request({ name: 'valid' }))]) {
+      assert.equal(response.status, 401)
+      expectPrivate(response)
+    }
+  })
   await check('Doyalist project list keeps database errors private and legacy creation stops before writes', async () => {
     const api = route('src/app/api/doyalist/projects/route.ts', {
       doyalistProject: { findMany: failure, create: failure },
     })
-    await expectSafe(api.GET(), 'プロジェクトの取得に失敗しました')
+    const failed = await api.GET()
+    expectPrivate(failed)
+    await expectSafe(failed, 'プロジェクトの取得に失敗しました')
     const denied = await api.POST(request({ name: 'valid' }))
     assert.equal(denied.status, 409)
+    expectPrivate(denied)
     assert.equal((await denied.json()).code, 'OPERATION_REQUIRED')
   })
   await check('Doyalist project list pages histories larger than the response limit', async () => {
@@ -66,6 +82,7 @@ async function expectSafe(promise, expected) {
     })
     const response = await api.GET()
     assert.equal(response.status, 200)
+    expectPrivate(response)
     const body = await response.text()
     assert(Buffer.byteLength(body) > 4.5 * 1024 * 1024)
     const result = JSON.parse(body)
@@ -97,6 +114,7 @@ async function expectSafe(promise, expected) {
     const req = (query) => ({ nextUrl: { searchParams: new URL(`https://doya.test/api/doyalist/projects?${query}`).searchParams } })
     const first = await api.GET(req('limit=50&search=Tokyo'))
     assert.equal(first.status, 200)
+    expectPrivate(first)
     const firstPage = await first.json()
     assert.equal(firstPage.projects.length, 50)
     assert.equal(firstPage.total, 60)
