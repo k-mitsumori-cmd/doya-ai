@@ -8,7 +8,7 @@ import { getPopupUserId, ownPopup } from '@/lib/popup/access'
 import { isId, sanitizeCreative, type PopupCreative } from '@/lib/popup/schema'
 import { saveImage } from '@/lib/popup/storage'
 import { toPopupDto } from '@/lib/popup/dto'
-import { generatePopupImage, parseImageBrief, POPUP_IMAGE_DAILY_LIMIT, POPUP_IMAGE_QUOTA_SCOPE } from '@/lib/popup/imagegen'
+import { generateAndSave, parseImageBrief, POPUP_IMAGE_DAILY_LIMIT, POPUP_IMAGE_QUOTA_SCOPE } from '@/lib/popup/imagegen'
 import { generateImageWithFallback } from '@/lib/image-generator'
 import { consumeDailyQuota, quotaSubject, refundDailyQuota } from '@/lib/server-daily-quota'
 import { withDoyaPowerCharge, DOYA_POWER_CONSUMED_HEADER } from '@/lib/doya-power/charge'
@@ -41,40 +41,34 @@ async function postHandler(req: NextRequest, ctx: Ctx) {
 
   const current = popup.creative as unknown as PopupCreative
   const c = sanitizeCreative(current, current)
+  const subject = quotaSubject(userId)
+  // 失敗のときに回数・ドヤパワーを戻すかは generateAndSave が決める（作られて課金されたあとの失敗では戻さない）
+  const r = await generateAndSave(
+    { generate: generateImageWithFallback, save: (buf) => saveImage(userId, popup.id, buf) },
+    { site: (popup.site.site || {}) as any, brief: parsed.brief, colors: c.colors, layout: c.layout }
+  )
+  if (!r.ok) {
+    if (r.refundQuota) await refundDailyQuota(POPUP_IMAGE_QUOTA_SCOPE, subject)
+    console.error('[popup/image/generate] failed', { status: r.status, refundQuota: r.refundQuota, consumed: r.consumed })
+    const res = fail(r.status, r.message)
+    if (r.consumed) res.headers.set(DOYA_POWER_CONSUMED_HEADER, '1')
+    return res
+  }
   try {
-    const r = await generatePopupImage(
-      { generate: generateImageWithFallback },
-      { site: (popup.site.site || {}) as any, brief: parsed.brief, colors: c.colors, layout: c.layout }
-    )
-    if (!r.ok) {
-      await refundDailyQuota(POPUP_IMAGE_QUOTA_SCOPE, quotaSubject(userId))
-      return fail(502, '作った画像が大きすぎて保存できませんでした。もう一度作り直してください。')
-    }
-    const saved = await saveImage(userId, popup.id, r.image)
-    if ('error' in saved) {
-      // 画像は作られている（課金された）ので、ドヤパワーは戻さない。回数だけ戻す
-      await refundDailyQuota(POPUP_IMAGE_QUOTA_SCOPE, quotaSubject(userId))
-      const res = fail(502, '画像を保存できませんでした。時間をおいて、もう一度お試しください。')
-      res.headers.set(DOYA_POWER_CONSUMED_HEADER, '1')
-      return res
-    }
     const alt = c.imageAlt || parsed.brief.headline || parsed.brief.message.slice(0, 60)
-    const creative = sanitizeCreative({ imageAlt: alt }, { ...c, imagePath: saved.path, imageWidth: saved.width, imageHeight: saved.height })
+    const creative = sanitizeCreative({ imageAlt: alt }, { ...c, imagePath: r.saved.path, imageWidth: r.saved.width, imageHeight: r.saved.height })
     const updated = await prisma.popup.update({ where: { id: popup.id }, data: { creative: creative as any } })
     void recordServiceUsage({ userId, serviceId: 'popup', action: 'ポップアップの画像を作成', summary: popup.name.slice(0, 60), count: 1 })
     return NextResponse.json({ popup: toPopupDto(updated) }, { headers: { 'Cache-Control': 'private, no-store' } })
-  } catch (e) {
-    const status = (e as { status?: unknown })?.status
-    console.error('[popup/image/generate] failed', { status: typeof status === 'number' ? status : undefined, name: e instanceof Error ? e.name : 'unknown' })
-    await refundDailyQuota(POPUP_IMAGE_QUOTA_SCOPE, quotaSubject(userId))
-    const res = fail(502, '画像を作れませんでした。時間をおいて、もう一度お試しください。')
-    // 上流が応答を返さなかった（時間切れ・切断）ときは、作られたか分からないので、ドヤパワーは戻さない
-    if (typeof status !== 'number') res.headers.set(DOYA_POWER_CONSUMED_HEADER, '1')
+  } catch {
+    // 画像は作られている（課金された）。回数もドヤパワーも戻さない
+    console.error('[popup/image/generate] db update failed')
+    const res = fail(500, '画像は作れましたが、案への反映に失敗しました。時間をおいて、もう一度お試しください。')
+    res.headers.set(DOYA_POWER_CONSUMED_HEADER, '1')
     return res
   }
 }
 
-// ドヤパワー（旗 DOYA_POWER_ROLLOUT の内側だけ）。見出し・伝えたいことの長さが上限を超えるときは、減らす前に 400 で断る
 const invalidBrief = (b: Record<string, unknown> | null) => {
   const r = parseImageBrief(b)
   return r.ok ? null : r.error

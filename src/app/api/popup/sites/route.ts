@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const userId = await getPopupUserId()
   if (!userId) return privateApiJson({ error: 'ログインが必要です。' }, { status: 401 })
   const body = await req.json().catch(() => ({}))
-  const r = await proposeForUser(userId, { url: body?.url, manualText: body?.manualText })
+  const r = await proposeForUser(userId, { url: body?.url, manualText: body?.manualText, withImageDraft: body?.withImageDraft === true })
   if (r.ok) return privateApiJson({ site: r.site, popups: r.popups })
   if (r.status === 429) {
     return privateApiJson(

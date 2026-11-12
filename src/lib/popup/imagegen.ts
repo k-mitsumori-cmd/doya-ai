@@ -11,6 +11,7 @@ import type { generateImageWithFallback } from '@/lib/image-generator'
 import type { SiteProfile } from '@/lib/asklink/types'
 import { MAX_IMAGE_BYTES } from './storage'
 import type { PopupLayout } from './schema'
+import { IMAGE_BRIEF_LIMITS } from './imagegen-public'
 
 /** 品質。medium 固定（asklink・adimage と同じ設定。reference/services/asklink.md の原価の見込みの根拠） */
 export const POPUP_IMAGE_QUALITY = 'medium' as const
@@ -18,11 +19,8 @@ export const POPUP_IMAGE_QUALITY = 'medium' as const
 export const POPUP_IMAGE_MODEL = 'gpt-image-2'
 /** 1枚あたりの見込み（米ドル）。reference/services/asklink.md「原価」の gpt-image-2 medium 1枚 $0.05〜0.07 の上側 */
 export const POPUP_IMAGE_USD_ESTIMATE = 0.07
-/** 1人が1日に作れる回数（作り直しも1回に数える） */
-export const POPUP_IMAGE_DAILY_LIMIT = 10
+export { POPUP_IMAGE_DAILY_LIMIT, IMAGE_BRIEF_LIMITS } from './imagegen-public'
 export const POPUP_IMAGE_QUOTA_SCOPE = 'popup-image'
-
-export const IMAGE_BRIEF_LIMITS = { headline: 14, message: 120 } as const
 
 /** 大きさ（16の倍数・長辺:短辺が3:1以内・1024×1024以上の面積。gpt-image-2 の条件）。ポップアップの縦横比に合わせる */
 export const POPUP_IMAGE_SIZES: Record<PopupLayout, { width: number; height: number }> = {
@@ -138,4 +136,51 @@ function aspectOf(w: number, h: number): string {
   if (w === h) return '1:1'
   if (w / h >= 2.5) return '21:9'
   return '4:5'
+}
+
+export type SavedImage = { path: string; width: number; height: number }
+
+export type GenerateAndSaveResult =
+  | { ok: true; saved: SavedImage; prompt: string }
+  | {
+      ok: false
+      status: number
+      message: string
+      /** 1日の回数を戻してよいか。上流が失敗を確かに返した（作られていない）ときだけ true */
+      refundQuota: boolean
+      /** 課金されたかもしれない（true のとき、応答に DOYA_POWER_CONSUMED_HEADER を付けてドヤパワーを戻さない） */
+      consumed: boolean
+    }
+
+/**
+ * 1枚作って保存する。失敗の種類ごとに、回数とドヤパワーを戻すかを決める（正本）。
+ * - 上流が失敗を確かに返した（status が数）→ 作られていない。回数もドヤパワーも戻す
+ * - 応答は返ったが画像が無い → 課金はされた。回数は戻す・ドヤパワーは戻さない
+ * - 時間切れ・切断 → 作られたか分からない。どちらも戻さない
+ * - 作れたあとの失敗（大きすぎる・保存できない）→ 課金された。どちらも戻さない
+ */
+export async function generateAndSave(
+  deps: { generate: GenerateFn; save: (image: Buffer) => Promise<SavedImage | { error: string }> },
+  input: Parameters<typeof generatePopupImage>[1]
+): Promise<GenerateAndSaveResult> {
+  let r: GenerateResult
+  try {
+    r = await generatePopupImage({ generate: deps.generate }, input)
+  } catch (e) {
+    const status = (e as { status?: unknown })?.status
+    const msg = e instanceof Error ? e.message : ''
+    const generic = '画像を作れませんでした。時間をおいて、もう一度お試しください。'
+    if (typeof status === 'number') return { ok: false, status: 502, message: generic, refundQuota: true, consumed: false }
+    if (/returned no image/.test(msg)) return { ok: false, status: 502, message: '画像を作れませんでした。内容を変えて、もう一度お試しください。', refundQuota: true, consumed: true }
+    return { ok: false, status: 502, message: generic, refundQuota: false, consumed: true }
+  }
+  if (!r.ok) return { ok: false, status: 502, message: '作った画像が大きすぎて保存できませんでした。もう一度作り直してください。', refundQuota: false, consumed: true }
+  let saved: SavedImage | { error: string }
+  try {
+    saved = await deps.save(r.image)
+  } catch {
+    saved = { error: 'save failed' }
+  }
+  if ('error' in saved) return { ok: false, status: 502, message: '画像を保存できませんでした。時間をおいて、もう一度お試しください。', refundQuota: false, consumed: true }
+  return { ok: true, saved, prompt: r.prompt }
 }

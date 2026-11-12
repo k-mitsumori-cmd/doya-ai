@@ -285,3 +285,19 @@ export function blankProposal(kind: PopupKind, site: SiteProfile): Proposal {
     frequency: sanitizeFrequency({}),
   }
 }
+
+/**
+ * 「画像でデザインした版」の下書き（画像型）。この時点では画像は無い（AIで画像を作る処理は呼ばない）。
+ * 編集画面の「画像を作る」ボタンで、利用者が押したときに1枚作る（ドヤパワーを使う）。
+ * リンク先は、相談・申し込みの行き先があればそれを入れておく。
+ */
+export function imageDraftProposal(site: SiteProfile): Proposal {
+  const p = blankProposal('image', site)
+  const cta = pickCta(site, 'b2b')
+  return {
+    ...p,
+    name: 'E. 画像でデザインした版',
+    reason: '編集画面の「画像を作る」ボタンで、サイトの内容と色に合う画像をAIが作ります（作るときにドヤパワーを使います）。作った画像がそのままポップアップになります。',
+    creative: sanitizeCreative({ ...p.creative, buttonUrl: cta?.url ?? '' }, p.creative),
+  }
+}

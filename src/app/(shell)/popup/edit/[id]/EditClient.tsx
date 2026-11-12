@@ -4,13 +4,17 @@
 // ⚠️ 保存する値はサーバ側（popup-write.ts）で検査し直す。ここの検査は表示用。
 // ⚠️ 色・角丸などはトークン（.pd-*）で描く。ポップアップ自体の色（利用者が選ぶ色）は値として扱う。
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ImagePlus, Loader2, Monitor, Pause, Play, Save, Smartphone } from 'lucide-react'
+import { AlertTriangle, ImagePlus, Loader2, Monitor, Pause, Play, Save, Smartphone, Sparkles } from 'lucide-react'
 import type { PopupDto } from '@/lib/popup/dto'
 import type { EditSiteInfo, PopupDaily } from '@/lib/popup/popup-read'
 import { LIMITS, PLACEMENT_LABEL, POPUP_PLACEMENTS, layoutOfPlacement, placementOf, type PopupCreative, type PopupLinkItem, type PopupPlacement } from '@/lib/popup/schema'
 import PopupPreview from '@/components/popup/PopupPreview'
 import { AreaChart } from '@/components/ds/charts'
-import { DaysSwitch, ErrorState, KindBadge, PageHeader, StatTile, StatusBadge, fmt, useToast } from '@/components/popup/ui'
+import { DaysSwitch, ErrorState, KindBadge, PageHeader, ProcessingSteps, StatTile, StatusBadge, fmt, useToast } from '@/components/popup/ui'
+import { useDoyaPower } from '@/components/doya-power/doya-power-context'
+import { ShellCostBadge } from '@/components/shell/power'
+import { doyaPowerCost } from '@/lib/doya-power/costs'
+import { IMAGE_BRIEF_LIMITS, POPUP_IMAGE_DAILY_LIMIT } from '@/lib/popup/imagegen-public'
 
 const len = (s: string) => Array.from(s).length
 
@@ -137,6 +141,13 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
   const [device, setDevice] = useState<'pc' | 'sp'>('pc')
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  // 画像を作る（AI）。見出しと伝えたいことは画面だけで持ち、押したときに送る
+  const [genHeadline, setGenHeadline] = useState('')
+  const [genMessage, setGenMessage] = useState('')
+  const [generating, setGenerating] = useState(false)
+  const [genSeconds, setGenSeconds] = useState(0)
+  const powerOn = useDoyaPower()
+  const powerCost = doyaPowerCost('popup.image')
   const [error, setError] = useState<string | null>(null)
   const [issues, setIssues] = useState<string[]>([])
   const [days, setDays] = useState<7 | 30 | 90>(30)
@@ -266,6 +277,44 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
     }
   }
 
+  useEffect(() => {
+    if (!generating) return
+    setGenSeconds(0)
+    const t = setInterval(() => setGenSeconds((n) => n + 1), 1000)
+    return () => clearInterval(t)
+  }, [generating])
+
+  const generate = async () => {
+    if (generating || uploading) return
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/popup/popups/${draft.id}/image/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline: genHeadline, message: genMessage }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (res.status === 401) {
+        window.location.href = `/auth/signin?callbackUrl=/popup/edit/${draft.id}`
+        return
+      }
+      if (!res.ok) {
+        setError(json?.error || '画像を作れませんでした。時間をおいて、もう一度お試しください。')
+        return
+      }
+      const cr = json.popup.creative
+      const img = { imagePath: cr.imagePath, imageWidth: cr.imageWidth, imageHeight: cr.imageHeight }
+      setPopup((p) => ({ ...p, creative: { ...p.creative, ...img, imageAlt: p.creative.imageAlt || cr.imageAlt }, imageUrl: json.popup.imageUrl, issues: json.popup.issues }))
+      setDraft((d) => ({ ...d, creative: { ...d.creative, ...img, imageAlt: d.creative.imageAlt || cr.imageAlt }, imageUrl: json.popup.imageUrl }))
+      show({ message: '画像を作りました。気に入らないときは「作り直す」を押してください。' })
+    } catch {
+      setError('通信に失敗しました。接続を確かめてもう一度お試しください。')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const siteColors = site.colors.filter((x) => /^#[0-9a-f]{6}$/i.test(x))
 
   return (
@@ -343,6 +392,43 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
                   />
                 </label>
                 <span className="pd-label">PNG・JPEG・WebP・GIF、2MBまで</span>
+              </div>
+              <div className="rounded-[var(--r-sm)] border border-[color:var(--line)] p-4">
+                <h3 className="flex items-center gap-2 text-[15px] font-bold">
+                  <Sparkles className="h-4 w-4 text-[color:var(--blue)]" aria-hidden />
+                  画像を作る
+                </h3>
+                <p className="pd-label mt-1">サイトの内容と色から、AIが画像を1枚作ります。画像に入る文字は、短い見出し1つまでです。</p>
+                <div className="mt-3 space-y-3">
+                  <Field id="popup-gen-headline" label="画像に入れる見出し（なくてもよい）" count={len(genHeadline)} max={IMAGE_BRIEF_LIMITS.headline}>
+                    <input id="popup-gen-headline" className="pd-input" value={genHeadline} onChange={(e) => setGenHeadline(e.target.value)} placeholder="例: 無料で相談できます" disabled={generating} />
+                  </Field>
+                  <Field id="popup-gen-message" label="伝えたいこと（なくてもよい）" count={len(genMessage)} max={IMAGE_BRIEF_LIMITS.message}>
+                    <textarea id="popup-gen-message" rows={3} className="pd-input" value={genMessage} onChange={(e) => setGenMessage(e.target.value)} placeholder="例: 初めての方にも安心して使ってもらえる雰囲気にしたい" disabled={generating} />
+                  </Field>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="pd-btn"
+                    disabled={generating || uploading || len(genHeadline) > IMAGE_BRIEF_LIMITS.headline || len(genMessage) > IMAGE_BRIEF_LIMITS.message}
+                    onClick={() => void generate()}
+                  >
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+                    {c.imagePath ? '作り直す' : '画像を作る'}
+                    <ShellCostBadge action="popup.image" />
+                  </button>
+                  <p className="pd-label min-w-0 flex-1">
+                    {powerOn && powerCost ? `ドヤパワーを ${powerCost} 使います。作り直すたびに、また ${powerCost} 使います。` : '作り直すたびに、1枚ぶんの費用がかかります。'}
+                    {` 1日に${POPUP_IMAGE_DAILY_LIMIT}回まで作れます。`}
+                  </p>
+                </div>
+                {generating && (
+                  <div className="mt-3">
+                    <ProcessingSteps steps={['指示文をまとめています', '画像を作っています']} current={genSeconds < 3 ? 0 : 1} note={`${genSeconds}秒たちました。1分ほどかかることがあります。画面を閉じずにお待ちください`} />
+                  </div>
+                )}
+                {c.imagePath && !generating && <p className="pd-label mt-3">作った画像は、右のプレビューで確かめられます。気に入ったら「保存」か「公開する」を押してください。</p>}
               </div>
               <Field id="popup-image-url" label="画像を押したときのリンク先URL" error={buttonUrlError}>
                 <input id="popup-image-url" className="pd-input" value={c.buttonUrl} onChange={(e) => setC({ buttonUrl: e.target.value })} placeholder="https://" inputMode="url" />

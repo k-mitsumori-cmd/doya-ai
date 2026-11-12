@@ -388,6 +388,15 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 | POST | `/api/opening/animations/[id]/export` | アニメーションエクスポート |
 | GET | `/api/opening/usage` | 使用状況確認 |
 
+## ドヤポップアップ API（画像の生成）
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| POST | `/api/popup/popups/[id]/image/generate` | 画像型の案に、AIで画像を1枚作って保存する（2026-11-12 追加）。本文 `{ headline?: string(14字まで), message?: string(120字まで) }`。ログイン必須・自分の画像型だけ。モデル（gpt-image-2）・品質（medium）・大きさはサーバーが決める。1人1日10回（超えると429）。ドヤパワー `popup.image` を1枚7減らし、失敗なら戻す（作り直しも毎回全額）。成功は `{ popup }`、失敗は `{ error }`（400 入力・404・429 回数・502 生成失敗・503 回数を確かめられない） |
+| POST | `/api/popup/sites` | 提案の作成。本文に `withImageDraft: true` を付けると、画像の無い画像型の下書き（E案）を足す（課金なし） |
+
+詳細は `reference/services/popup.md` 3-2。
+
 ## Cronジョブ API (3)
 
 | メソッド | パス | 説明 |

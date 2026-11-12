@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CheckCircle2, CircleDashed, Globe, ImagePlus, Sparkles } from 'lucide-react'
 import type { SiteDto } from '@/lib/popup/dto'
 import { EmptyState, PageHeader, ProcessingSteps, fmt, pct } from '@/components/popup/ui'
 import { useInPopupShell } from '@/components/popup/shell-context'
@@ -72,6 +72,8 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
   // ドヤAIの「頼む」から来たときは、読み取った値を入れた状態で開く（押すのは本人）
   useDoyaPrefill((read) => { const u = read('url', 'url'); if (u) setUrl(u) })
   const [manualText, setManualText] = useState('')
+  // 画像でデザインした版の下書きも作る（画像はこの時点では作らない。作るのは編集画面の「画像を作る」）
+  const [withImageDraft, setWithImageDraft] = useState(false)
   const [needManual, setNeedManual] = useState(false)
   const [loading, setLoading] = useState(false)
   const oneButton = useOneButton()
@@ -98,7 +100,7 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
       const res = await fetch('/api/popup/sites', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, manualText: needManual ? manualText : undefined }),
+        body: JSON.stringify({ url, manualText: needManual ? manualText : undefined, withImageDraft }),
       })
       const data = await res.json().catch(() => ({}))
       if (res.status === 401) {
@@ -148,7 +150,7 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
             eyebrow="ドヤポップアップ"
             cta={loading ? 'ポップアップの案を作っています。このままお待ちください' : 'サイトの URL を入れたら、押してください'}
             label="提案を作る"
-            scope="入れた URL のサイトを読み、ポップアップの下書きを3案作ります。公開するまで、サイトには何も出ません。"
+            scope="入れた URL のサイトを読み、ポップアップの下書きを複数案作ります。公開するまで、サイトには何も出ません。"
             onRun={() => void create()}
             disabled={loading || !urlLooksValid}
             disabledReason="サイトの URL を入れると押せます。"
@@ -159,14 +161,14 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
       <div className="mb-6 space-y-4">
           {/* キービジュアルを 375px でも出す（今までは md 以上だけ）。主ボタンは下の「提案を作る」1つ（UI 品質 H-3・S-22） */}
           <ToolHero
-            title={<>URLを入れるだけで、<wbr />サイトに合う<wbr />ポップアップを3案</>}
-            lead={<>「AIに聞く」・相談への案内・<wbr />おすすめページの3案を、<wbr />下書きで作ります。<wbr />公開するまで、<wbr />サイトには何も出ません。</>}
+            title={<>URLを入れるだけで、<wbr />サイトに合う<wbr />ポップアップを提案</>}
+            lead={<>「AIに聞く」・相談への案内・<wbr />おすすめページ・右下の案を、<wbr />下書きで作ります。<wbr />公開するまで、<wbr />サイトには何も出ません。</>}
             tool="popup"
           />
           <FirstSteps
             id="popup"
             steps={[
-              { title: 'サイトのURLを入れる', body: 'AIがサイトを読み取り、3つの案を作ります' },
+              { title: 'サイトのURLを入れる', body: 'AIがサイトを読み取り、複数の案を作ります' },
               { title: '案を直して公開する', body: '文言・色・出すページを選びます' },
               { title: 'タグを1行貼る', body: 'サイトに貼ると表示され、クリック率まで測れます' },
             ]}
@@ -210,6 +212,19 @@ export default function PopupTool({ initialSites }: { initialSites: SiteDto[] })
             </p>
           </div>
         </div>
+
+        <label htmlFor="popup-with-image" className="mt-4 flex min-h-[44px] cursor-pointer items-start gap-3 rounded-[var(--r-sm)] border border-[color:var(--line)] p-3">
+          <input id="popup-with-image" type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={withImageDraft} onChange={(e) => setWithImageDraft(e.target.checked)} disabled={loading} />
+          <span className="min-w-0">
+            <span className="flex items-center gap-1 text-[15px] font-bold">
+              <ImagePlus className="h-4 w-4 shrink-0 text-[color:var(--blue)]" aria-hidden />
+              画像でデザインした版の下書きも作る
+            </span>
+            <span className="pd-label mt-1 block">
+              画像型の下書きを1つ足します。この時点では画像を作らず、ドヤパワーも使いません。画像は、案の編集画面の「画像を作る」を押したときに作ります。
+            </span>
+          </span>
+        </label>
 
         {needManual && (
           <div className="mt-4">

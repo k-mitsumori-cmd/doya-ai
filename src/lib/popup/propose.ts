@@ -9,7 +9,7 @@ import { parseSourceUrl, readSite, SiteUnreadableError } from '@/lib/asklink/sit
 import { generateBannerCopy, generateLinks } from '@/lib/asklink/generate'
 import type { QuotaResult } from '@/lib/plan-limit'
 import { createSiteWithinQuota } from './access'
-import { buildProposals } from './proposals'
+import { blankProposal, buildProposals, imageDraftProposal } from './proposals'
 import { parseDomain } from './schema'
 import { sumTotals } from './stats'
 import { toSiteDto, type SiteDto } from './dto'
@@ -24,7 +24,7 @@ export type ProposeResult =
   | { ok: false; status: 422; error: string; code: 'WEBSITE_UNREADABLE' }
   | { ok: false; status: 500; error: string }
 
-export async function proposeForUser(userId: string, input: { url: unknown; manualText?: unknown }): Promise<ProposeResult> {
+export async function proposeForUser(userId: string, input: { url: unknown; manualText?: unknown; withImageDraft?: unknown }): Promise<ProposeResult> {
   const sourceUrl = parseSourceUrl(input.url)
   const domain = sourceUrl ? parseDomain(sourceUrl) : null
   if (!sourceUrl || !domain) return { ok: false, status: 400, error: 'サイトのURLを正しく入力してください。' }
@@ -49,6 +49,8 @@ export async function proposeForUser(userId: string, input: { url: unknown; manu
     const links = await generateLinks(audience, site, allowedUrls)
     const copy = await generateBannerCopy(audience, site, links[0])
     const proposals = buildProposals(site, audience, links, copy)
+    // 「画像でデザインした版」。下書きの入れ物だけを作る（画像は作らない＝課金しない）。画像は編集画面の「画像を作る」で、利用者が押して作る
+    if (input.withImageDraft === true) proposals.push(imageDraftProposal(site))
     const saved = await prisma.$transaction(async (tx) => {
       const s = await tx.popupSite.update({
         where: { id: siteId },
