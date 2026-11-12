@@ -12,7 +12,7 @@ const WRAPPED={
   'interview/articles/generate':'interview.article','adimage/concepts/[id]/refine':'image.refine','shanai/interviews/[id]/article':'interview.article',
   'sfa/ai/score':'text.generate','sfa/ai/next-action':'text.generate','persona/generate':'persona.generate','seo/articles':'seo.article',
   'banner/test/generate':'banner.generate','banner/from-url':'banner.generate','banner/generate':'banner.generate','banner/refine':'image.refine',
-  'tenjikai/image':'tenjikai.image','doyaslide/structure':'slide.generate',
+  'tenjikai/image':'tenjikai.image','popup/popups/[id]/image/generate':'popup.image','doyaslide/structure':'slide.generate',
 };
 // クライアントのキー（同じ操作をまとめる ID）を渡してよい API。どれも、処理の側が同じキーで結果を返し直すか、
 // 食い違い（本文の違い）を断る作り（receipt・operation・reserve）。ここに無い API でキーを渡したら落とす

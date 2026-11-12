@@ -24,6 +24,8 @@ export const DOYA_POWER_COSTS = {
   'image.refine': 7,
   /** 展示会の画像 1枚 */
   'tenjikai.image': 7,
+  /** ポップアップの画像 1枚（画像型の「画像を作る」。作り直しも1枚ごとに減る） */
+  'popup.image': 7,
   /** 文字起こし 60分ごと */
   'transcribe.hour': 10,
   /** インタビューの記事化 1回 */

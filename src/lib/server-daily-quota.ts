@@ -75,3 +75,19 @@ export async function purgeOldDailyQuotas(today = jstDayKey()): Promise<number> 
     WHERE "key" LIKE 'rl:v1:%' AND split_part("key", ':', 4) < ${today}
   `
 }
+
+/**
+ * 消費した1回分を戻す（生成に失敗して何も返せなかったときなど）。0 より下げない。
+ * 戻せなくても処理は止めない（戻し損ねは、利用者の側が1回分少なくなるだけ）。
+ */
+export async function refundDailyQuota(scope: string, subject: string): Promise<void> {
+  const key = dailyQuotaKey(scope, subject)
+  try {
+    await prisma.$executeRaw`
+      UPDATE "SystemSetting" SET "value" = (("value")::int - 1)::text
+      WHERE "key" = ${key} AND ("value")::int > 0
+    `
+  } catch {
+    console.warn('[daily-quota] refund failed')
+  }
+}

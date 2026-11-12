@@ -9,6 +9,7 @@ export const ACTION_LABELS: Record<string, string> = {
   'banner.generate': 'バナーの生成',
   'image.refine': '画像の修正',
   'tenjikai.image': '展示会の画像',
+  'popup.image': 'ポップアップの画像',
   'transcribe.hour': '文字起こし',
   'interview.article': 'インタビューの記事化',
   'slide.generate': 'スライドの生成',

@@ -30,7 +30,8 @@ for (const file of privateFiles) {
   const rel = file.slice(process.cwd().length + 1)
 
   test(`${rel}: すべてのハンドラでログインを確認する`, () => {
-    const handlers = src.match(/export async function (GET|POST|PATCH|PUT|DELETE)\b/g) || []
+    // ドヤパワーの包み（withDoyaPowerCharge）で出すハンドラも 1 つに数える（中の postHandler がログインを確かめる）
+    const handlers = src.match(/export (?:async function|const) (GET|POST|PATCH|PUT|DELETE)\b/g) || []
     const checks = src.match(/await getPopupUserId\(\)/g) || []
     assert.ok(handlers.length > 0)
     assert.equal(checks.length, handlers.length)
