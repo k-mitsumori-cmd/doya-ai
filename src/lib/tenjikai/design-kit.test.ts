@@ -1,7 +1,7 @@
 // ブースのデザインの決まり（BDK）と、面の画像の切り出しの確かめ。課金 API・DB は使わない。
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { SAMPLE_INPUT, analyzeSite, generateBoothPlans } from './engine'
+import { SAMPLE_INPUT, analyzeSite, generateBoothPlans, mockGeneratedPlan } from './engine'
 import { generateGraphicPlan } from './graphics'
 import { ART_TYPES, HEADLINE_MAX_PER_LINE, buildDesignPrompt, checkKit, completeDirections, completeStrategy, contrast, deriveKit, draftDirections, draftStrategy, headlineLines, isHex, isKit, kitBlock, readKit, saturation, scrub, withDirection, withPaletteColor, type LayoutType } from './design-kit'
 
@@ -163,4 +163,10 @@ test('方向の下書きは、型が3つそろう。AI の返事が欠けても�
   const st = draftStrategy(A, 'lead')
   assert.deepEqual(completeStrategy({ aim: 'A', hook: 5 }, st), { ...st, aim: 'A' })
   assert.ok(Object.values(st).every(Boolean))
+})
+
+test('下書きの計画（mock）にも、戦略と、3つの型の方向が入る', () => {
+  const g = mockGeneratedPlan(SAMPLE_INPUT)
+  assert.ok(g.strategy && Object.values(g.strategy).every(Boolean))
+  assert.deepEqual(g.directions?.map((d) => d.type).sort(), ['graphic', 'photo', 'world'])
 })

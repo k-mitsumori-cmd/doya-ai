@@ -3,6 +3,8 @@
 // ここにある analyzeSite / generateBoothPlans / generateCreatives はその下書き兼フォールバック。
 // 金額・寸法・数量・締切はAIに任せず、ここにあるルール計算を本番でもそのまま使う。
 
+import { draftDirections, draftStrategy, type ArtDirection, type BoothStrategy } from './design-kit'
+
 export type BoothPosition = 'inline' | 'corner' | 'peninsula' | 'island'
 export type Goal = 'lead' | 'brand' | 'demo'
 
@@ -540,10 +542,15 @@ export interface GeneratedPlan {
   analysis: SiteAnalysis
   boothCopy: Partial<Record<BoothPlan['variant'], BoothCopy>>
   creativeCopy: Partial<Record<CreativeKind, CreativeCopy>>
+  /** 戦略（狙い・来てほしい人・3秒の一言・体験）。古い保存には無い */
+  strategy?: BoothStrategy
+  /** デザインの方向（実写・大きな文字と色面・世界観を1つずつ）。古い保存には無い */
+  directions?: ArtDirection[]
 }
 
 export function mockGeneratedPlan(input: ProjectInput, notice?: string): GeneratedPlan {
-  return { source: 'mock', notice, analysis: analyzeSite(input.serviceUrl), boothCopy: {}, creativeCopy: {} }
+  const analysis = analyzeSite(input.serviceUrl)
+  return { source: 'mock', notice, analysis, boothCopy: {}, creativeCopy: {}, strategy: draftStrategy(analysis, input.goal), directions: draftDirections(analysis, input.goal) }
 }
 
 export function applyBoothCopy(plans: BoothPlan[], copy: GeneratedPlan['boothCopy']): BoothPlan[] {

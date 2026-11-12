@@ -21,6 +21,7 @@ import {
   type ProjectInput,
   type SiteAnalysis,
 } from './engine'
+import { completeDirections, completeStrategy, draftDirections, draftStrategy, type ArtDirection, type BoothStrategy } from './design-kit'
 
 const MAX_SITE_CHARS = 12000
 
@@ -131,6 +132,42 @@ export async function aiBoothCopy(a: SiteAnalysis, input: ProjectInput): Promise
   return out
 }
 
+// ---------- 戦略とデザインの方向 ----------
+
+/**
+ * 出展の戦略（狙い・来てほしい人・通路から3秒で伝える一言・体験）と、デザインの方向3つ（実写・大きな文字と色面・世界観）を書く。
+ * 返事は項目ごとに検査し、欠けた項目は下書き（サイトの解析から作る）で埋める。型は必ず3つそろえる。
+ */
+export async function aiStrategy(a: SiteAnalysis, input: ProjectInput): Promise<{ strategy: BoothStrategy; directions: ArtDirection[] }> {
+  const draftS = draftStrategy(a, input.goal)
+  const draftD = draftDirections(a, input.goal)
+  const prompt = [
+    'あなたはBtoB展示会のブース企画を担当するプランナーです。',
+    'この出展者の戦略と、ブースのデザインの方向を3つ書いてください。',
+    '',
+    '【制約】',
+    '- サイトに無い実績・数字・受賞歴を作らないこと。来場者の人数や集客の見込みは書かないこと。',
+    '- strategy.aim は出展の狙い（全角40字以内）。audience は来てほしい人（全角40字以内）。hook は通路から3秒で伝える一言（全角20字以内）。experience はブースで体験してもらうこと（全角50字以内）。',
+    '- directions は、type が photo / graphic / world のものを1つずつ、ちょうど3つ。3つは、絵の作り方そのものが違うこと。',
+    '  photo = 人や利用の場面・製品を使う手元の、写真のような絵。信頼・導入の実感を伝えたいとき。',
+    '  graphic = ブランドの色の大きな面と太い見出し。幾何の形を大きく使う。通路で足を止めたいとき。',
+    '  world = 立体のイラストや、光と奥行のある空間でサービスの世界を見せる。デモ・体験に引きこみたいとき。',
+    '- 各 direction の name は全角12字以内（画像には描かない）。aim は全角40字以内。subject はキービジュアルの題材（全角60字以内。何をどう描くか。数字・文字・実在の人物や会社名は入れない）。headline はキービジュアルに描く見出し（1行12字以内、2行まで。\\n で改行してよい。サイトの内容から外れないこと）。',
+    '',
+    '【出展者】',
+    analysisText(a),
+    '',
+    '【出展条件】',
+    brief(input),
+    '',
+    '【出力するJSONの形式】',
+    '{"strategy":{"aim":"","audience":"","hook":"","experience":""},"directions":[{"type":"photo","name":"","aim":"","subject":"","headline":""},{"type":"graphic","name":"","aim":"","subject":"","headline":""},{"type":"world","name":"","aim":"","subject":"","headline":""}]}',
+  ].join('\n')
+
+  const raw = await geminiGenerateJson<Record<string, any>>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT, generationConfig: { temperature: 0.7 } }, 'TenjikaiStrategy')
+  return { strategy: completeStrategy(raw?.strategy, draftS), directions: completeDirections(raw?.directions, draftD) }
+}
+
 // ---------- 制作物 ----------
 
 export async function aiCreativeCopy(a: SiteAnalysis, input: ProjectInput): Promise<GeneratedPlan['creativeCopy']> {
@@ -170,15 +207,19 @@ export async function aiCreativeCopy(a: SiteAnalysis, input: ProjectInput): Prom
  */
 export async function aiGeneratePlan(input: ProjectInput): Promise<GeneratedPlan> {
   const analysis = await aiAnalyzeSite(input.serviceUrl)
-  const [booth, creative] = await Promise.allSettled([aiBoothCopy(analysis, input), aiCreativeCopy(analysis, input)])
-  const partial = booth.status === 'rejected' || creative.status === 'rejected'
+  const [booth, creative, strat] = await Promise.allSettled([aiBoothCopy(analysis, input), aiCreativeCopy(analysis, input), aiStrategy(analysis, input)])
+  const partial = booth.status === 'rejected' || creative.status === 'rejected' || strat.status === 'rejected'
   if (booth.status === 'rejected') console.warn('[tenjikai] booth copy failed')
   if (creative.status === 'rejected') console.warn('[tenjikai] creative copy failed')
+  if (strat.status === 'rejected') console.warn('[tenjikai] strategy failed')
   return {
     source: 'ai',
     notice: partial ? '一部の文面はAIで作成できなかったため、下書きを表示しています。' : undefined,
     analysis,
     boothCopy: booth.status === 'fulfilled' ? booth.value : {},
     creativeCopy: creative.status === 'fulfilled' ? creative.value : {},
+    // 戦略・方向が作れなかったときは、サイトの解析から作った下書きで埋める（3つの型は必ずそろう）
+    strategy: strat.status === 'fulfilled' ? strat.value.strategy : draftStrategy(analysis, input.goal),
+    directions: strat.status === 'fulfilled' ? strat.value.directions : draftDirections(analysis, input.goal),
   }
 }
