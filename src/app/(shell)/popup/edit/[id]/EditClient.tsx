@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ImagePlus, Loader2, Monitor, Pause, Play, Save, Smartphone } from 'lucide-react'
 import type { PopupDto } from '@/lib/popup/dto'
 import type { EditSiteInfo, PopupDaily } from '@/lib/popup/popup-read'
-import { LAYOUT_LABEL, LIMITS, POPUP_LAYOUTS, type PopupCreative, type PopupLinkItem } from '@/lib/popup/schema'
+import { LIMITS, PLACEMENT_LABEL, POPUP_PLACEMENTS, layoutOfPlacement, placementOf, type PopupCreative, type PopupLinkItem, type PopupPlacement } from '@/lib/popup/schema'
 import PopupPreview from '@/components/popup/PopupPreview'
 import { AreaChart } from '@/components/ds/charts'
 import { DaysSwitch, ErrorState, KindBadge, PageHeader, StatTile, StatusBadge, fmt, useToast } from '@/components/popup/ui'
@@ -41,6 +41,41 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="pd-h2">{title}</h2>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
+  )
+}
+
+/** 位置の小さな図。枠が画面、中の塊がポップアップ */
+const PLACEMENT_BOX: Record<PopupPlacement, React.CSSProperties> = {
+  center: { left: '50%', top: '50%', width: '44%', height: '52%', transform: 'translate(-50%,-50%)' },
+  'bottom-right': { right: '7%', bottom: '9%', width: '34%', height: '34%' },
+  'bottom-left': { left: '7%', bottom: '9%', width: '34%', height: '34%' },
+  bar: { left: 0, right: 0, bottom: 0, height: '22%', borderRadius: '4px 4px 0 0' },
+}
+
+function PlacementPicker({ value, onChange }: { value: PopupPlacement; onChange: (p: PopupPlacement) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup" aria-label="ポップアップを出す位置">
+      {POPUP_PLACEMENTS.map((p) => {
+        const on = value === p
+        return (
+          <button
+            key={p}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(p)}
+            className={`flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[var(--r-sm)] border px-2 py-2 text-[13px] font-bold motion-safe:transition-colors motion-safe:duration-150 ${
+              on ? 'border-[color:var(--blue)] bg-[var(--blue-soft)] text-[color:var(--blue-deep)]' : 'border-[color:var(--line-strong)] text-[color:var(--sub)] hover:border-[color:var(--blue)]'
+            }`}
+          >
+            <span aria-hidden className="relative block h-[40px] w-[64px] overflow-hidden rounded-[6px] border border-[color:var(--line-strong)] bg-[var(--paper)]">
+              <span className={`absolute rounded-[3px] motion-safe:transition-colors motion-safe:duration-150 ${on ? 'bg-[color:var(--blue)]' : 'bg-[color:var(--muted)]'}`} style={PLACEMENT_BOX[p]} />
+            </span>
+            {PLACEMENT_LABEL[p]}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -160,6 +195,7 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
         frequency: draft.frequency,
         creative: {
           layout: c.layout,
+          corner: c.corner,
           eyebrow: c.eyebrow,
           headline: c.headline,
           sub: c.sub,
@@ -318,23 +354,10 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
             </Section>
           )}
 
-          <Section title="形">
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label="ポップアップの形">
-              {POPUP_LAYOUTS.map((l) => (
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setC({ layout: l })}
-                  aria-pressed={c.layout === l}
-                  className={`min-h-[48px] rounded-[var(--r-sm)] border px-2 text-[13px] font-bold ${
-                    c.layout === l ? 'border-[color:var(--blue)] bg-[var(--blue-soft)] text-[color:var(--blue-deep)]' : 'border-[color:var(--line-strong)] text-[color:var(--sub)] hover:border-[color:var(--blue)]'
-                  }`}
-                >
-                  {LAYOUT_LABEL[l]}
-                </button>
-              ))}
-            </div>
+          <Section title="位置">
+            <PlacementPicker value={placementOf(c)} onChange={(p) => setC(layoutOfPlacement(p))} />
             {c.layout === 'modal' && !isImage && <p className="pd-label">スマホでは画面を覆わないよう、下からせり上がる形で表示します。</p>}
+            {c.layout === 'slide' && <p className="pd-label">スマホでは、右下・左下とも画面の下に寄せ、幅いっぱいに収めて表示します。</p>}
           </Section>
 
           {!isImage && (

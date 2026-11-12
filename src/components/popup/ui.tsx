@@ -16,7 +16,8 @@ import { useInPopupShell } from './shell-context'
 import type { PopupDto } from '@/lib/popup/dto'
 import {
   KIND_LABEL,
-  LAYOUT_LABEL,
+  PLACEMENT_LABEL,
+  placementOf,
   STATUS_LABEL,
   type PopupFrequency,
   type PopupStatus,
@@ -44,7 +45,7 @@ export function frequencyText(f: PopupFrequency): string {
 }
 
 export function summaryText(p: PopupDto): string {
-  return `${LAYOUT_LABEL[p.creative.layout]}・${triggerText(p.trigger)}`
+  return `${PLACEMENT_LABEL[placementOf(p.creative)]}・${triggerText(p.trigger)}`
 }
 
 export function fmt(n: number): string {
