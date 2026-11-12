@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { SAMPLE_INPUT, analyzeSite, generateBoothPlans } from './engine'
 import { generateGraphicPlan } from './graphics'
-import { HEADLINE_MAX_PER_LINE, buildDesignPrompt, checkKit, contrast, deriveKit, headlineLines, isHex, kitBlock, saturation, withPaletteColor } from './design-kit'
+import { ART_TYPES, HEADLINE_MAX_PER_LINE, buildDesignPrompt, checkKit, completeDirections, completeStrategy, contrast, deriveKit, draftDirections, draftStrategy, headlineLines, isHex, isKit, kitBlock, readKit, saturation, scrub, withDirection, withPaletteColor, type LayoutType } from './design-kit'
 
 test('主色は、白い見出しが読める暗さ（対比 4.5 以上）に整える。同じ色相のまま暗くする', () => {
   const kit = deriveKit({ colors: { primary: '#ffd23f', secondary: '#1f1414', accent: '#0f62fe' }, tone: 't' })
@@ -82,4 +82,85 @@ test('指示文に、寸法（mm）や割合（%）の数字を書かない（�
     assert.doesNotMatch(prompt, /\d\s*%/, `${w}x${h}`)
   }
   assert.match(buildDesignPrompt(kit, { name: 'x', widthMm: 850, heightMm: 2000, role: 'r', layout: 'appeal', headline: 'あ' }), /縦に細長い長方形/)
+})
+
+const A = analyzeSite(SAMPLE_INPUT.serviceUrl)
+const kitOf = (type: (typeof ART_TYPES)[number]) => withDirection(deriveKit(A), draftDirections(A).find((d) => d.type === type)!)
+
+test('3つの方向（実写・大きな文字と色面・世界観）の指示文は、互いに違う。色の5つの役割は同じ', () => {
+  const [photo, graphic, world] = (['photo', 'graphic', 'world'] as const).map(kitOf)
+  assert.deepEqual(photo.palette, graphic.palette)
+  const blocks = [kitBlock(photo), kitBlock(graphic), kitBlock(world)]
+  assert.equal(new Set(blocks).size, 3)
+  for (const layout of ['hero', 'appeal', 'number', 'guide'] as LayoutType[]) {
+    const prompts = [photo, graphic, world].map((k) => buildDesignPrompt(k, { name: 'x', widthMm: 2000, heightMm: 2700, role: 'r', layout, headline: '導入が早い' }))
+    assert.equal(new Set(prompts).size, 3, layout)
+  }
+  // 型ごとの言葉（構図・光・素材）
+  assert.match(blocks[0], /自然光/)
+  assert.match(blocks[0], /被写界深度は浅く/)
+  assert.match(blocks[2], /リムライト/)
+  // 「帯1本・円1つ」の文は、大きな文字と色面の型にだけ残る
+  assert.match(blocks[1], /帯は1本だけ/)
+  assert.doesNotMatch(blocks[0], /帯は1本だけ/)
+  assert.doesNotMatch(blocks[2], /帯は1本だけ/)
+})
+
+test('どの型の指示文にも、見出しの決まり（1つだけ・引用符）と、禁止（実在の人物・ロゴ・額縁・寸法の数字）が入る', () => {
+  for (const type of ART_TYPES) {
+    const kit = kitOf(type)
+    const prompt = buildDesignPrompt(kit, { name: 'x', widthMm: 2000, heightMm: 2700, role: 'r', layout: 'hero', headline: 'マーケの作業、\nAIでドヤ速。', hasReference: true })
+    assert.match(prompt, /この面に描く文字は、次の1つだけ。一字も変えず、一字も足さず、正確に描く/, type)
+    assert.ok(prompt.includes('「マーケの作業、」') && prompt.includes('「AIでドヤ速。」'), type)
+    assert.match(prompt, /【禁止】/)
+    assert.match(prompt, /実在する人物/, type)
+    assert.match(prompt, /ロゴや認証マーク/, type)
+    assert.match(prompt, /枠・額縁・外側の余白・背景の灰色/, type)
+    assert.match(prompt, /寸法線と寸法・割合の数字/, type)
+    assert.match(prompt, /添付の画像は、このブースの見本/, type)
+    assert.doesNotMatch(prompt, /\d\s*mm/, type)
+    assert.doesNotMatch(prompt, /\d\s*%/, type)
+  }
+})
+
+test('方向の題材・狙いに、引用符や数字と単位があっても、指示文には入らない', () => {
+  const dirty = withDirection(deriveKit(A), { ...draftDirections(A)[0], subject: '「大きな見出し」と2000mmの壁、85%の人', aim: '導入率90%' })
+  const block = kitBlock(dirty)
+  assert.doesNotMatch(block, /[「」]/)
+  assert.doesNotMatch(block, /\d\s*(mm|%)/)
+  assert.equal(scrub('「あ」12mm'), 'あ')
+})
+
+test('version 1 の保存は、graphic として読む。壊れた保存は読まない', () => {
+  const v2 = deriveKit(A)
+  const { direction: _d, ...rest } = v2
+  const v1 = { ...rest, version: 1 }
+  assert.equal(isKit(v1), false)
+  const read = readKit(v1)
+  assert.equal(read?.version, 2)
+  assert.equal(read?.direction.type, 'graphic')
+  assert.equal(readKit(v2)?.direction.type, 'graphic')
+  assert.equal(readKit({ ...v2, direction: { type: 'oil' } }), null)
+  assert.equal(readKit({ version: 3 }), null)
+  assert.equal(readKit(null), null)
+  const photo = kitOf('photo')
+  assert.equal(readKit(JSON.parse(JSON.stringify(photo)))?.direction.type, 'photo')
+})
+
+test('方向の下書きは、型が3つそろう。AI の返事が欠けても、項目ごとに下書きで埋まる', () => {
+  const draft = draftDirections(A, 'demo')
+  assert.deepEqual(draft.map((d) => d.type).sort(), ['graphic', 'photo', 'world'])
+  assert.ok(draft.every((d) => d.name && d.aim && d.subject && d.headline))
+  const out = completeDirections([{ type: 'world', name: 'AI の名前', aim: '', subject: 5, headline: 'あ'.repeat(40) }, { type: 'bogus', name: 'x' }], draft)
+  assert.equal(out.length, 3)
+  assert.equal(out.find((d) => d.type === 'world')!.name, 'AI の名前')
+  assert.equal(out.find((d) => d.type === 'world')!.aim, draft.find((d) => d.type === 'world')!.aim)
+  assert.equal(out.find((d) => d.type === 'world')!.subject, draft.find((d) => d.type === 'world')!.subject)
+  assert.ok(headlineLines(out.find((d) => d.type === 'world')!.headline).every((l) => [...l].length <= HEADLINE_MAX_PER_LINE))
+  assert.deepEqual(out.find((d) => d.type === 'photo'), draft.find((d) => d.type === 'photo'))
+  assert.equal(completeDirections(null, draft).length, 3)
+  assert.equal(completeDirections({ photo: { name: 'P' } }, draft).find((d) => d.type === 'photo')!.name, 'P')
+  const st = draftStrategy(A, 'lead')
+  assert.deepEqual(completeStrategy({ aim: 'A', hook: 5 }, st), { ...st, aim: 'A' })
+  assert.ok(Object.values(st).every(Boolean))
 })

@@ -3,7 +3,7 @@
 // 単価は、サーバー側の1日の上限額（image-quota.ts）を数えるためだけに使う。目安なので、Google の料金表で確かめること。
 
 import type { Creative, CreativeKind, SiteAnalysis, BoothPlan } from './engine'
-import { buildDesignPrompt, deriveKit, kitBlock, type BoothDesignKit, type LayoutType } from './design-kit'
+import { buildDesignPrompt, deriveKit, kitBlock, type ArtType, type BoothDesignKit, type LayoutType } from './design-kit'
 import { safeZone } from './image-fit'
 
 export type ImageSize = '1K' | '2K' | '4K'
@@ -91,16 +91,33 @@ export function buildCreativePrompt(c: Creative, a: SiteAnalysis, kit: BoothDesi
   })
 }
 
-export function buildBoothRenderPrompt(plan: BoothPlan, a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a)) {
-  const parts = plan.elements.map((e) => e.label).join('、')
+/** 部材の名前から、数字と単位（65型・2台など）を除く（画像に寸法や数が描かれないため） */
+const noDigits = (t: string) => t.replace(/[0-9０-９][0-9０-９.]*\s*(mm|cm|m|型|台|%|％)?/g, '').trim()
+
+const RENDER_LOOK: Record<ArtType, string> = {
+  photo: '貼られた面の絵は実写風。ホールの光（天井の照明）と、面の絵の自然光が、同じ空気の中にあるように描く。',
+  graphic: '貼られた面は、大きな色面と太い見出しのグラフィック。遠くからでも色が目に入るように描く。',
+  world: '貼られた面は、光と奥行のある世界の絵。面が光るように見え、まわりの照明は少し落ち着かせる。',
+}
+
+/**
+ * 完成予想図の指示文（仕様 5 章）。参照は2枚: 1枚目 = 3D の表示（配置と寸法）、2枚目 = キービジュアル（絵柄）。
+ * 寸法・割合の数字は書かない（画像に寸法線が描かれるため）。
+ */
+export function buildBoothRenderPrompt(plan: BoothPlan, a: SiteAnalysis, kit: BoothDesignKit = deriveKit(a), opts: { hasKeyVisual?: boolean } = {}) {
+  const parts = plan.elements.map((e) => noDigits(e.label)).join('、')
+  const type = kit.direction.type
   return [
-    `添付の等角図は展示会ブース（${plan.widthM}m × ${plan.depthM}m、${plan.name}）のレイアウトです。`,
-    'この配置と寸法を変えずに、東京ビッグサイトの展示ホールに設営された完成予想図を、来場者目線の斜め前方からフォトリアルに描いてください。',
+    `展示会ブース（${plan.name}）の完成予想図を作る。東京ビッグサイトのような展示ホールに実際に建った、写真のような絵にする。来場者の目線の高さの、斜め前方から見る。`,
+    '添付は2枚。1枚目は、ブースの配置と寸法を示す3D の表示。部材の数・位置・大きさ・向きは、1枚目のとおりに変えない。1枚目に書かれた文字・寸法・数字・色の凡例は、画像に描かない。',
+    opts.hasKeyVisual === false ? '' : '2枚目は、背面壁の中央に貼るキービジュアル。この絵柄・色み・見出しを、そのまま背面壁の中央に貼って描く。見出しの文字は、2枚目に描かれているものだけを写し、新しい文字は足さない。',
     `部材：${parts}。`,
-    '面のグラフィック（背面壁・ロールアップ・吊り看板など）は、次のブースのデザインの決まりのとおりに、色と形をそろえて描く。面の文字は、添付の絵に描かれているものだけを、そのまま写し、新しい文字は足さない。',
+    'そのほかの面（背面壁の左右・ロールアップ・吊り看板・受付）は、2枚目と同じ方向・同じ色で、次のブースのデザインの決まりのとおりにそろえる。',
+    '【次の決まりは、面に貼る絵の決まり。ホール全体の描写（写真のような質感）には当てはめない】',
     kitBlock(kit),
-    '天井の照明、カーペット、通路を歩く来場者を数名。',
-  ].join('\n')
+    RENDER_LOOK[type],
+    '天井の照明、カーペット、通路を歩く来場者を数名（顔は小さく、特定の人物に似せない）。ホールのほかのブースは、白い壁だけの簡素なものにして、文字・ロゴは描かない。',
+  ].filter(Boolean).join('\n')
 }
 
 export interface ImageGenRequest {
@@ -110,6 +127,8 @@ export interface ImageGenRequest {
   /** 利用者が「作る」を押したこと */
   approved: true
   referencePng?: string // base64（data URLのプレフィックスなし）
+  /** 参照を2枚渡すとき（完成予想図: 1枚目 = 3D の表示、2枚目 = キービジュアル）。referencePng とは、どちらか一方 */
+  referencePngs?: string[]
   /** 記録用の種類（creative_image / booth_render / graphic_panel） */
   kind?: string
 }

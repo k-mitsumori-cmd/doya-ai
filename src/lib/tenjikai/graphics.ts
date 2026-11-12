@@ -223,7 +223,7 @@ export function buildPanelPrompt(p: GraphicPanel, a: SiteAnalysis, kit: BoothDes
     viewDistanceM: p.viewDistanceM,
     layout: p.layout,
     // ヒーローの見出しは、改行つきのまま渡す（2行の切れ目を、サイトの解析の改行に合わせる）
-    headline: p.layout === 'guide' && p.name.includes('扉') ? '' : p.layout === 'hero' ? a.headline : p.headline,
+    headline: p.layout === 'guide' && p.name.includes('扉') ? '' : p.layout === 'hero' ? (kit.direction.headline || a.headline) : p.headline,
     hasReference: opts.hasReference,
     safeWidthPct: safe.safeWidthPct,
     safeHeightPct: safe.safeHeightPct,

@@ -187,7 +187,7 @@ export const KIT_VARIANTS: Record<KitVariantKey, { label: string; note: string; 
  * - 暗色: とても暗い色（白との対比 12 以上）。元の色が明るければ、主色を暗くして作る
  * - 差し色: 主色と見分けがつく色（対比 1.5 以上）。つかなければ既定の黄色
  */
-export function deriveKit(a: Pick<SiteAnalysis, 'colors' | 'tone'>, variant: KitVariantKey = 'band'): BoothDesignKit {
+export function deriveKit(a: Pick<SiteAnalysis, 'colors' | 'tone'>, variant: KitVariantKey = 'band', direction?: ArtDirection): BoothDesignKit {
   const src = a.colors
   const prov: BoothDesignKit['provenance'] = {
     primary: { from: 'analysis', note: '読み取った主な色' },
@@ -222,8 +222,9 @@ export function deriveKit(a: Pick<SiteAnalysis, 'colors' | 'tone'>, variant: Kit
   }
   const v = KIT_VARIANTS[variant]
   return {
-    version: 1,
+    version: 2,
     variant,
+    direction: direction ?? makeDirection('graphic', { name: '大きな文字と色面', aim: '', subject: '', headline: '' }),
     palette: { primary, dark, accent, paper: WHITE, mist: mix(primary, WHITE, 0.94) },
     ratio: v.ratio,
     typeLook: '太い日本語のゴシック体。字間は広め。角は丸めない。',
@@ -240,11 +241,41 @@ export function withVariant(kit: BoothDesignKit, variant: KitVariantKey): BoothD
   return { ...kit, variant, ratio: v.ratio, motif: { ...kit.motif, circleDiameterRatio: v.circleDiameterRatio }, zones: { ...kit.zones, headBandRatio: v.headBandRatio } }
 }
 
-/** 保存した決まりが、使える形かを確かめる（壊れた保存は捨てる） */
+/** 方向を作る（絵の調子の文は、型ごとに決まった文を入れる） */
+export function makeDirection(type: ArtType, d: Partial<Omit<ArtDirection, 'type' | 'look'>> = {}): ArtDirection {
+  return { type, name: d.name ?? ART_SPEC[type].label, aim: d.aim ?? '', subject: d.subject ?? '', headline: d.headline ?? '', look: ART_SPEC[type].look }
+}
+
+/** 方向を選ぶ。型の既定の面積の比率・帯の高さにも切り替える（色・出どころはそのまま） */
+export function withDirection(kit: BoothDesignKit, direction: ArtDirection): BoothDesignKit {
+  return { ...withVariant(kit, ART_SPEC[direction.type].variant), direction }
+}
+
+function isDirection(v: unknown): v is ArtDirection {
+  if (typeof v !== 'object' || v === null) return false
+  const d = v as Partial<ArtDirection>
+  return isArtType(d.type) && ['name', 'aim', 'subject', 'headline', 'look'].every((k) => typeof (d as Record<string, unknown>)[k] === 'string')
+}
+
+/** 保存した決まり（version 2）が、使える形かを確かめる（壊れた保存は捨てる） */
 export function isKit(v: unknown): v is BoothDesignKit {
   if (typeof v !== 'object' || v === null) return false
   const k = v as Partial<BoothDesignKit>
-  return k.version === 1 && !!k.palette && ['primary', 'dark', 'accent', 'paper', 'mist'].every((r) => isHex((k.palette as Record<string, unknown>)[r])) && !!k.ratio && !!k.motif && !!k.zones && !!k.provenance && typeof k.variant === 'string' && k.variant in KIT_VARIANTS
+  return k.version === 2 && isDirection(k.direction) && isKitBody(v)
+}
+
+/** 保存を読む。version 1（方向を持たない）は、大きな文字と色面（graphic）の決まりとして読む。使えない保存は null */
+export function readKit(v: unknown): BoothDesignKit | null {
+  if (isKit(v)) return v
+  if (typeof v === 'object' && v !== null && (v as { version?: unknown }).version === 1 && isKitBody(v)) {
+    return { ...(v as unknown as Omit<BoothDesignKit, 'version' | 'direction'>), version: 2, direction: makeDirection('graphic') }
+  }
+  return null
+}
+
+function isKitBody(v: unknown): boolean {
+  const k = v as Partial<BoothDesignKit>
+  return !!k.palette && ['primary', 'dark', 'accent', 'paper', 'mist'].every((r) => isHex((k.palette as Record<string, unknown>)[r])) && !!k.ratio && !!k.motif && !!k.zones && !!k.provenance && typeof k.variant === 'string' && k.variant in KIT_VARIANTS
 }
 
 /** 利用者が色を直したときの反映。直した色は出どころを 'user' にする */
@@ -292,11 +323,28 @@ export function headlineLines(text: string): string[] {
 
 export type LayoutType = 'hero' | 'appeal' | 'number' | 'guide'
 
+/** 大きな文字と色面（graphic）の面の型。前の版の名前のまま残す */
 export const LAYOUT_TEXT: Record<LayoutType, string> = {
   hero: 'ヒーロー（上の帯に見出しとブランド名。中央に円。下は無地）',
   appeal: '訴求（上の帯に見出し1つ。中央に斜めの帯。下は無地）',
   number: '数字（上の帯に見出し。中央は、あとから数字を重ねるための無地。下に QR コードを重ねる場所を空ける）',
   guide: '案内（主色の面に、短い案内文1つ。足元は暗色）',
+}
+
+export const LAYOUT_TEXT_BY_TYPE: Record<ArtType, Record<LayoutType, string>> = {
+  graphic: LAYOUT_TEXT,
+  photo: {
+    hero: 'ヒーロー（上の帯に見出しとブランド名。帯の下は、題材の写真を面いっぱいに。この面が、ブース全体の見本になる）',
+    appeal: '訴求（上の帯に見出し1つ。帯の下は、その強みが伝わる場面の写真）',
+    number: '数字（上の帯に見出し。中央は、あとから数字を重ねるため、写真を薄く、ぼかして使う。下に QR コードを重ねる場所を空ける）',
+    guide: '案内（主色の面に、短い案内文1つ。足元は暗色。写真は使わない）',
+  },
+  world: {
+    hero: 'ヒーロー（上の帯に見出しとブランド名。帯の下は、題材の世界を、光と奥行で面いっぱいに。この面が、ブース全体の見本になる）',
+    appeal: '訴求（上の帯に見出し1つ。帯の下は、その強みを表す立体を1つ中央に）',
+    number: '数字（上の帯に見出し。中央は、あとから数字を重ねるため、暗色の無地に近い、光だけの空間。下に QR コードを重ねる場所を空ける）',
+    guide: '案内（主色の面に、短い案内文1つ。足元は暗色。立体は使わない）',
+  },
 }
 
 // ---------- 指示文 ----------
@@ -307,18 +355,45 @@ export const LAYOUT_TEXT: Record<LayoutType, string> = {
  */
 const wari = (n: number) => (n >= 0.095 ? `約${Math.round(n * 100) / 10}割` : `約${Math.max(1, Math.round(n * 100))}分`)
 
+/** AI や利用者が書いた文を、指示文に入れられる形にする（引用符・数字と単位・改行を除く。画像に文字や寸法線が描かれないため） */
+export function scrub(text: string, max = 80): string {
+  return (text ?? '')
+    .replace(/[「」『』"“”]/g, '')
+    .replace(/[0-9０-９][0-9０-９.,，．]*\s*(mm|cm|m|ミリ|メートル|%|％|割|型|台|px|人|社|件|倍)?/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+}
+
 /** 全部の面・制作物・完成予想図で、一字も違わずに同じになる共通のブロック */
 export function kitBlock(kit: BoothDesignKit): string {
   const p = kit.palette, r = kit.ratio, m = kit.motif, z = kit.zones
+  const d = kit.direction
+  const spec = ART_SPEC[d.type]
+  const aim = scrub(d.aim, 60), subject = scrub(d.subject, 80)
+  const graphic = d.type === 'graphic'
+  const colorLine = graphic
+    ? `・色は5つだけ: 主色 ${p.primary}（見出しの帯・大きな面）、暗色 ${p.dark}（濃い面と、紙の上の文字）、差し色 ${p.accent}（小さな面だけ）、紙 ${p.paper}、薄い補助色 ${p.mist}。面積の目安は、紙 ${wari(r.paper)}、主色 ${wari(r.primary)}、暗色 ${wari(r.dark)}、差し色 ${wari(r.accent)} 以内。ほかの色は足さない。`
+    : `・色は5つを主に使う: 主色 ${p.primary}（見出しの帯と、全体の色みの中心）、暗色 ${p.dark}（影と、濃い部分）、差し色 ${p.accent}（小さな差し色だけ）、紙 ${p.paper}、薄い補助色 ${p.mist}。写真や立体の絵でも、服・小物・背景・光の色をこの5色に寄せ、全体の色みをそろえる。ほかの強い色は足さない。`
+  const shapeLine = graphic
+    ? `・形: 大きな幾何の形を1〜2つ。帯は1本だけ（右上がり ${m.bandAngleDeg} 度、面の高さの ${wari(m.bandHeightRatio)} の太さ、色は差し色）。円は1つだけ（直径は面の短い辺の ${wari(m.circleDiameterRatio)}、中心は右下寄り、色は暗色）。`
+    : ''
+  const zoneLine = graphic
+    ? `・構図: 上から ${wari(z.headBandRatio)} は主色の無地の帯（見出しを置く）。下から ${wari(z.footBandRatio)} は紙の色の無地。面の端まで、色で塗りきる（枠、額縁、外側の余白、影、背景の灰色は描かない）。`
+    : `・構図: 上から ${wari(z.headBandRatio)} は主色の無地の帯（見出しを置く）。その下から面の端まで、絵で塗りきる（枠、額縁、外側の余白、背景の灰色は描かない）。`
   return [
     '【ブースのデザインの決まり（全部の面で、一字も違わずに同じにする）】',
-    `・色は5つだけ: 主色 ${p.primary}（見出しの帯・大きな面）、暗色 ${p.dark}（濃い面と、紙の上の文字）、差し色 ${p.accent}（小さな面だけ）、紙 ${p.paper}、薄い補助色 ${p.mist}。面積の目安は、紙 ${wari(r.paper)}、主色 ${wari(r.primary)}、暗色 ${wari(r.dark)}、差し色 ${wari(r.accent)} 以内。ほかの色は足さない。`,
-    '・絵の調子: 色の面だけで作る、フラットなデザイン。帯と円は、無地の色の面にする（中に模様・絵・図を描かない）。写真、3D の描写、影、グラデーション、イラスト、アイコン、人物、矢印、歯車、端末や画面の絵は、描かない。',
-    `・形: 帯は1本だけ（右上がり ${m.bandAngleDeg} 度、面の高さの ${wari(m.bandHeightRatio)} の太さ、色は差し色）。円は1つだけ（直径は面の短い辺の ${wari(m.circleDiameterRatio)}、中心は右下寄り、色は暗色）。`,
-    `・構図: 上から ${wari(z.headBandRatio)} は主色の無地の帯（見出しを置く）。下から ${wari(z.footBandRatio)} は紙の色の無地。面の端まで、色で塗りきる（枠、額縁、外側の余白、影、背景の灰色は描かない）。`,
+    `・デザインの方向: ${spec.label}型。狙い: ${aim || spec.fit}。キービジュアルの題材: ${subject || '（サービスの利用の場面）'}。題材は絵で表し、文字にしない。`,
+    `・絵の調子: ${spec.look}`,
+    `・${spec.composition}`,
+    `・${spec.lightText}`,
+    `・${spec.materialText}`,
+    colorLine,
+    shapeLine,
+    zoneLine,
     `・書体: ${kit.typeLook}見出しの文字は紙の色（白）。`,
     `・トーン: ${kit.tone}`,
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 /** 面の形を、数字を使わずに言葉で書く（寸法の数字を、画像に描かれないようにする） */
@@ -350,10 +425,23 @@ export interface DesignTarget {
   safeHeightPct?: number
 }
 
+const FORBID_COMMON = '実在する人物（有名人・実在の顔）、ロゴや認証マーク（実在のものも、作ったものも）、枠・額縁・外側の余白・背景の灰色、寸法線と寸法・割合の数字、指定した文字以外の文字（看板・画面・書類・商品に写る文字も含む）、絵文字'
+const FORBID_BY_TYPE: Record<ArtType, string> = {
+  graphic: '決まりにない色、写真、3D の描写、イラスト、アイコン、人物、矢印、歯車、端末や画面の絵、影、斜めのアングル',
+  photo: '決まりの色から外れた強い色、イラスト調、アイコン、矢印、歯車、CG のような質感、顔を正面から大きく写した人物、斜めのアングル（面に正対して撮る）',
+  world: '決まりの色から外れた強い色、実写の人物、アイコン、矢印、歯車、文字の入った画面、斜めのアングル（面に正対した構図にする）',
+}
+const REFERENCE_BY_TYPE: Record<ArtType, string> = {
+  graphic: '見本の、色・帯と円の形と位置・書体の雰囲気・余白を、そのまま使う。',
+  photo: '見本の、写真の色みと光・見出しの帯の位置と書体・余白を、そのまま使う。題材の場面は、この面に合うものに変えてよい。',
+  world: '見本の、立体の質感・光の回り込み・色み・見出しの帯の位置と書体を、そのまま使う。立体の形は、この面に合うものに変えてよい。',
+}
+
 /**
- * 指示文を作る（仕様 4.10。6つのブロックを、この順に）。面も、制作物も、完成予想図以外はこの関数だけを通す。
+ * 指示文を作る（仕様 4.10。役割 → 方向 → 色 → 文字 → 禁止 の順）。面も、制作物も、完成予想図以外はこの関数だけを通す。
  */
 export function buildDesignPrompt(kit: BoothDesignKit, t: DesignTarget): string {
+  const type = kit.direction.type
   const lines = headlineLines(t.headline)
   const safe = t.safeWidthPct && t.safeWidthPct < 100 ? `。文字は、面の中央の約${Math.max(1, Math.round(t.safeWidthPct / 10))}割の幅の中に置く（左右が切られることがあるため）` : ''
   const safeH = t.safeHeightPct && t.safeHeightPct < 100 ? '。上下も、端から十分に空ける' : ''
@@ -368,9 +456,75 @@ export function buildDesignPrompt(kit: BoothDesignKit, t: DesignTarget): string 
   return [
     `展示会ブースの「${t.name}」に貼る完成デザイン。${shapeWord(t.widthMm, t.heightMm)}の面を、枠なしで、面いっぱいに作る。役割：${t.role}${t.viewDistanceM ? `（遠くから見られる面。見る距離は ${t.viewDistanceM}m ほど）` : ''}`,
     kitBlock(kit),
-    `この面の型：${LAYOUT_TEXT[t.layout]}`,
+    `この面の型：${LAYOUT_TEXT_BY_TYPE[type][t.layout]}`,
     textBlock,
-    '【禁止】決まりにない色、写真、3D の描写、イラスト、アイコン、人物、矢印、歯車、端末や画面の絵、実在しないロゴや認証マーク、斜めのアングル、枠・額縁・外側の余白・影・背景の灰色、寸法線と寸法・割合の数字、指定した文字以外の文字、絵文字。',
-    t.hasReference ? '【参照】添付の画像は、このブースの見本。見本の、色・帯と円の形と位置・書体の雰囲気・余白を、そのまま使う。見本の中の文字や内容は写さない（この面の文字は、上に書いたものだけ）。' : '',
+    `【禁止】${FORBID_BY_TYPE[type]}、${FORBID_COMMON}。`,
+    t.hasReference ? `【参照】添付の画像は、このブースの見本（キービジュアル）。${REFERENCE_BY_TYPE[type]}見本の中の文字や内容は写さない（この面の文字は、上に書いたものだけ）。` : '',
   ].filter(Boolean).join('\n')
+}
+
+// ---------- 戦略と方向の下書き・検査 ----------
+
+const GOAL_TEXT: Record<Goal, { aim: string; experience: string }> = {
+  lead: { aim: '名刺交換を増やし、商談につなげる', experience: '受付で話を聞き、デモで使い方を見て、資料と名刺を交換する' },
+  brand: { aim: 'サービスの名前と特長を、通路で知ってもらう', experience: '通路から特長が伝わり、立ち止まって映像や展示を見る' },
+  demo: { aim: '実際に触って、使い心地を確かめてもらう', experience: 'デモ台で操作を体験し、担当者に質問する' },
+}
+
+const flat = (t: string) => (t ?? '').replace(/\s+/g, '')
+
+/** サイトの解析から作る、戦略の下書き（AI が使えないとき・欠けたときに使う） */
+export function draftStrategy(a: Pick<SiteAnalysis, 'brand' | 'category' | 'headline' | 'valueProps' | 'targets'>, goal: Goal): BoothStrategy {
+  const g = GOAL_TEXT[goal] ?? GOAL_TEXT.lead
+  return {
+    aim: g.aim,
+    audience: a.targets.length ? a.targets.join('、') : `${a.category}に関心のある人`,
+    hook: flat(a.headline) || a.valueProps[0]?.title || a.brand,
+    experience: g.experience,
+  }
+}
+
+/** サイトの解析から作る、3つの方向の下書き（型は必ず3つそろえる） */
+export function draftDirections(a: Pick<SiteAnalysis, 'brand' | 'category' | 'headline' | 'valueProps' | 'targets'>, goal: Goal = 'lead'): ArtDirection[] {
+  const vp = (i: number) => a.valueProps[i % Math.max(1, a.valueProps.length)]?.title || a.brand
+  const who = a.targets[0] || `${a.category}の担当者`
+  return [
+    makeDirection('photo', { name: '導入の実感', aim: '導入した会社の毎日が見え、信頼を伝える', subject: `${who}が、${a.category}を使って仕事を進める場面。机の上の手元と、打ち合わせの後ろ姿`, headline: vp(0) }),
+    makeDirection('graphic', { name: '通路で止める', aim: '遠くからでも読める見出しで、足を止めてもらう', subject: 'ブランドの色の大きな面と、大きな幾何の形。人物や製品の絵は使わない', headline: flat(a.headline) || vp(0) }),
+    makeDirection('world', { name: '世界に引きこむ', aim: 'サービスの世界を1枚で見せ、デモに誘う', subject: `${a.category}の仕組みを、光る立体の部品が並ぶ空間として表した絵`, headline: vp(1) }),
+  ]
+}
+
+const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+
+/** AI の返した戦略を、項目ごとに検査する。欠けた項目は下書きで埋める */
+export function completeStrategy(raw: unknown, draft: BoothStrategy): BoothStrategy {
+  const r = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+  return {
+    aim: clean(r.aim, 80) || draft.aim,
+    audience: clean(r.audience, 80) || draft.audience,
+    hook: clean(r.hook, 30) || draft.hook,
+    experience: clean(r.experience, 100) || draft.experience,
+  }
+}
+
+/** AI の返した方向（配列、または型をキーにした連想配列）を、型ごと・項目ごとに検査する。型が欠けたら下書きで埋め、必ず3つ返す */
+export function completeDirections(raw: unknown, draft: ArtDirection[]): ArtDirection[] {
+  const list: unknown[] = Array.isArray(raw) ? raw : typeof raw === 'object' && raw !== null ? Object.entries(raw).map(([k, v]) => (typeof v === 'object' && v !== null ? { type: k, ...(v as object) } : v)) : []
+  return ART_TYPES.map((type) => {
+    const fallback = draft.find((d) => d.type === type) ?? makeDirection(type)
+    const found = list.find((x) => typeof x === 'object' && x !== null && (x as { type?: unknown }).type === type) as Record<string, unknown> | undefined
+    if (!found) return fallback
+    return makeDirection(type, {
+      name: clean(found.name, 24) || fallback.name,
+      aim: clean(found.aim, 80) || fallback.aim,
+      subject: scrub(clean(found.subject, 120), 120) || fallback.subject,
+      headline: headlineLines(clean(found.headline, 60)).join('\n') || fallback.headline,
+    })
+  })
+}
+
+/** 保存した戦略・方向を読む（壊れていたら、下書きで埋める） */
+export function readStrategy(raw: unknown, draft: BoothStrategy): BoothStrategy {
+  return completeStrategy(raw, draft)
 }

@@ -3,7 +3,7 @@
 // ⚠️ 利用者ごとにキーを分ける（同じ端末で別のアカウントに切り替えても、前の人の内容を出さない）。
 // ⚠️ localStorage は読めない・書けないことがある（プライベート窓・容量超過）。すべて try/catch し、失敗しても画面は動かす。
 import { BOOTH_SIZE_LIMIT, boothSize, isValidBoothMeter, type GeneratedPlan, type ProjectInput } from './engine'
-import { isKit, type BoothDesignKit } from './design-kit'
+import { readKit, type BoothDesignKit } from './design-kit'
 
 export const STORE_VERSION = 1
 
@@ -99,7 +99,8 @@ export function loadProjectResult(userId: string | null | undefined, store: KeyV
     }
     const images: Record<string, string> = {}
     if (isRecord(p.panelImages)) for (const [k, v] of Object.entries(p.panelImages)) if (typeof v === 'string') images[k] = v
-    const kit = isKit(p.designKit) ? p.designKit : undefined
+    // version 1 の保存は、大きな文字と色面（graphic）の決まりとして読む（readKit）
+    const kit = readKit(p.designKit) ?? undefined
     // デザインの決まりを持たない保存（2026-10-29 より前）の画像は、文字を含まない。目印を付けて、見出しを重ねて出す
     let legacySig: Record<string, string> | undefined
     if (isRecord(p.legacySig)) {
