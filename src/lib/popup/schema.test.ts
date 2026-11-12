@@ -14,6 +14,9 @@ import {
   parseDomain,
   pathMatches,
   publishIssues,
+  layoutOfPlacement,
+  placementOf,
+  POPUP_PLACEMENTS,
   sanitizeColor,
   sanitizeCreative,
   sanitizeFrequency,
@@ -53,6 +56,34 @@ test('文言は上限で切り、制御文字を落とす', () => {
   assert.equal(c.sub, 'ab')
   assert.equal(c.bubbles.length, 3)
   assert.equal(c.layout, 'modal')
+})
+
+test('位置（corner）: 無い・不正な値は右下にそろえ、左下は通す', () => {
+  assert.equal(sanitizeCreative({}).corner, 'right')
+  assert.equal(sanitizeCreative({ layout: 'slide' }).corner, 'right')
+  assert.equal(sanitizeCreative({ corner: 'top' }).corner, 'right')
+  assert.equal(sanitizeCreative({ layout: 'slide', corner: 'left' }).corner, 'left')
+  // 古い保存データ（corner が無い）を base にしても、右下のまま
+  assert.equal(sanitizeCreative({ headline: 'x' }, { layout: 'slide' } as any).corner, 'right')
+  // 編集で corner を送らなければ、保存済みの値を保つ
+  assert.equal(sanitizeCreative({ headline: 'x' }, { layout: 'slide', corner: 'left' } as any).corner, 'left')
+})
+
+test('位置の選択（placement）と layout・corner を行き来できる', () => {
+  for (const p of POPUP_PLACEMENTS) assert.equal(placementOf(layoutOfPlacement(p)), p)
+  assert.deepEqual(layoutOfPlacement('bottom-left'), { layout: 'slide', corner: 'left' })
+  assert.deepEqual(layoutOfPlacement('bottom-right'), { layout: 'slide', corner: 'right' })
+  // 今までの slide（corner なし）は右下として見える
+  assert.equal(placementOf(sanitizeCreative({ layout: 'slide' })), 'bottom-right')
+})
+
+test('embed.js は corner を left のときだけ左下にし、古い設定は右下のまま（スマホは左右に余白を取り幅に収める）', () => {
+  const src = readFileSync(join(process.cwd(), 'public/popup/embed.js'), 'utf8')
+  assert.ok(/layout === 'slide' && p\.corner === 'left' \? ' cleft'/.test(src), 'cleft の付与が見つからない')
+  assert.ok(/\.slide\.cleft \.card\{right:auto;left:20px\}/.test(src))
+  assert.ok(/\.mobile\.slide \.card,\.mobile\.slide\.cleft \.card\{left:12px;right:12px;bottom:12px;width:auto\}/.test(src))
+  // 既定の右下の指定は残っている
+  assert.ok(/\.slide \.card\{right:20px;bottom:20px;/.test(src))
 })
 
 test('リンク一覧は3件まで・URLが不正なものは落とす', () => {
@@ -211,9 +242,9 @@ test('色はボタンの白文字が読めるものだけを選ぶ', () => {
   assert.ok(contrastRatio('#0066ff', '#ffffff') >= 3)
 })
 
-test('3案を作る。リンク先はサイトで見つかったURLだけ', () => {
+test('3案と右下の版を作る。リンク先はサイトで見つかったURLだけ', () => {
   const ps = buildProposals(SITE, 'b2b', [link('understand'), link('prepare')], COPY)
-  assert.deepEqual(ps.map((p) => p.kind), ['ask', 'cta', 'pages'])
+  assert.deepEqual(ps.map((p) => p.kind), ['ask', 'cta', 'pages', 'cta'])
   const allowed = new Set([SITE.contactUrl, SITE.downloadUrl, ...SITE.pages.map((p) => p.url)])
   assert.equal(ps[1].creative.buttonUrl, SITE.contactUrl)
   for (const l of ps[2].creative.links) assert.ok(allowed.has(l.url), l.url)
@@ -221,14 +252,20 @@ test('3案を作る。リンク先はサイトで見つかったURLだけ', () =
   assert.equal(ps[0].trigger.type, 'scroll')
   assert.equal(ps[1].trigger.type, 'exit')
   assert.equal(ps[2].creative.layout, 'slide')
+  // 右下の版（D案）: 隅に出す形・右下・行き先はサイトのURL
+  assert.equal(ps[3].creative.layout, 'slide')
+  assert.equal(ps[3].creative.corner, 'right')
+  assert.equal(ps[3].creative.buttonUrl, SITE.contactUrl)
   for (const p of ps) assert.deepEqual(publishIssues(p.kind, p.creative), [], p.name)
 })
 
-test('行き先が無いサイトでは B・C 案を作らない', () => {
+test('行き先が無いサイトでは B・C 案を作らない（右下の版は「AIに聞く」で作る）', () => {
   const bare: SiteProfile = { ...SITE, contactUrl: null, downloadUrl: null, pricingUrl: null, pages: [] }
   assert.equal(pickCta(bare, 'b2b'), null)
   assert.deepEqual(recommendedLinks(bare), [])
-  assert.deepEqual(buildProposals(bare, 'b2b', [link('understand')], COPY).map((p) => p.kind), ['ask'])
+  assert.deepEqual(buildProposals(bare, 'b2b', [link('understand')], COPY).map((p) => p.kind), ['ask', 'ask'])
+  // 要確認の質問リンクは、右下の版にも使わない
+  assert.deepEqual(buildProposals(bare, 'b2b', [link('understand', false)], COPY).map((p) => p.kind), ['ask'])
 })
 
 test('要確認の2本目の質問リンクは、おすすめページ案のボタンに使わない', () => {

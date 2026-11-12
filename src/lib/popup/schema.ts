@@ -8,10 +8,13 @@
 export type PopupKind = 'ask' | 'cta' | 'pages' | 'image'
 export type PopupStatus = 'draft' | 'live' | 'paused'
 export type PopupLayout = 'modal' | 'slide' | 'bar'
+/** 'slide'（隅に出す形）のときの置き場所。右下（既定）か左下。modal・bar では使わない */
+export type PopupCorner = 'right' | 'left'
 
 export const POPUP_KINDS: PopupKind[] = ['ask', 'cta', 'pages', 'image']
 export const POPUP_STATUSES: PopupStatus[] = ['draft', 'live', 'paused']
 export const POPUP_LAYOUTS: PopupLayout[] = ['modal', 'slide', 'bar']
+export const POPUP_CORNERS: PopupCorner[] = ['right', 'left']
 
 export const KIND_LABEL: Record<PopupKind, string> = {
   ask: 'AIに聞く',
@@ -24,6 +27,31 @@ export const LAYOUT_LABEL: Record<PopupLayout, string> = {
   modal: '中央に表示',
   slide: '右下に表示',
   bar: '下部に帯で表示',
+}
+
+/**
+ * 編集画面の「位置」の選択肢。layout と corner の組み合わせを1つの選択にまとめたもの。
+ * 保存する値は layout と corner（この表は画面の表示用）。
+ */
+export type PopupPlacement = 'center' | 'bottom-right' | 'bottom-left' | 'bar'
+export const PLACEMENT_LABEL: Record<PopupPlacement, string> = {
+  center: '真ん中',
+  'bottom-right': '右下',
+  'bottom-left': '左下',
+  bar: '下の帯',
+}
+export const POPUP_PLACEMENTS: PopupPlacement[] = ['center', 'bottom-right', 'bottom-left', 'bar']
+
+export function placementOf(c: Pick<PopupCreative, 'layout' | 'corner'>): PopupPlacement {
+  if (c.layout === 'modal') return 'center'
+  if (c.layout === 'bar') return 'bar'
+  return c.corner === 'left' ? 'bottom-left' : 'bottom-right'
+}
+
+export function layoutOfPlacement(p: PopupPlacement): { layout: PopupLayout; corner: PopupCorner } {
+  if (p === 'center') return { layout: 'modal', corner: 'right' }
+  if (p === 'bar') return { layout: 'bar', corner: 'right' }
+  return { layout: 'slide', corner: p === 'bottom-left' ? 'left' : 'right' }
 }
 
 export const STATUS_LABEL: Record<PopupStatus, string> = {
@@ -67,6 +95,8 @@ export interface PopupLinkItem {
 
 export interface PopupCreative {
   layout: PopupLayout
+  /** layout が 'slide' のときの置き場所。古い保存データには無いので、読むときは 'right' にそろえる */
+  corner: PopupCorner
   /** 上に小さく出す文字（サイト名など）。空なら出さない */
   eyebrow: string
   headline: string
@@ -211,6 +241,8 @@ export function sanitizeCreative(raw: unknown, base?: Partial<PopupCreative>): P
   }
   return {
     layout: oneOf(r.layout ?? b.layout, POPUP_LAYOUTS, 'modal'),
+    // ⚠️ 無い・不正な値は 'right'（今までの 'slide' は右下に出ていたので、見え方を変えない）
+    corner: oneOf(r.corner ?? b.corner, POPUP_CORNERS, 'right'),
     eyebrow: pickStr('eyebrow', LIMITS.eyebrow),
     headline: pickStr('headline', LIMITS.headline),
     sub: pickStr('sub', LIMITS.sub),

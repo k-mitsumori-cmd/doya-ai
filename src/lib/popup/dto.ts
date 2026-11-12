@@ -123,6 +123,8 @@ export interface EmbedPopup {
   id: string
   kind: PopupKind
   layout: PopupCreative['layout']
+  /** layout が slide のときの置き場所（古い設定には無い。embed.js は無ければ右下にする） */
+  corner: PopupCreative['corner']
   eyebrow: string
   headline: string
   sub: string
@@ -145,6 +147,7 @@ export function toEmbedPopup(p: Pick<Popup, 'id' | 'kind' | 'creative' | 'trigge
     id: p.id,
     kind: p.kind as PopupKind,
     layout: c.layout,
+    corner: c.corner,
     eyebrow: c.eyebrow,
     headline: c.headline,
     sub: c.sub,

@@ -80,6 +80,7 @@ function askProposal(site: SiteProfile, link: AskLink, copy: BannerCopy, colors:
       (link.needsReview ? '（質問文が自動チェックを通らなかったため、公開前に内容を確認してください）' : ''),
     creative: sanitizeCreative({
       layout: 'modal',
+      corner: 'right',
       eyebrow: site.name,
       headline: copy.headline,
       sub: copy.sub,
@@ -130,6 +131,7 @@ function ctaProposal(site: SiteProfile, audience: Audience, colors: PopupColors)
     reason: `ページを離れそうなときに、${t.what}への案内を出します。スマホではページを離れる動きを見分けられないので、25秒後に出します。`,
     creative: sanitizeCreative({
       layout: 'modal',
+      corner: 'right',
       eyebrow: site.name,
       headline: t.headline,
       sub: t.sub,
@@ -144,6 +146,61 @@ function ctaProposal(site: SiteProfile, audience: Audience, colors: PopupColors)
     trigger: sanitizeTrigger({ type: 'exit', delaySec: 25, scrollPct: 50 }),
     targeting: sanitizeTargeting({}),
     frequency: sanitizeFrequency({ hideDays: 14, oncePerSession: true }),
+  }
+}
+
+/**
+ * 画面の右下に小さく出す版（真ん中に出す案より、読んでいる邪魔になりにくい）。
+ * 相談・申し込みの行き先があればそれを、無ければ「AIに聞く」を右下に出す。どちらも無ければ作らない。
+ */
+function cornerProposal(site: SiteProfile, audience: Audience, link: AskLink | undefined, colors: PopupColors): Proposal | null {
+  const t = pickCta(site, audience)
+  if (t) {
+    return {
+      kind: 'cta',
+      name: 'D. 右下に控えめに出す',
+      reason: `ページを開いて20秒後に、${t.what}への案内を画面の右下に小さく出します。ページの内容を隠しにくい形です。`,
+      creative: sanitizeCreative({
+        layout: 'slide',
+        corner: 'right',
+        eyebrow: site.name,
+        headline: t.headline,
+        sub: t.sub,
+        bubbles: [],
+        buttonLabel: t.buttonLabel,
+        buttonUrl: t.url,
+        note: '',
+        question: '',
+        links: [],
+        colors,
+      }),
+      trigger: sanitizeTrigger({ type: 'delay', delaySec: 20, scrollPct: 50 }),
+      targeting: sanitizeTargeting({}),
+      frequency: sanitizeFrequency({ hideDays: 7, oncePerSession: true }),
+    }
+  }
+  if (!link || link.needsReview) return null
+  return {
+    kind: 'ask',
+    name: 'D. 右下に控えめに出す',
+    reason: 'ページを開いて20秒後に、ChatGPTに相談できるボタンを画面の右下に小さく出します。ページの内容を隠しにくい形です。',
+    creative: sanitizeCreative({
+      layout: 'slide',
+      corner: 'right',
+      eyebrow: site.name,
+      headline: 'サイトのこと、AIに聞いてみませんか？',
+      sub: '気になることを、その場でChatGPTに質問できます。',
+      bubbles: [],
+      buttonLabel: link.buttonLabel,
+      buttonUrl: link.url,
+      note: BANNER_NOTE_TEXT,
+      question: link.question,
+      links: [],
+      colors,
+    }),
+    trigger: sanitizeTrigger({ type: 'delay', delaySec: 20, scrollPct: 50 }),
+    targeting: sanitizeTargeting({}),
+    frequency: sanitizeFrequency({ hideDays: 7, oncePerSession: true }),
   }
 }
 
@@ -170,6 +227,7 @@ function pagesProposal(site: SiteProfile, audience: Audience, second: AskLink | 
     reason: 'ページを開いて15秒後に、次に読むとよいページを右下に出します。AIに相談できるボタンも一緒に出します。',
     creative: sanitizeCreative({
       layout: 'slide',
+      corner: 'right',
       eyebrow: site.name,
       headline: audience === 'b2c' ? 'あわせて見たいページ' : 'こちらのページもおすすめです',
       sub: `${site.name}をもっと知るための${links.length}ページ`,
@@ -187,7 +245,7 @@ function pagesProposal(site: SiteProfile, audience: Audience, second: AskLink | 
   }
 }
 
-/** 3案（B・C は行き先が無ければ省く）。並び順がそのまま表示の優先順になる */
+/** 3案＋右下の版（B・C・D は行き先が無ければ省く）。並び順がそのまま表示の優先順になる */
 export function buildProposals(site: SiteProfile, audience: Audience, links: AskLink[], copy: BannerCopy): Proposal[] {
   const colors = pickColors(site.colors)
   const out: Proposal[] = []
@@ -196,6 +254,8 @@ export function buildProposals(site: SiteProfile, audience: Audience, links: Ask
   if (cta) out.push(cta)
   const pages = pagesProposal(site, audience, links[1], colors)
   if (pages) out.push(pages)
+  const corner = cornerProposal(site, audience, links[0], colors)
+  if (corner) out.push(corner)
   return out
 }
 
@@ -208,6 +268,7 @@ export function blankProposal(kind: PopupKind, site: SiteProfile): Proposal {
     reason: '',
     creative: sanitizeCreative({
       layout: 'modal',
+      corner: 'right',
       eyebrow: kind === 'image' ? '' : site.name,
       headline: kind === 'image' ? '' : 'お知らせ',
       sub: '',

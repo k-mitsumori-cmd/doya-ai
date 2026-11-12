@@ -16,7 +16,7 @@ const NOW = new Date('2026-10-18T03:00:00Z') // JST 2026-10-18 12:00
 const SITE_PROFILE = { name: 'サンプル', summary: '', strengths: [], target: '', contactUrl: 'https://example.com/contact', downloadUrl: null, pricingUrl: null, pages: [], colors: ['#0a58ca'] }
 
 function creative(extra: Record<string, unknown> = {}) {
-  return { layout: 'modal', eyebrow: '', headline: '見出し', sub: '', bubbles: [], buttonLabel: '押す', buttonUrl: 'https://example.com/contact', note: '', question: '', links: [], colors: { bg: '#ffffff', accent: '#0066ff', text: '#1f2430' }, imagePath: null, imageWidth: null, imageHeight: null, imageAlt: '', ...extra }
+  return { layout: 'modal', corner: 'right', eyebrow: '', headline: '見出し', sub: '', bubbles: [], buttonLabel: '押す', buttonUrl: 'https://example.com/contact', note: '', question: '', links: [], colors: { bg: '#ffffff', accent: '#0066ff', text: '#1f2430' }, imagePath: null, imageWidth: null, imageHeight: null, imageAlt: '', ...extra }
 }
 
 function popupRow(id: string, siteId: string, userId: string, status: string, sortOrder: number) {

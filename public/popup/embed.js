@@ -215,10 +215,11 @@
     '.modal .card{left:50%;top:50%;width:min(440px,calc(100vw - 32px));transform:translate(-50%,-46%)}' +
     '.show.modal .card{transform:translate(-50%,-50%)}' +
     '.slide .card{right:20px;bottom:20px;width:min(340px,calc(100vw - 24px));transform:translateY(16px);padding:22px 20px 18px}' +
+    '.slide.cleft .card{right:auto;left:20px}' +
     '.bar .card{left:0;right:0;bottom:0;border-radius:16px 16px 0 0;padding:14px 56px 14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;transform:translateY(100%)}' +
     '.sheet .card{left:0;right:0;bottom:0;top:auto;width:100%;border-radius:20px 20px 0 0;transform:translateY(100%);padding:24px 20px calc(18px + env(safe-area-inset-bottom))}' +
     '.show.sheet .card,.show.slide .card,.show.bar .card{transform:none}' +
-    '.mobile.slide .card{left:12px;right:12px;bottom:12px;width:auto}' +
+    '.mobile.slide .card,.mobile.slide.cleft .card{left:12px;right:12px;bottom:12px;width:auto}' +
     '.close{position:absolute;top:10px;right:10px;width:36px;height:36px;border:0;border-radius:999px;background:transparent;color:var(--text);opacity:.55;cursor:pointer;display:grid;place-items:center}' +
     '.close:hover{opacity:1;background:var(--tint)}.close:focus-visible{outline:2px solid var(--accent);outline-offset:2px;opacity:1}' +
     '.close svg{width:18px;height:18px}' +
@@ -285,7 +286,7 @@
     style.textContent = CSS
     shadow.appendChild(style)
 
-    var root = el('div', 'root ' + (layout === 'modal' && mobile && !isImage ? 'sheet' : layout) + (mobile ? ' mobile' : '') + (reducedMotion() ? ' noanim' : ''))
+    var root = el('div', 'root ' + (layout === 'modal' && mobile && !isImage ? 'sheet' : layout) + (layout === 'slide' && p.corner === 'left' ? ' cleft' : '') + (mobile ? ' mobile' : '') + (reducedMotion() ? ' noanim' : ''))
     root.style.setProperty('--bg', bg)
     root.style.setProperty('--accent', accent)
     root.style.setProperty('--text', text)

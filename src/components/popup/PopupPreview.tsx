@@ -16,6 +16,7 @@ export function toPreviewPopup(p: PopupDto) {
     id: p.id,
     kind: p.kind,
     layout: c.layout,
+    corner: c.corner,
     eyebrow: c.eyebrow,
     headline: c.headline,
     sub: c.sub,
