@@ -11,7 +11,7 @@
 // ⚠️ 公開画面・ゲスト画面（共有閲覧・面接・回答画面など）では使わない（ADDON R-7）。
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
@@ -31,6 +31,7 @@ import { RECENT_COOKIE, serializeRecent } from '@/lib/shell/recent'
 import { NAV_GROUPS_COOKIE, serializeNavGroups } from '@/lib/shell/nav-groups'
 import { useNotice } from '@/components/notice/NoticeProvider'
 import { newToolIds } from '@/lib/notice/announcements'
+import { FrequentContext, PinButton, useFrequentTools } from './FrequentTools'
 
 // 日付で変わるので、開くたびに作る（同じ描画の中では1回だけ）
 let newToolCache: { day: string; ids: Set<string> } | null = null
@@ -46,6 +47,8 @@ import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
 import { brandName } from '@/lib/brand'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
+/** 「よく使うツール」に出せるツール（ホームは除く） */
+const FREQUENT_VALID: ReadonlySet<string> = new Set(ALL_SHELL_TOOLS.filter((t) => t.id !== 'home').map((t) => t.id))
 
 function toolBase(tool: ShellTool) {
   return tool.href.split('/').slice(0, 2).join('/')
@@ -73,13 +76,22 @@ function NavItem({ tool, pathname, onNavigate, prefetch, mirror }: { tool: Shell
   // 組織を選ぶツールは、入口ではなく組織のページへ（中身がある）
   const href = useToolHref()(tool.href)
   // mirror は「最近使ったツール」の複製。今のページの印（aria-current）は本来の区分の側だけに付ける
-  return (
+  const link = (
     <Link href={href} className={styles.navItem} aria-current={active && !mirror ? 'page' : undefined} data-active={active && mirror ? 'true' : undefined} onClick={() => onNavigate(href)} title={tool.name} prefetch={prefetch}>
       <ToolBearIcon id={tool.id} icon={tool.icon} />
       <span className={styles.navLabel}>{tool.name}</span>
       {tool.beta ? <span className={styles.beta}>開発中</span> : null}
       {!tool.beta && isNew ? <span className={styles.newTag}>新機能</span> : null}
     </Link>
+  )
+  // 「よく使うツール」の旗が on のときだけ、行の右にピンのボタンを置く（off のときは今のまま、リンクだけ）
+  const frequent = useContext(FrequentContext)
+  if (!frequent || !frequent.valid.has(tool.id)) return link
+  return (
+    <div className={styles.pinRow}>
+      {link}
+      <PinButton toolId={tool.id} toolName={tool.name} />
+    </div>
   )
 }
 
@@ -333,7 +345,7 @@ function AgentTasksRow({ pathname, onNavigate }: { pathname: string; onNavigate:
 /** HubSpot のポップアップの要素（CompanyDialog.tsx で会社情報の画面を開いている間に隠すものと同じ） */
 const HIDE_HUBSPOT_CSS = '[id^="hs-web-interactives"],[class*="hs-web-interactive"],#hubspot-messages-iframe-container,.hs-overlay-container{display:none!important}'
 
-export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups, actorKey, supportChat = false, agentChat = false }: {
+export default function AppShell({ children, userName, initialRecent, departments, products, agentTasks = false, navGroups, actorKey, supportChat = false, agentChat = false, frequent }: {
   children: ReactNode
   userName?: string | null
   /** 最近使ったツール（新しい見た目のとき、サーバーが cookie から読んで渡す。最初の描画から並べ、あとから押し下げない） */
@@ -353,6 +365,8 @@ export default function AppShell({ children, userName, initialRecent, department
   actorKey?: string
   /** まとまりの開閉（cookie。押したものだけ） */
   navGroups?: Record<string, boolean>
+  /** 「よく使うツール」（旗 SHELL_FREQUENT_TOOLS_ROLLOUT。サーバーが on と決めたときだけ渡される。渡されなければ記録も表示もしない） */
+  frequent?: { initial: string[]; pinnedCount: number }
 }) {
   const pathname = usePathname() || '/'
   // 新しい見た目（チェックリスト §5.1）のときだけ、UI 品質の直し（区分の名前・押した瞬間の選択・先読み）を使う
@@ -437,6 +451,11 @@ export default function AppShell({ children, userName, initialRecent, department
   // 最近の記録（cookie・localStorage）は残す。並びの固定された欄（経営ホームなど）で使う
   const recentTools: ShellTool[] = []
 
+  // 「よく使うツール」（旗が on のときだけ。並びは1日1回だけ作る）。docs/architecture/shell/FREQUENT-TOOLS-2026-11-12.md
+  const currentToolId = useMemo(() => ALL_SHELL_TOOLS.find((t) => t.id !== 'home' && isActive(pathname, t))?.id ?? null, [pathname])
+  const freq = useFrequentTools({ enabled: Boolean(frequent), actorKey: actorKey ?? '', initial: frequent ? { ids: frequent.initial, pinnedCount: frequent.pinnedCount } : undefined, currentToolId, valid: FREQUENT_VALID })
+  const frequentTools = freq.ids.map((id) => ALL_SHELL_TOOLS.find((t) => t.id === id)).filter((t): t is ShellTool => Boolean(t))
+
   // 枠の中の h1 を1つにする（UI 品質 S-57）
   const mainRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
@@ -455,6 +474,7 @@ export default function AppShell({ children, userName, initialRecent, department
 
   return (
     <InShellContext.Provider value={true}>
+    <FrequentContext.Provider value={freq.context}>
     <ShellUsageProvider>
     <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
@@ -504,6 +524,14 @@ export default function AppShell({ children, userName, initialRecent, department
         <div className={styles.navScroll}>
           <NavItem tool={productsOn ? productHome : SHELL_HOME} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} />
           {agentTasks ? <AgentTasksRow key={actorKey || 'anonymous'} pathname={pathname} onNavigate={navigate} /> : null}
+          {frequentTools.length ? (
+            <div className={styles.group} data-late={freq.late ? 'true' : undefined}>
+              <p className={styles.groupLabel}>よく使うツール</p>
+              {frequentTools.map((tool) => (
+                <NavItem key={tool.id} tool={tool} pathname={shownPath} onNavigate={navigate} prefetch={prefetch} mirror />
+              ))}
+            </div>
+          ) : null}
           {recentTools.length ? (
             <div className={styles.group}>
               <p className={styles.groupLabel}>最近使ったツール</p>
@@ -603,6 +631,7 @@ export default function AppShell({ children, userName, initialRecent, department
       <CommandPalette open={palette} onClose={() => setPalette(false)} withIntents={true} withDepartments={deptOn && !productsOn} withProducts={productsOn} />
     </div>
     </ShellUsageProvider>
+    </FrequentContext.Provider>
     </InShellContext.Provider>
   )
 }

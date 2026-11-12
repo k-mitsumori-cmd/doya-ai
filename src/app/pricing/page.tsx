@@ -9,6 +9,8 @@ import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
 import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
+import { FREQ_COOKIE, parseFreqCookie } from '@/lib/shell/frequent'
+import { isShellFrequentEnabledFor } from '@/lib/shell/frequent-flag'
 import ShellGate from '@/components/shell/ShellGate'
 import PricingNext from '@/components/pricing/PricingNext'
 import PricingV2 from '@/components/pricing/PricingV2'
@@ -36,8 +38,11 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   const actorKey = (session.user as { id?: string }).id ?? session.user.email ?? ''
   const [company, toolHrefs, supportChat] = await Promise.all([getAccountCompanyName().catch(() => null), shellToolHrefs().catch(() => ({})), isSupportChatEnabled()])
   const initialRecent = parseRecent((await cookies()).get(RECENT_COOKIE)?.value)
+  // 左のメニューの「よく使うツール」（旗 SHELL_FREQUENT_TOOLS_ROLLOUT。off なら cookie も読まない）
+  const frequentCookie = actorKey && isShellFrequentEnabledFor(session.user.email) ? parseFreqCookie((await cookies()).get(FREQ_COOKIE)?.value, actorKey) : null
+  const frequent = frequentCookie ? { initial: frequentCookie.ids, pinnedCount: frequentCookie.pinnedCount } : undefined
   return (
-    <ShellGate key={actorKey} session={session} signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} always>
+    <ShellGate key={actorKey} session={session} signedIn supportChat={supportChat} userName={session.user.name ?? null} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} frequent={frequent} always>
       {view === 'current'
         ? <PricingNext canceled={canceled} inShell serverSignedIn serverPlan={(session.user as { plan?: string }).plan ?? null} />
         : <PricingV2 view={view} canceled={canceled} inShell serverSignedIn {...v2Extra} />}

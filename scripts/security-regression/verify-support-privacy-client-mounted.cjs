@@ -36,6 +36,7 @@ async function scenario(strict,kind){
   if(n==='@/components/notice/NoticeProvider')return {__esModule:true,default:pass,useNotice:()=>({enabled:false,held:[],openHeld:()=>{}})};
   if(n==='./icons')return {ShellIcon:none};
   if(n==='./ToolBearIcon')return {ToolBearIcon:none};
+  if(n==='./FrequentTools')return {FrequentContext:context(),PinButton:none,useFrequentTools:()=>({ids:[],late:false,context:null})};
   if(n==='@/lib/shell/recent')return {RECENT_COOKIE:'synthetic-recent',serializeRecent:()=>''};
   if(n==='@/lib/shell/nav-groups')return {NAV_GROUPS_COOKIE:'synthetic-groups',serializeNavGroups:()=>''};
   if(n==='@/lib/notice/announcements')return {newToolIds:()=>new Set()};

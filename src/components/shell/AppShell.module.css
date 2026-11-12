@@ -340,3 +340,37 @@
 @media (max-width: 767px) {
   .shell[data-agent-chat='true'] .account { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ---- よく使うツール（旗 SHELL_FREQUENT_TOOLS_ROLLOUT が on のときだけ使う） ---- */
+/* 行の右に、ピンのボタンを重ねる。ボタンはリンクの外に置く（押せるものの入れ子にしない） */
+.pinRow { position: relative; }
+.pinRow > .navItem { padding-right: 40px; }
+.pinButton {
+  position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+  display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer;
+  opacity: 0; transition: opacity 0.15s var(--ease), background 0.15s var(--ease), color 0.15s var(--ease);
+}
+/* ホバー・フォーカスで出す。固定している行は、いつも薄く見せる */
+.pinRow:hover .pinButton,
+.pinRow:focus-within .pinButton,
+.pinButton:focus-visible { opacity: 1; }
+.pinButton[aria-pressed='true'] { opacity: 1; color: var(--blue); }
+.pinButton:hover { background: var(--blue-soft); color: var(--blue); }
+.pinButton[aria-disabled='true'] { cursor: not-allowed; color: var(--line); }
+.pinButton:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* 欄があとから出るときだけ、ゆっくり出す（280ms）。最初の描画から並ぶときは動かさない */
+.group[data-late='true'] { animation: shell-freq-in 0.28s var(--ease) both; }
+@keyframes shell-freq-in { from { opacity: 0; } to { opacity: 1; } }
+/* 触って使う画面（ホバーが無い）では、ボタンをいつも出す */
+@media (hover: none) { .pinButton { opacity: 1; } }
+@media (max-width: 767px) { .pinButton { opacity: 1; width: 32px; height: 32px; } }
+/* アイコンだけの細いメニューでは、ボタンを出さない */
+@media (min-width: 768px) and (max-width: 1279px) {
+  .pinButton { display: none; }
+  .pinRow > .navItem { padding-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pinButton { transition: none; }
+  .group[data-late='true'] { animation: none; }
+}

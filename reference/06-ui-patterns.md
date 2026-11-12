@@ -2870,3 +2870,13 @@ src/
 `generationGrowth` / 各サービスの `growth` は数値または `null`。対応する `generationGrowthStatus` / `growthStatus` は `comparable`（比較可能）、`no-baseline`（前月0件）、`not-measured`（未集計）。前月0件は100%や0%を作らず「比較不可（前月0件）」とする。HRの月次比較は未集計。月初の当月0件も、前月が正数なら算術上の-100%を隠さない。比較は日本時間の今月途中累計と前月全体であり、同じ日数・確定月間値の比較ではない。本日の生成件数に月間増減率を添えない。
 
 利用統計の期間選択・CSV出力、サービス別の組織/従業員/プロジェクト/打刻と生成行の単位混在、全サービス網羅は、この修正では未対応。エラー復旧や月間比較の修正だけで利用統計全体の完成とは扱わない。
+
+### 左のメニューの「よく使うツール」（共通の枠 AppShell）
+
+旗 `SHELL_FREQUENT_TOOLS_ROLLOUT`（off / preview / all。既定 off）が出すと決めた人にだけ、ホームの下に「よく使うツール」の欄を出す。off のときは、記録も表示もしない。
+
+- 選び方: 直近30日に、ツールを開いた日数が多い順。同じ日に何度開いても1日と数える。2日以上のツールだけを、最大5つ出す。
+- 並びは1日1回だけ作る。画面を移っても入れ替わらない。ツールの行のピンのボタンで固定でき、固定したツールが先に並ぶ（最大5つ）。
+- 保存は localStorage `doya-shell-freq-v1:<アカウントの id>` と、cookie `doya_shell_freq`（アカウントの id の短いハッシュつき）。サーバーが cookie を読み、最初の描画から並べる。別の端末で同じ並びにするには、DB への保存が別に要る。
+- スマホは、下のナビを変えず、「すべて」の引き出しのいちばん上に出す。
+- 計算は `src/lib/shell/frequent.ts`、旗は `src/lib/shell/frequent-flag.ts`、画面の部品は `src/components/shell/FrequentTools.tsx`。仕様は `docs/architecture/shell/FREQUENT-TOOLS-2026-11-12.md`。

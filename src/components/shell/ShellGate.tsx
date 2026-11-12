@@ -33,7 +33,7 @@ import AgentDock from '@/components/agent-chat/AgentDock'
 
 const EMPTY: Record<string, string> = {}
 
-export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, products, agentTasks = false, agentChat = false, navGroups, children }: {
+export default function ShellGate({ session, signedIn, userName, guide = false, supportChat = false, oneButton = false, doyaPower = false, doyaPowerState = null, doyaPowerFx, company = undefined, always = false, toolHrefs, initialRecent, departments, products, agentTasks = false, agentChat = false, navGroups, frequent, children }: {
   /** サーバーで読んだログイン情報。クライアントが /api/auth/session を取り直すまで「確認中」の文字を出さないための初期値。認可はサーバー側の判定のまま */
   session?: Session | null
   signedIn: boolean
@@ -63,6 +63,8 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   agentChat?: boolean
   /** 左のメニューのまとまりの開閉（cookie から読んで渡す。src/lib/shell/nav-groups.ts） */
   navGroups?: Record<string, boolean>
+  /** 左のメニューの「よく使うツール」（旗 SHELL_FREQUENT_TOOLS_ROLLOUT が出すと決めた人だけ、サーバーが cookie から読んで渡す） */
+  frequent?: { initial: string[]; pinnedCount: number }
   /** ツールの一覧に無いページ（/pricing など）でも、ログインしていれば枠を出す */
   always?: boolean
   /** アカウントの会社（null は見つからない。UI 品質 B-1） */
@@ -74,7 +76,7 @@ export default function ShellGate({ session, signedIn, userName, guide = false, 
   const shown = always ? signedIn : shouldShowShell(pathname, { signedIn })
   const userKey = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
   const framed = shown
-    ? <AppShell actorKey={userKey} userName={userName} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups} supportChat={supportChat} agentChat={Boolean(agentChat)}>{children}</AppShell>
+    ? <AppShell actorKey={userKey} userName={userName} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} navGroups={navGroups} frequent={frequent} supportChat={supportChat} agentChat={Boolean(agentChat)}>{children}</AppShell>
     : <>{children}</>
   // ドヤくんの知らせは、旗が出すと決めた人が、枠を開いているときだけ（見た記録はユーザーごと）
   const inner = guide && shown && userKey

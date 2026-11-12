@@ -24,6 +24,8 @@ import { getAccountCompanyName } from '@/lib/shell/company.server'
 import { shellToolHrefs } from '@/lib/shell/tool-hrefs.server'
 import { cookies } from 'next/headers'
 import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
+import { FREQ_COOKIE, parseFreqCookie } from '@/lib/shell/frequent'
+import { isShellFrequentEnabledFor } from '@/lib/shell/frequent-flag'
 import { NAV_GROUPS_COOKIE, parseNavGroups } from '@/lib/shell/nav-groups'
 import { isAgentOrchestrationEnabled } from '@/lib/agent-orchestration/flag'
 import { isAgentChatEnabled } from '@/lib/agent-chat/flag'
@@ -62,6 +64,11 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
     : [undefined, {}]
   // 最近使ったツール（最初の描画から並べ、あとから押し下げない）
   const initialRecent = signedIn ? parseRecent((await cookies()).get(RECENT_COOKIE)?.value) : undefined
+  // 左のメニューの「よく使うツール」（旗 SHELL_FREQUENT_TOOLS_ROLLOUT。off なら cookie も読まず、今のまま）。最初の描画から並べ、あとから押し下げない
+  const frequentActor = (session?.user as { id?: string } | undefined)?.id ?? session?.user?.email ?? ''
+  const frequent = signedIn && frequentActor && isShellFrequentEnabledFor(session?.user?.email)
+    ? await (async () => { const f = parseFreqCookie((await cookies()).get(FREQ_COOKIE)?.value, frequentActor); return { initial: f.ids, pinnedCount: f.pinnedCount } })()
+    : undefined
   // 左のメニューのまとまり（ドヤマーケAI など）の開閉。最初の描画から開いた形で出し、あとから動かさない
   const navGroups = signedIn ? parseNavGroups((await cookies()).get(NAV_GROUPS_COOKIE)?.value) : undefined
   // 左のメニューの「動いているタスク」（ドヤくんに任せた ToDo）。旗 AGENT_ORCHESTRATION_ROLLOUT の内側だけ（off ならセッションも読まない）
@@ -75,7 +82,7 @@ export default async function ShellGroupLayout({ children }: { children: ReactNo
   const userId = (session?.user as { id?: string } | undefined)?.id
   const doyaPowerFx = doyaPower && userId ? (await loadDoyaPowerFxForUser(userId).catch(() => null))?.fx ?? undefined : undefined
   return (
-    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} agentChat={agentChat} navGroups={navGroups}>
+    <ShellGate session={session} signedIn={signedIn} userName={session?.user?.name ?? null} guide={guide} supportChat={supportChat} oneButton={oneButton} doyaPower={doyaPower} doyaPowerState={doyaPowerState} doyaPowerFx={doyaPowerFx} company={company} toolHrefs={toolHrefs} initialRecent={initialRecent} departments={departments} products={products} agentTasks={agentTasks} agentChat={agentChat} navGroups={navGroups} frequent={frequent}>
       {children}
     </ShellGate>
   )
