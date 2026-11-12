@@ -17,8 +17,12 @@ import { IMAGEGEN_DISABLED_MESSAGE, isImageGenDisabled, remainingLabel, requestI
 import { nearestRatio } from '@/lib/tenjikai/imagegen'
 import { buildPanelPrompt, generateGraphicPlan, type GraphicPanel } from '@/lib/tenjikai/graphics'
 import { cropImageToAspect, toReferencePng } from '@/lib/tenjikai/image-fit'
-import type { BoothDesignKit } from '@/lib/tenjikai/design-kit'
+import type { ArtDirection, ArtType, BoothDesignKit, BoothStrategy } from '@/lib/tenjikai/design-kit'
 import DesignKitStudio from './DesignKitStudio'
+import KeyVisualStep from './KeyVisualStep'
+import { defaultSelection, needSummary } from '@/lib/tenjikai/image-budget'
+import { useDoyaPower } from '@/components/doya-power/doya-power-context'
+import { doyaPowerCost } from '@/lib/doya-power/costs'
 import { batchSummary, runPanelBatch, type BatchFace } from '@/lib/tenjikai/batch'
 import DoyaWorking from '@/components/shell/DoyaWorking'
 import { KIND_LABEL, man, planCost, yen, type BoothPlan, type ProjectInput, type SiteAnalysis } from '@/lib/tenjikai/engine'
@@ -68,9 +72,17 @@ interface StudioProps {
   setPanelImages: (f: (m: Images) => Images) => void
   /** 小間の横と奥行を変える（3D と面の数・大きさが変わる）。作った面の画像は外す */
   onResize?: (widthM: number, depthM: number) => void
-  /** ブースのデザインの決まり（仕様 4 章）と、確定したか。確定するまで、画像は作れない */
+  /** 戦略と、3つのデザインの方向（実写・大きな文字と色面・世界観）。おすすめの型は出展の目的から決める */
+  strategy: BoothStrategy
+  directions: ArtDirection[]
+  recommended: ArtType
+  /** ブースのデザインの決まり（方向を含む）と、確定したか。確定するまで、画像は作れない */
   kit: BoothDesignKit
   kitConfirmed: boolean
+  /** キービジュアル（背面壁の中央）を、本人が確定したか。確定するまで、残りの面は作れない */
+  keyVisualConfirmed: boolean
+  onKeyVisualConfirm: () => void
+  onKeyVisualReset: () => void
   /** 文字を含まない昔の画像の目印。その画像の上には、見出しを重ねて出す */
   legacySig?: Record<string, string>
   onKitChange: (kit: BoothDesignKit) => void
@@ -78,12 +90,13 @@ interface StudioProps {
   onKitReopen: () => void
 }
 
-const KIT_NEEDED_MESSAGE = '先に、上の「ブースのデザインの決まり」を確定してください。確定した決まりで、すべての面を同じに作ります。'
+const KIT_NEEDED_MESSAGE = '先に、上の「戦略とデザインの方向」を確定してください。確定した方向で、すべての面を同じに作ります。'
+const KV_NEEDED_MESSAGE = '先に、キービジュアル（背面壁の中央）を作って確定してください。この絵を見本にして、残りの面を作ります。'
 
 const VIEW_LABEL = { '3d': '3D', iso: '等角模型', plan: '平面図' } as const
 
 // 利用者の流れ（2026-10-19 ユーザー指示）: 条件を入れる → 3D で確かめる → 面の画像を作る（3D に貼られる） → 書き出す
-const FLOW = ['条件を入れる', '3Dで確かめる', '面の画像を作る', '書き出す'] as const
+const FLOW = ['条件を入れる', '方向を決める', 'キービジュアルを作る', '残りの面を作る', '書き出す'] as const
 
 // 書き出し：割付表（CSV）と、作った面の画像を保存する
 function download(name: string, href: string) {
@@ -151,7 +164,7 @@ async function exportPack(plan: BoothPlan, panels: GraphicPanel[], images: Image
   }
 }
 
-export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize, kit, kitConfirmed, legacySig, onKitChange, onKitConfirm, onKitReopen }: StudioProps) {
+export default function BoothStudio({ plans, variant, setVariant, input, analysis, panelImages, setPanelImages, onResize, strategy, directions, recommended, kit, kitConfirmed, keyVisualConfirmed, onKeyVisualConfirm, onKeyVisualReset, legacySig, onKitChange, onKitConfirm, onKitReopen }: StudioProps) {
   const [view, setView] = useState<'3d' | 'iso' | 'plan'>('3d')
   const [selectedId, setSelectedId] = useState<string>()
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
@@ -193,10 +206,14 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   // 見本（マスター）: 背面壁の中央の画像
   const heroPanel = panels.find((p) => p.layout === 'hero')
   const heroImage = heroPanel ? panelImages[heroPanel.id] : undefined
-  const missing = panels.filter((p) => !panelImages[p.id])
-  const madeCount = panels.length - missing.length
-  const allMade = panels.length > 0 && missing.length === 0
-  const step = allMade ? 3 : 2
+  const allMissing = panels.filter((p) => !panelImages[p.id])
+  // まとめて作る面。キービジュアル（背面壁の中央）は先に作って確定するので、確定後は、ここに入らない
+  const missing = allMissing
+  const madeCount = panels.length - allMissing.length
+  const allMade = panels.length > 0 && allMissing.length === 0
+  const step = allMade ? 4 : keyVisualConfirmed ? 3 : kitConfirmed ? 2 : 1
+  const powerOn = useDoyaPower()
+  const [picked, setPicked] = useState<string[]>([])
 
   const selectElement = (id: string) => {
     setSelectedId(id)
@@ -219,6 +236,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
     setStopReason(undefined)
     // 見本（マスター）を先に作り、残りの面は、見本を参照して作る（仕様 5 章）。すでに見本があれば、それを参照にする
     const ordered = [...targets].sort((a, b) => Number(b.layout === 'hero') - Number(a.layout === 'hero'))
+    if (ordered.length === 0) return
     const heroNow = panels.find((p) => p.layout === 'hero')
     let masterRef: string | undefined = heroNow && panelImages[heroNow.id] ? await toReferencePng(panelImages[heroNow.id]) : undefined
     if (scope.signal.aborted) return
@@ -247,12 +265,24 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
   }
 
   const left = remainingLabel(quota)
-  const notEnough = quota?.enabled && quota.remaining !== null && quota.remaining < missing.length
+  const remainingNow = quota?.enabled ? quota.remaining : null
+  const sel = missing.filter((p) => picked.includes(p.id))
+  const need = needSummary(sel.length, remainingNow)
+  const notEnough = !need.enough
+  const openConfirm = () => {
+    setFaces([])
+    setStopReason(undefined)
+    setPicked(defaultSelection(missing.map((p) => p.id), remainingNow))
+    setBatchOpen(true)
+  }
   // サーバーが画像の生成を止めている（TENJIKAI_IMAGEGEN_ENABLED が未設定）。押す前から分かるように出す
   const disabled = isImageGenDisabled(quota)
   // 決まりを確定するまでは、画像を作らせない（面ごとに色や形がばらばらになるのを防ぐ。2026-10-29）
   const kitBlocked = !kitConfirmed
-  const blocked = disabled || kitBlocked
+  // キービジュアルを確定するまでは、残りの面を作らせない（見本が無いまま作ると、面ごとに絵がばらばらになる）
+  const kvBlocked = kitConfirmed && !keyVisualConfirmed
+  const blocked = disabled || kitBlocked || kvBlocked
+  const blockedMessage = disabled ? IMAGEGEN_DISABLED_MESSAGE : kitBlocked ? KIT_NEEDED_MESSAGE : KV_NEEDED_MESSAGE
   const failedPanels = panels.filter((p) => !panelImages[p.id] && faces.some((f) => f.id === p.id && (f.status === 'failed' || f.status === 'skipped')))
   const sizeChanged = sizeDraft.w !== plan.widthM || sizeDraft.d !== plan.depthM
   // 旗 ONE_BUTTON_ROLLOUT が on の人には、上の帯を「これ1つで全部進む」形にする（ドヤくん＋大きなボタン1つ）
@@ -264,13 +294,13 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
         <OneButtonBar
           eyebrow="ブース設計"
           cta={allMade ? 'すべての面ができました。書き出して、印刷会社に渡せます' : running ? '面の画像を作っています。このままお待ちください' : 'ブースの形と大きさが決まったら、押してください'}
-          label={allMade ? '書き出す' : running ? `進み具合を見る（${summary.finished}/${summary.total}面）` : `面の画像をまとめて作る（${missing.length}面）`}
+          label={allMade ? '書き出す' : running ? `進み具合を見る（${summary.finished}/${summary.total}面）` : `残りの面をまとめて作る（${missing.length}面）`}
           scope={allMade
             ? '3Dの完成図・割付表・面の画像を、まとめて書き出します。'
             : `まだ画像の無い${missing.length}面を、1面ずつ作ります。できた面から3Dの壁に貼られます。${left ? `（${left}）` : ''}`}
-          onRun={allMade ? runExport : running ? () => setBatchOpen(true) : () => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }}
+          onRun={allMade ? runExport : running ? () => setBatchOpen(true) : openConfirm}
           disabled={!allMade && !running && blocked}
-          disabledReason={kitBlocked && !disabled ? KIT_NEEDED_MESSAGE : IMAGEGEN_DISABLED_MESSAGE}
+          disabledReason={blockedMessage}
           running={running}
           // 作っている間に押すと、進み具合の画面を開く（新しく作り始めはしない）
           clickableWhileRunning
@@ -285,7 +315,22 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       <FlowSteps steps={FLOW} current={step} label="ブース設計の進め方" />
 
       {/* ブースのデザインの決まり。先に決める（確定するまで、画像は作れない） */}
-      <DesignKitStudio kit={kit} confirmed={kitConfirmed} onChange={onKitChange} onConfirm={onKitConfirm} onReopen={onKitReopen} madeCount={madeCount} />
+      <DesignKitStudio strategy={strategy} directions={directions} recommended={recommended} kit={kit} confirmed={kitConfirmed} onChange={onKitChange} onConfirm={onKitConfirm} onReopen={onKitReopen} madeCount={madeCount} />
+
+      {/* キービジュアル（背面壁の中央）を、先に1枚作って確定する。これが、残りの面・制作物・完成予想図の見本になる */}
+      {heroPanel && (
+        <KeyVisualStep
+          image={heroImage}
+          directionLabel={kit.direction.name}
+          kitConfirmed={kitConfirmed}
+          confirmed={keyVisualConfirmed && !!heroImage}
+          disabledReason={disabled ? IMAGEGEN_DISABLED_MESSAGE : undefined}
+          quotaLabel={left}
+          aspect={heroPanel.widthMm / heroPanel.heightMm}
+          onMake={() => setPanelTarget(heroPanel)}
+          onConfirm={onKeyVisualConfirm}
+        />
+      )}
 
       {/* 次にやること（ds/next-step。ほかのツールの帯も同じ部品）。上の帯（ONE_BUTTON）が出ているときは、同じボタンが二重になるので出さない */}
       {oneButton ? null : <NextStepBar
@@ -296,7 +341,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             : running
               ? `面の画像を作っています（${summary.finished}/${summary.total}面）。できた面から3Dに貼られます。`
               : blocked
-                ? (kitBlocked && !disabled ? KIT_NEEDED_MESSAGE : IMAGEGEN_DISABLED_MESSAGE)
+                ? blockedMessage
                 : `次は、面の画像を作ります（${madeCount}/${panels.length}面が完成）。`
         }
         sub={left && !allMade ? left : undefined}
@@ -309,8 +354,8 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             進み具合を見る（{summary.finished}/{summary.total}面）
           </NextStepAction>
         ) : (
-          <NextStepAction onClick={() => { setFaces([]); setStopReason(undefined); setBatchOpen(true) }} iconNode={<ImagePlus className="h-4 w-4" aria-hidden />}>
-            {`面の画像をまとめて作る（${missing.length}面）`}
+          <NextStepAction onClick={openConfirm} iconNode={<ImagePlus className="h-4 w-4" aria-hidden />}>
+            {`残りの面をまとめて作る（${missing.length}面）`}
             {/* 減る量は、作る面の数ぶん（ドヤパワーの旗の内側だけ） */}
             <ShellCostBadge action="tenjikai.image" units={Math.max(1, missing.length)} />
           </NextStepAction>
@@ -459,17 +504,39 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
       <Modal open={batchOpen} onClose={() => setBatchOpen(false)} title="面の画像をまとめて作る">
         {faces.length === 0 ? (
           <div className="flex flex-col gap-4" data-batch-state="confirm">
-            <p className="text-[15px] leading-relaxed text-ink">まだ画像の無い {missing.length} 面ぶんを、1面ずつ順に作ります。できた面から、3Dの壁面に貼られます。</p>
+            <p className="text-[15px] leading-relaxed text-ink">キービジュアルを見本にして、まだ画像の無い {missing.length} 面を、1面ずつ順に作ります。できた面から、3Dの壁面に貼られます。</p>
             {disabled && (
               <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{IMAGEGEN_DISABLED_MESSAGE}</p>
             )}
             {kitBlocked && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{KIT_NEEDED_MESSAGE}</p>}
-            {left && <p className="text-[13px] text-[var(--sub)]">{left}</p>}
-            {notEnough && <p className="rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">きょう作れる残りが足りません。作れる面まで作り、残りは明日作れます。</p>}
+            {kvBlocked && <p role="alert" className="rounded-[var(--r-sm)] border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">{KV_NEEDED_MESSAGE}</p>}
+            <dl className="grid grid-cols-3 gap-2 rounded-[var(--r-sm)] bg-[var(--track)] p-3 text-center" aria-label="作る前の見積もり">
+              <div><dt className="text-[12px] text-[var(--sub)]">要る枚数</dt><dd className="text-[18px] font-black text-ink tabular">{need.need}枚</dd></div>
+              <div><dt className="text-[12px] text-[var(--sub)]">減るドヤパワー</dt><dd className="text-[18px] font-black text-ink tabular">{powerOn ? (doyaPowerCost('tenjikai.image', need.need) ?? 0) : '―'}</dd></div>
+              <div><dt className="text-[12px] text-[var(--sub)]">きょうの残り</dt><dd className="text-[18px] font-black text-ink tabular">{need.remaining === null ? '―' : `${need.remaining}枚`}</dd></div>
+            </dl>
+            {notEnough && (
+              <p role="alert" className="rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">
+                きょう作れる残りが、{need.short}枚足りません。下で、作る面を選んでください。選ばなかった面は、残りが回復したあとに作れます。
+              </p>
+            )}
+            <ul className="flex max-h-[32vh] flex-col gap-1 overflow-y-auto" aria-label="作る面を選ぶ">
+              {missing.map((p) => {
+                const on = picked.includes(p.id)
+                return (
+                  <li key={p.id}>
+                    <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-[var(--r-sm)] border border-gray-200 px-3 text-[13px] font-bold text-ink">
+                      <input type="checkbox" checked={on} onChange={() => setPicked((x) => (on ? x.filter((i) => i !== p.id) : [...x, p.id]))} className="h-4 w-4" />
+                      {p.name}
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setBatchOpen(false)} className="min-h-[44px] rounded-xl px-4 text-sm font-bold text-gray-500 hover:bg-gray-100">キャンセル</button>
-              <button type="button" disabled={blocked || missing.length === 0} onClick={() => void runBatch()} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
-                <ImagePlus className="h-4 w-4" /> 作りはじめる
+              <button type="button" disabled={blocked || sel.length === 0 || notEnough} onClick={() => void runBatch(sel)} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <ImagePlus className="h-4 w-4" /> {sel.length}枚を作りはじめる
               </button>
             </div>
           </div>
@@ -540,7 +607,7 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
           kind="graphic_panel"
           title={`${panelTarget.name}の画像を作る`}
           colors={{ primary: kit.palette.primary, secondary: kit.palette.dark, accent: kit.palette.accent }}
-          blockedReason={kitBlocked ? KIT_NEEDED_MESSAGE : undefined}
+          blockedReason={kitBlocked ? KIT_NEEDED_MESSAGE : panelTarget.layout !== 'hero' && kvBlocked ? KV_NEEDED_MESSAGE : undefined}
           prompt={buildPanelPrompt(panelTarget, analysis, kit, { hasReference: panelTarget.layout !== 'hero' && !!heroImage })}
           aspectRatio={nearestRatio(panelTarget.widthMm, panelTarget.heightMm)}
           getReference={panelTarget.layout !== 'hero' && heroImage ? () => toReferencePng(heroImage) : undefined}
@@ -548,6 +615,8 @@ export default function BoothStudio({ plans, variant, setVariant, input, analysi
             if (!imgs[0]) return
             const fitted = await cropImageToAspect(imgs[0], panelTarget.widthMm / panelTarget.heightMm)
             setPanelImages((m) => ({ ...m, [panelTarget.id]: fitted }))
+            // キービジュアルを作り直したら、確定は外す（見て、もう一度確定する）
+            if (panelTarget.layout === 'hero') onKeyVisualReset()
           }}
         />
       )}

@@ -38,8 +38,8 @@ const { load } = require('./load-typescript.cjs');
 const dom = new JSDOM('<body><main></main></body>', { url: 'https://synthetic.invalid/tenjikai/booth' });
 global.window = dom.window; global.document = dom.window.document; global.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = require('react-dom/client');
-const engine = load('src/lib/tenjikai/engine.ts');
 const kit = load('src/lib/tenjikai/design-kit.ts');
+const engine = load('src/lib/tenjikai/engine.ts', { './design-kit': kit });
 const fit = load('src/lib/tenjikai/image-fit.ts');
 const image = load('src/lib/tenjikai/imagegen.ts', { './design-kit': kit, './image-fit': fit });
 const graphics = load('src/lib/tenjikai/graphics.ts', { './design-kit': kit, './imagegen': image, './image-fit': fit });
@@ -92,12 +92,15 @@ const mocks = {
   '@/components/one-button/context': { useOneButton: () => false },
   '@/components/one-button/OneButtonBar': { OneButtonBar: Null },
   '@/components/shell/power': { ShellCostBadge: Null },
+  '@/lib/tenjikai/image-budget': load('src/lib/tenjikai/image-budget.ts'),
+  '@/components/doya-power/doya-power-context': { useDoyaPower: () => false },
+  '@/lib/doya-power/costs': { doyaPowerCost: () => 0 },
   '@/components/shell/DoyaWorking': { __esModule: true, default: Null },
   './ui': { PageHeader: Null, CountUp: ({ value }) => React.createElement('span', null, String(value)), Modal: ({ open, children }) => open ? children : null },
   '@/components/ds/next-step': { FlowSteps: Null, NextStepBar: ({ action }) => React.createElement('section', null, action), NextStepAction: ({ children, onClick, disabled }) => React.createElement('button', { onClick, disabled }, children) },
   'next/image': { __esModule: true, default: Null },
 };
-for (const name of ['IsoBooth', 'Booth3D', 'GraphicPlanner', 'ImageGenModal', 'EmptyState', 'BoothSizeInput', 'DesignKitStudio']) mocks['./' + name] = { __esModule: true, default: Null };
+for (const name of ['IsoBooth', 'Booth3D', 'GraphicPlanner', 'ImageGenModal', 'EmptyState', 'BoothSizeInput', 'DesignKitStudio', 'KeyVisualStep']) mocks['./' + name] = { __esModule: true, default: Null };
 const file = 'src/components/tenjikai/BoothStudio.tsx';
 const baseline = process.env.DOYA_TEST_BASELINE && path.join(process.env.DOYA_TEST_BASELINE, file);
 const source = fs.readFileSync(baseline && fs.existsSync(baseline) ? baseline : path.join(root, file), 'utf8');
@@ -118,16 +121,17 @@ function props(owner) {
   return {
     plans, variant: 'A', setVariant() {}, input, analysis: generated.analysis,
     panelImages: mode === 'reference-await' ? { [hero.id]: 'data:image/png;base64,c3ludGhldGlj' } : {},
-    setPanelImages() { writes.push({ owner, actor }); }, kit: designKit, kitConfirmed: true,
+    setPanelImages() { writes.push({ owner, actor }); }, kit: designKit, kitConfirmed: true, keyVisualConfirmed: true,
+    strategy: generated.strategy, directions: generated.directions, recommended: 'photo', onKeyVisualConfirm() {}, onKeyVisualReset() {},
     onKitChange() {}, onKitConfirm() {}, onKitReopen() {},
   };
 }
 const render = owner => { actor = owner; return act(() => mounted.render(React.createElement(React.StrictMode, null, React.createElement(Component, { key: owner, ...props(owner) })))); };
 async function start() {
-  const open = [...host.querySelectorAll('button')].find(button => button.textContent.includes('面の画像をまとめて作る'));
+  const open = [...host.querySelectorAll('button')].find(button => button.textContent.includes('残りの面をまとめて作る'));
   assert(open && !open.disabled, 'Actual batch action must be available');
   await act(() => open.click());
-  const confirm = [...host.querySelectorAll('button')].find(button => button.textContent.trim() === '作りはじめる');
+  const confirm = [...host.querySelectorAll('button')].find(button => /枚を作りはじめる$/.test(button.textContent.trim()));
   assert(confirm && !confirm.disabled, 'Actual confirmation must be enabled');
   await act(() => confirm.click());
 }

@@ -28,8 +28,8 @@ function load(file, mocks = {}) {
   }, { filename: file });
   return exports;
 }
-const engine = load('src/lib/tenjikai/engine.ts');
 const designKit = load('src/lib/tenjikai/design-kit.ts');
+const engine = load('src/lib/tenjikai/engine.ts', { './design-kit': designKit });
 const imageFit = load('src/lib/tenjikai/image-fit.ts');
 const imagegen = load('src/lib/tenjikai/imagegen.ts', { './design-kit': designKit, './image-fit': imageFit });
 const graphics = load('src/lib/tenjikai/graphics.ts', { './design-kit': designKit, './imagegen': imagegen, './image-fit': imageFit });

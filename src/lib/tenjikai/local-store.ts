@@ -19,6 +19,8 @@ export type SavedProject = {
   /** ブースのデザインの決まり（2026-10-29。無いときは、サイトの解析から作り直す）と、確定したか */
   designKit?: BoothDesignKit
   designKitConfirmed?: boolean
+  /** キービジュアル（背面壁の中央）を本人が確定したか（2026-11-11。無い保存は、決まりが確定済みで画像があれば確定済みとして読む） */
+  keyVisualConfirmed?: boolean
   /** 文字を含まない画像（2026-10-29 より前に作った画像）の目印（面の id → 画像の印）。この画像の上には、見出しを画面で重ねる */
   legacySig?: Record<string, string>
 }
@@ -112,6 +114,7 @@ export function loadProjectResult(userId: string | null | undefined, store: KeyV
     // 決まり・目印は、あるときだけ足す（保存した内容を、読んだだけで書き換えない）
     const project: SavedProject = { ...(p as unknown as SavedProject), panelImages: images }
     if (kit) { project.designKit = kit; project.designKitConfirmed = p.designKitConfirmed === true } else { delete project.designKit; delete project.designKitConfirmed }
+    if (typeof p.keyVisualConfirmed !== 'boolean') delete project.keyVisualConfirmed
     if (legacySig) project.legacySig = legacySig
     return { status: 'ready', project }
   } catch {

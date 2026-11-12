@@ -32,7 +32,7 @@ import {
   type ProjectInput,
 } from '@/lib/tenjikai/engine'
 import { loadProjectResult, saveProject } from '@/lib/tenjikai/local-store'
-import { deriveKit, type BoothDesignKit } from '@/lib/tenjikai/design-kit'
+import { completeDirections, completeStrategy, deriveKit, draftDirections, draftStrategy, withDirection, type ArtType, type BoothDesignKit } from '@/lib/tenjikai/design-kit'
 import { generateGraphicPlan } from '@/lib/tenjikai/graphics'
 
 type Phase = 'input' | 'generating' | 'ready'
@@ -63,6 +63,8 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
   // ブースのデザインの決まり（2026-10-29）。確定するまで、画像は作れない。確定したあとで作る面・制作物は、すべてこの決まりで作る
   const [kit, setKit] = useState<BoothDesignKit | null>(null)
   const [kitConfirmed, setKitConfirmed] = useState(false)
+  // キービジュアル（背面壁の中央）を、本人が確定したか。確定するまで、残りの面・制作物は作れない
+  const [keyVisualConfirmed, setKeyVisualConfirmed] = useState(false)
   // 文字を含まない昔の画像の目印（local-store.ts の legacySig）
   const [legacySig, setLegacySig] = useState<Record<string, string> | undefined>(undefined)
 
@@ -93,6 +95,8 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
       if (saved.designKit) {
         setKit(saved.designKit)
         setKitConfirmed(saved.designKitConfirmed === true)
+        // 前の版の保存（キービジュアルの確定を持たない）は、決まりが確定済みで画像があれば、確定済みとして続ける
+        setKeyVisualConfirmed(typeof saved.keyVisualConfirmed === 'boolean' ? saved.keyVisualConfirmed : saved.designKitConfirmed === true && Object.keys(saved.panelImages).length > 0)
       }
       setPhase('ready')
     }
@@ -104,7 +108,7 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
   useEffect(() => {
     if (!restored || phase !== 'ready') return
     const t = window.setTimeout(() => {
-      const r = saveProject(userId, { ...restoredFields.current, input, generated, variant, selectedNovelty, panelImages, designKit: kit ?? undefined, designKitConfirmed: kitConfirmed, legacySig })
+      const r = saveProject(userId, { ...restoredFields.current, input, generated, variant, selectedNovelty, panelImages, designKit: kit ?? undefined, designKitConfirmed: kitConfirmed, keyVisualConfirmed, legacySig })
       setSaveNote(
         r === 'saved-without-images'
           ? 'この端末には、作った画像を保存しきれませんでした。再読み込みすると画像は消えます。ブース設計の画面から画像を書き出しておいてください。'
@@ -114,11 +118,16 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
       )
     }, 500)
     return () => window.clearTimeout(t)
-  }, [restored, phase, userId, input, generated, variant, selectedNovelty, panelImages, kit, kitConfirmed, legacySig])
+  }, [restored, phase, userId, input, generated, variant, selectedNovelty, panelImages, kit, kitConfirmed, keyVisualConfirmed, legacySig])
 
   const analysis = generated.analysis
   // 決まりは、サイトの解析から作った下書きで始める。確定する前は、解析が変わるたびに下書きを作り直す（確定後・利用者が直したあとは、その決まりを守る）
-  const draftKit = useMemo(() => deriveKit(analysis), [analysis])
+  // 戦略と3つの方向。古い保存・AI の欠けは、サイトの解析から作る下書きで埋める（型は必ず3つそろう）
+  const strategy = useMemo(() => completeStrategy(generated.strategy, draftStrategy(analysis, input.goal)), [generated.strategy, analysis, input.goal])
+  const directions = useMemo(() => completeDirections(generated.directions, draftDirections(analysis, input.goal)), [generated.directions, analysis, input.goal])
+  // 出展の目的に合う型（名刺 = 実写、認知 = 大きな文字と色面、デモ = 世界観）。最初は、この型を選んだ状態にする
+  const recommended: ArtType = input.goal === 'demo' ? 'world' : input.goal === 'brand' ? 'graphic' : 'photo'
+  const draftKit = useMemo(() => withDirection(deriveKit(analysis), directions.find((d) => d.type === recommended) ?? directions[0]), [analysis, directions, recommended])
   const activeKit = kit ?? draftKit
   const plans = useMemo(() => applyBoothCopy(generateBoothPlans(input), generated.boothCopy), [input, generated.boothCopy])
   const plan = plans.find((p) => p.variant === variant) ?? plans[0]
@@ -145,6 +154,7 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
     // 新しい案件では、前の案件で確定したデザインの決まりを持ち越さない（下書きから作り直す）
     setKit(null)
     setKitConfirmed(false)
+    setKeyVisualConfirmed(false)
     setAnimDone(false)
     setPending(true)
     setPhase('generating')
@@ -162,6 +172,7 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
   const resizeBooth = (widthM: number, depthM: number) => {
     setInput((p) => withBoothSize(p, widthM, depthM))
     setPanelImages({})
+    setKeyVisualConfirmed(false)
   }
 
   // 演出と API の両方が終わってから結果画面へ
@@ -207,9 +218,9 @@ function ActorProject({ shell = false, userId = null }: TenjikaiAppProps) {
       case 'overview':
         return <Overview input={input} analysis={analysis} plan={plan} budget={budget} deadlines={deadlines} creatives={creatives} go={go} />
       case 'booth':
-        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} onResize={resizeBooth} kit={activeKit} kitConfirmed={kitConfirmed} legacySig={legacySig} onKitChange={setKit} onKitConfirm={() => { setKit(activeKit); setKitConfirmed(true) }} onKitReopen={() => { setKit(activeKit); setKitConfirmed(false) }} />
+        return <BoothStudio plans={plans} variant={variant} setVariant={setVariant} input={input} analysis={analysis} panelImages={panelImages} setPanelImages={setPanelImages} onResize={resizeBooth} strategy={strategy} directions={directions} recommended={recommended} kit={activeKit} kitConfirmed={kitConfirmed} keyVisualConfirmed={keyVisualConfirmed} onKeyVisualConfirm={() => setKeyVisualConfirmed(true)} onKeyVisualReset={() => setKeyVisualConfirmed(false)} legacySig={legacySig} onKitChange={setKit} onKitConfirm={() => { setKit(activeKit); setKitConfirmed(true) }} onKitReopen={() => { setKit(activeKit); setKitConfirmed(false); setKeyVisualConfirmed(false) }} />
       case 'creatives':
-        return <CreativeStudio creatives={creatives} analysis={analysis} kit={activeKit} kitConfirmed={kitConfirmed} masterImage={masterImage} goBooth={() => go('booth')} />
+        return <CreativeStudio creatives={creatives} analysis={analysis} kit={activeKit} kitConfirmed={kitConfirmed} keyVisualConfirmed={keyVisualConfirmed && !!masterImage} masterImage={masterImage} goBooth={() => go('booth')} />
       case 'novelty':
         return <NoveltyPicker input={input} novelties={novelties} selected={selectedNovelty} setSelected={setSelectedNovelty} />
       case 'budget':

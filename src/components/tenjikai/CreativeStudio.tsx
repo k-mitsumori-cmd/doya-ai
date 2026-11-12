@@ -129,12 +129,16 @@ function LoopPreview({ a }: { a: SiteAnalysis }) {
   )
 }
 
-export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed, masterImage, goBooth }: {
+const NEED_MESSAGE = '先に、ブース設計の画面で、デザインの方向とキービジュアルを確定してください。キービジュアルを見本にして、制作物を作ります。'
+
+export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed, keyVisualConfirmed, masterImage, goBooth }: {
   creatives: Creative[]
   analysis: SiteAnalysis
   /** ブースのデザインの決まり。面の画像と同じ決まりで作る（2026-10-29） */
   kit: BoothDesignKit
   kitConfirmed: boolean
+  /** キービジュアルを確定したか */
+  keyVisualConfirmed: boolean
   /** 見本（背面壁の中央の画像）。あれば、参照として渡す */
   masterImage?: string
   /** ブース設計の画面へ移る（決まりを確定する場所） */
@@ -158,10 +162,10 @@ export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed,
         }
       />
 
-      {!kitConfirmed && (
+      {!(kitConfirmed && keyVisualConfirmed) && (
         <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--r)] border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-[14px] font-bold text-amber-900">先に、ブース設計の画面で「ブースのデザインの決まり」を確定してください。面の画像と同じ決まりで、制作物を作ります。</p>
-          <button type="button" onClick={goBooth} className="inline-flex min-h-[44px] items-center rounded-xl border-2 border-amber-700 px-4 text-sm font-black text-amber-900">決まりを確定しに行く</button>
+          <p className="text-[14px] font-bold text-amber-900">{NEED_MESSAGE}</p>
+          <button type="button" onClick={goBooth} className="inline-flex min-h-[44px] items-center rounded-xl border-2 border-amber-700 px-4 text-sm font-black text-amber-900">ブース設計で確定しに行く</button>
         </div>
       )}
 
@@ -252,7 +256,7 @@ export default function CreativeStudio({ creatives, analysis, kit, kitConfirmed,
           onClose={() => setTarget(null)}
           title={`${target.name}のデザイン画像を生成`}
           colors={{ primary: kit.palette.primary, secondary: kit.palette.dark, accent: kit.palette.accent }}
-          blockedReason={kitConfirmed ? undefined : '先に、ブース設計の画面で「ブースのデザインの決まり」を確定してください。'}
+          blockedReason={kitConfirmed && keyVisualConfirmed ? undefined : NEED_MESSAGE}
           prompt={buildCreativePrompt(target, analysis, kit, { hasReference: !!masterImage })}
           aspectRatio={nearestRatio(target.widthMm, target.heightMm)}
           getReference={masterImage ? () => toReferencePng(masterImage) : undefined}
