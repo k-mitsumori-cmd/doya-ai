@@ -1,16 +1,108 @@
 // ============================================
 // ブースのデザインの決まり（Booth Design Kit。BDK）
 // ============================================
-// 仕様: docs/architecture/tenjikai/BOOTH-DESIGN-KIT-2026-10-29.md（4 章）
+// 仕様: docs/architecture/tenjikai/BOOTH-DESIGN-KIT-2026-10-29.md（4 章）と、
+//       docs/architecture/tenjikai/BOOTH-CONCEPT-FLOW-2026-11-11.md（4 章。デザインの方向 = 実写 / 大きな文字と色面 / 世界観）
 // 最初に1つ決め、このあと作る面・制作物・完成予想図の指示文に、同じ文を入れる。
 // ⚠️ 色の規則と指示文の組み立てだけを持つ（React・DB・課金の API は使わない。テストあり: design-kit.test.ts）
-import type { SiteAnalysis } from './engine'
+import type { Goal, SiteAnalysis } from './engine'
 
 export type KitVariantKey = 'band' | 'paper' | 'dark'
 
-export interface BoothDesignKit {
-  version: 1
+// ---------- デザインの方向（絵の作り方の型。3つ） ----------
+
+export type ArtType = 'photo' | 'graphic' | 'world'
+export const ART_TYPES: readonly ArtType[] = ['photo', 'graphic', 'world']
+
+/** デザインの方向。文章の AI（または下書き）が、サイトの内容に合わせて書く。型は3つから1つずつ使う */
+export interface ArtDirection {
+  type: ArtType
+  /** 方向の名前（全角12字まで。画像には描かない） */
+  name: string
+  /** 狙い（全角40字まで） */
+  aim: string
+  /** キービジュアルの題材（全角60字まで。文字・数字は含めない） */
+  subject: string
+  /** キービジュアルに描く見出し（1行12字・2行まで。\n で改行できる） */
+  headline: string
+  /** 絵の調子の文（画面に出す。型ごとに決まった文） */
+  look: string
+}
+
+/** 出展の狙いの文（戦略。画面に出す） */
+export interface BoothStrategy {
+  /** 出展の狙い */
+  aim: string
+  /** 来てほしい人 */
+  audience: string
+  /** 通路から3秒で伝える一言 */
+  hook: string
+  /** ブースで体験してもらうこと */
+  experience: string
+}
+
+export interface ArtTypeSpec {
+  label: string
+  /** 画面用: 絵の作り方 / 素材 / 照明 / 向く目的 */
+  how: string
+  material: string
+  light: string
+  fit: string
+  /** 指示文用（型ごとに、構図・光・素材の言葉を具体的に書く） */
+  look: string
+  composition: string
+  lightText: string
+  materialText: string
+  /** この型の既定の面積の比率・帯の高さ（KIT_VARIANTS の案） */
   variant: KitVariantKey
+}
+
+export const ART_SPEC: Record<ArtType, ArtTypeSpec> = {
+  photo: {
+    label: '実写',
+    how: '人や利用の場面、製品を使う手元を、写真のような絵で面いっぱいに使う',
+    material: '木・紙・布・金属など、実物の質感',
+    light: '窓からの自然光。奥をぼかす',
+    fit: '信頼・導入の実感を伝えたいとき',
+    look: '人や利用の場面、製品を使う手元などを写した、写真のような絵を、見出しの帯の下から面の端まで広げて使う。イラストやグラフィックの形は使わない。',
+    composition: '構図: 人物は後ろ姿・横顔・手元・肩越しのどれかにして、顔を正面から大きく写さない。手前に主役（手元や製品）、奥に執務室や展示会場の背景を置く。視線の高さから、面に正対して撮る。',
+    lightText: '光: 窓からの自然光のような、やわらかい光。被写界深度は浅く、奥をなめらかにぼかす。',
+    materialText: '素材: 木、紙、布、金属など、実物の質感が見える。服・小物・背景に主色と差し色を使い、全体の色みを決まりの色に寄せる。',
+    variant: 'paper',
+  },
+  graphic: {
+    label: '大きな文字と色面',
+    how: 'ブランドの色の大きな面と太い見出し。幾何の形を大きく使う',
+    material: '印刷物のような、無地の色の面',
+    light: '影も光沢もない、平らな色面',
+    fit: '通路で足を止めたい、認知を広げたいとき',
+    look: '大きな文字と色面で作るグラフィック。ブランドの色の大きな面と、太い見出しを主役にする。幾何の形を大きく、1〜2つだけ使い、遠くから読める強さにする。写真、3D の描写、影、グラデーション、イラスト、アイコン、人物、矢印、歯車、端末や画面の絵は描かない。',
+    composition: '構図: 見出しの帯と、大きな幾何の形（帯1本・円1つまで）で、面を大胆に分ける。形の中に、模様・絵・図を描かない。',
+    lightText: '光: 影も光沢もない、均一で平らな色面。',
+    materialText: '素材: 印刷物のような、無地の色の面。',
+    variant: 'band',
+  },
+  world: {
+    label: '世界観',
+    how: '立体のイラストや、光と奥行のある空間で、サービスの世界を1枚で見せる',
+    material: 'ガラスの透明感、半透明の樹脂、つや消しの金属',
+    light: '暗い背景に、主色と差し色の光が回り込む',
+    fit: 'デモ・体験に引きこみたいとき',
+    look: '立体のイラストや、光と奥行のある空間の絵で、サービスの世界を1枚で見せる。製品の画面は、文字のない抽象的な図形と色の面で見せる。',
+    composition: '構図: 中央に、主役となる立体の形を1つ置き、そのまわりに小さな立体を少数だけ浮かせる。手前から奥へ小さくなる奥行きをつける。面に正対した構図にする。',
+    lightText: '光: 暗色の背景の中に、主色と差し色の光が回り込む。立体の縁に、細く明るい線（リムライト）が出る。',
+    materialText: '素材: ガラスのような透明感、半透明の樹脂、つや消しの金属。やわらかい影を落とす。全体の色みを決まりの色に寄せる。',
+    variant: 'dark',
+  },
+}
+
+export const isArtType = (v: unknown): v is ArtType => typeof v === 'string' && (ART_TYPES as readonly string[]).includes(v)
+
+export interface BoothDesignKit {
+  version: 2
+  variant: KitVariantKey
+  /** デザインの方向（型・名前・狙い・題材・見出し・絵の調子の文）。2026-11-11 から */
+  direction: ArtDirection
   /** 5つの役割の色（#rrggbb） */
   palette: { primary: string; dark: string; accent: string; paper: string; mist: string }
   /** 面積の目安の比率（合計 1） */
