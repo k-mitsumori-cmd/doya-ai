@@ -357,7 +357,7 @@ function TrendChart({ trend, salesState, quotesState }: {
     ...(salesState === 'error' ? ['受注'] : []),
     ...(quotesState === 'error' ? ['確定見積'] : []),
   ]
-  const empty = failed.length === 0 && series.every((item) => item.values.every((value) => value === 0))
+  const empty = failed.length === 0 && series.length === 0
   return (
     <div className={styles.chartWrap}>
       {series.length > 0 ? (
