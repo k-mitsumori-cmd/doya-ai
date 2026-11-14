@@ -175,8 +175,9 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       const d = await submitOnce({
         scope: 'income-contract',
         input: body,
-        send: (operationId) => fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body: { ...body, operationId } }),
-        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/contracts', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
+        readScope: () => fetchJson<{ scope: string }>('/api/income/contracts', { method: 'POST', body: { onceAction: 'scope' } }).then((r) => r.scope),
+        send: (operationId, operationScope) => fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body: { ...body, operationId, operationScope } }),
+        resolve: (operationId, operationScope) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/contracts', { method: 'POST', body: { operationId, operationScope, onceAction: 'resolve' } }).then((r) => r.once.state),
       })
       saveLock.close()
       markClean()

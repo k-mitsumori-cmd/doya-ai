@@ -88,8 +88,9 @@ export default function NewInvoicePage() {
       const d = await submitOnce({
         scope: 'income-invoice',
         input: body,
-        send: (operationId) => fetchJson<{ invoice: { id: string } }>('/api/income/invoices', { method: 'POST', body: { ...body, operationId } }),
-        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/invoices', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
+        readScope: () => fetchJson<{ scope: string }>('/api/income/invoices', { method: 'POST', body: { onceAction: 'scope' } }).then((r) => r.scope),
+        send: (operationId, operationScope) => fetchJson<{ invoice: { id: string } }>('/api/income/invoices', { method: 'POST', body: { ...body, operationId, operationScope } }),
+        resolve: (operationId, operationScope) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/invoices', { method: 'POST', body: { operationId, operationScope, onceAction: 'resolve' } }).then((r) => r.once.state),
       })
       saveLock.close()
       markClean()

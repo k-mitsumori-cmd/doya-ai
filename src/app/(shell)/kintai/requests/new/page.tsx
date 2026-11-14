@@ -210,8 +210,9 @@ function NewRequestContent() {
       await submitOnce({
         scope: 'kintai-request',
         input: body,
-        send: (operationId) => post({ ...body, operationId }),
-        resolve: (operationId) => post({ operationId, onceAction: 'resolve' }).then((d) => d.once.state as OnceResolutionState),
+        readScope: () => post({ onceAction: 'scope' }).then((d) => d.scope as string),
+        send: (operationId, operationScope) => post({ ...body, operationId, operationScope }),
+        resolve: (operationId, operationScope) => post({ operationId, operationScope, onceAction: 'resolve' }).then((d) => d.once.state as OnceResolutionState),
       })
 
       saveLock.close()

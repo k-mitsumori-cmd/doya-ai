@@ -159,8 +159,9 @@ export default function ContractForm({ mode, initial, preset, onSaved }: { mode:
         const r = await submitOnce({
           scope: `expense-contract:${orgSlug}`,
           input: body,
-          send: (operationId) => expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', { ...body, operationId })),
-          resolve: (operationId) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/contracts', orgSlug, jsonInit('POST', { operationId, onceAction: 'resolve' })).then((d) => d.once.state),
+          readScope: () => expenseApi<{ scope: string }>('/api/expense/contracts', orgSlug, jsonInit('POST', { onceAction: 'scope' })).then((r) => r.scope),
+          send: (operationId, operationScope) => expenseApi<{ contract: Contract }>('/api/expense/contracts', orgSlug, jsonInit('POST', { ...body, operationId, operationScope })),
+          resolve: (operationId, operationScope) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/contracts', orgSlug, jsonInit('POST', { operationId, operationScope, onceAction: 'resolve' })).then((d) => d.once.state),
         })
         saveLock.close()
         // 会話からの保存では、通知も移動もしない（会話が完了を出してから移る）

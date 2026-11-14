@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
-import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from './submit-once'
+import { assertOnceScope, onceScopeKey, createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from './submit-once'
 import { ONCE_SAVED_MESSAGE, ONCE_STORAGE_UNAVAILABLE_MESSAGE, onceFingerprint, submitOnce, SubmitOnceSavedError } from './submit-once-client'
 
 const OP = '11111111-1111-4111-8111-111111111111'
@@ -98,63 +98,64 @@ beforeEach(() => {
 afterEach(() => { (globalThis as { window?: unknown }).window = realWindow })
 
 const httpError = (status: number) => Object.assign(new Error('失敗'), { status })
+const readScope = async () => 'a'.repeat(64)
 const never = async () => { throw new Error('状態の確認は呼ばれないはず') }
 
 test('通信に失敗したら、同じ内容の送り直しに同じ番号を使う', async () => {
   const ids: (string | undefined)[] = []
   const send = async (id: string | undefined) => { ids.push(id); if (ids.length === 1) throw new TypeError('network'); return 'ok' }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
-  assert.equal(await submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }), 'ok')
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
+  assert.equal(await submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }), 'ok')
   assert.equal(ids[0], ids[1]); assert.ok(ids[0])
 })
 
 test('成功のあとの同じ内容は、別の登録として新しい番号を使う', async () => {
   const ids: (string | undefined)[] = []
   const send = async (id: string | undefined) => { ids.push(id); return 'ok' }
-  await submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never })
-  await submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never })
+  await submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never })
+  await submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never })
   assert.notEqual(ids[0], ids[1])
 })
 
-test('4xx は登録されていないので控えを消す。5xx は結果が分からないので残す', async () => {
+test('確定した4xxは控えを消し、5xxは残す', async () => {
   const ids: (string | undefined)[] = []
   let status = 400
   const send = async (id: string | undefined) => { ids.push(id); throw httpError(status) }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
   assert.notEqual(ids[0], ids[1])
   status = 500
-  await assert.rejects(submitOnce({ scope: 't', input: { a: 1 }, send, resolve: never }))
-  await assert.rejects(submitOnce({ scope: 't', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 't', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 't', input: { a: 1 }, send, resolve: never }))
   assert.equal(ids[2], ids[3])
 })
 
 test('内容を変えて送るときは先に確かめ、保存ずみなら今回は送らない', async () => {
   const sent: unknown[] = []
   const send = async (id: string | undefined) => { sent.push(id); if (sent.length === 1) throw new TypeError('network'); return 'ok' }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
   await assert.rejects(
-    submitOnce({ scope: 's', input: { a: 2 }, send, resolve: async () => 'found' }),
+    submitOnce({ readScope, scope: 's', input: { a: 2 }, send, resolve: async () => 'found' }),
     (e: Error) => e instanceof SubmitOnceSavedError && e.message === ONCE_SAVED_MESSAGE,
   )
   assert.equal(sent.length, 1)
   // 知らせたあとは控えが消えているので、本人がもう一度押せば登録できる
-  assert.equal(await submitOnce({ scope: 's', input: { a: 2 }, send, resolve: never }), 'ok')
+  assert.equal(await submitOnce({ readScope, scope: 's', input: { a: 2 }, send, resolve: never }), 'ok')
 })
 
 test('内容を変えて送るとき、前回が未保存なら新しい番号で送る', async () => {
   const ids: (string | undefined)[] = []
   const send = async (id: string | undefined) => { ids.push(id); if (ids.length === 1) throw new TypeError('network'); return 'ok' }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
-  assert.equal(await submitOnce({ scope: 's', input: { a: 2 }, send, resolve: async () => 'cancelled' }), 'ok')
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
+  assert.equal(await submitOnce({ readScope, scope: 's', input: { a: 2 }, send, resolve: async () => 'cancelled' }), 'ok')
   assert.notEqual(ids[0], ids[1])
 })
 
 test('状態を確かめられないときは送らない', async () => {
   const sent: unknown[] = []
   const send = async (id: string | undefined) => { sent.push(id); if (sent.length === 1) throw new TypeError('network'); return 'ok' }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send, resolve: never }))
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 2 }, send, resolve: async () => { throw new TypeError('network') } }))
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: never }))
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 2 }, send, resolve: async () => { throw new TypeError('network') } }))
   assert.equal(sent.length, 1)
 })
 
@@ -162,15 +163,15 @@ test('控えが1日より古いと、内容が同じでも先に確かめる', a
   const ids: (string | undefined)[] = []
   const send = async (id: string | undefined) => { ids.push(id); return 'ok' }
   const w = (globalThis as unknown as { window: { localStorage: Storage } }).window
-  w.localStorage.setItem('submit-once:pending:v1:s', JSON.stringify({ operationId: '22222222-2222-4222-8222-222222222222', fingerprint: onceFingerprint({ a: 1 }), at: Date.now() - 25 * 3600 * 1000 }))
+  w.localStorage.setItem('submit-once:pending:v2:' + await readScope(), JSON.stringify({ operationId: '22222222-2222-4222-8222-222222222222', fingerprint: onceFingerprint({ a: 1 }), at: Date.now() - 25 * 3600 * 1000 }))
   let asked = 0
-  assert.equal(await submitOnce({ scope: 's', input: { a: 1 }, send, resolve: async () => { asked++; return 'cancelled' } }), 'ok')
+  assert.equal(await submitOnce({ readScope, scope: 's', input: { a: 1 }, send, resolve: async () => { asked++; return 'cancelled' } }), 'ok')
   assert.equal(asked, 1); assert.notEqual(ids[0], '22222222-2222-4222-8222-222222222222')
 })
 
 test('ブラウザに控えられないときは保存APIを呼ばない', async () => {
   (globalThis as { window?: unknown }).window = { localStorage: { setItem: () => { throw new Error('blocked') } } }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send: never, resolve: never }), {
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send: never, resolve: never }), {
     message: ONCE_STORAGE_UNAVAILABLE_MESSAGE,
   })
 })
@@ -182,7 +183,67 @@ test('試し書きに成功しても操作IDを控えられない場合は保存
     if (key.startsWith('submit-once:pending:')) throw new Error('quota')
     setItem(key, value)
   }
-  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send: never, resolve: never }), {
+  await assert.rejects(submitOnce({ readScope, scope: 's', input: { a: 1 }, send: never, resolve: never }), {
     message: ONCE_STORAGE_UNAVAILABLE_MESSAGE,
   })
+})
+
+test('利用者や組織を変えて元に戻っても、元の控えで再送する', async () => {
+  const ids: string[] = []
+  const send = async (id: string) => {
+    ids.push(id)
+    if (ids.length === 1) throw new TypeError('lost')
+    return 'ok'
+  }
+  const input = { amount: 100 }
+  await assert.rejects(submitOnce({ scope: 's', input, readScope, send, resolve: never }))
+  await submitOnce({ scope: 's', input, readScope: async () => 'b'.repeat(64), send, resolve: never })
+  await submitOnce({ scope: 's', input, readScope, send, resolve: never })
+  assert.notEqual(ids[0], ids[1])
+  assert.equal(ids[0], ids[2])
+})
+
+test('区分が変わって送信を拒否された場合、保存状態が不明な元の控えを残す', async () => {
+  const ids: string[] = []
+  const send = async (id: string) => {
+    ids.push(id)
+    if (ids.length === 1) throw httpError(412)
+    return 'ok'
+  }
+  const input = { amount: 100 }
+  await assert.rejects(submitOnce({ scope: 's', input, readScope, send, resolve: never }))
+  await submitOnce({ scope: 's', input, readScope, send, resolve: never })
+  assert.equal(ids[0], ids[1])
+})
+
+test('旧控えを現在の区分で照会し、保存済みのときは送信せず別利用者用の控えを残す', async () => {
+  const { localStorage } = (globalThis as unknown as { window: { localStorage: Storage } }).window
+  const legacy = JSON.stringify({ operationId: OP, fingerprint: onceFingerprint({ a: 1 }), at: Date.now() })
+  localStorage.setItem('submit-once:pending:v1:s', legacy)
+  await assert.rejects(submitOnce({
+    scope: 's', input: { a: 1 }, readScope, send: never,
+    resolve: async (id, bound) => {
+      assert.equal(id, OP)
+      assert.equal(bound, await readScope())
+      return 'found'
+    },
+  }), SubmitOnceSavedError)
+  assert.equal(localStorage.getItem('submit-once:pending:v1:s'), legacy)
+})
+
+test('サーバーが解決した組織または操作者が変わった操作を拒否する', () => {
+  const operationScope = onceScopeKey(scope())
+  assert.doesNotThrow(() => assertOnceScope({ operationScope }, scope()))
+  for (const current of [scope({ actorId: 'other' }), scope({ organizationId: 'other' }), scope({ operationId: null })]) {
+    assert.throws(() => assertOnceScope({ operationScope }, current), (e: Fail) => e.status === 412)
+  }
+})
+
+test('旧送信の操作IDは区分付きに変わっても同じ登録を返す', async () => {
+  const { tx } = fakeTx()
+  const m = maker()
+  const first = await createOnce(tx, scope(), { a: 1, operationId: OP }, m.find, m.create)
+  const replay = await createOnce(tx, scope(), { a: 1, operationId: OP, operationScope: onceScopeKey(scope()) }, m.find, m.create)
+  assert.deepEqual(replay, { entry: first.entry, replayed: true })
+  assert.equal(m.made.length, 1)
 })

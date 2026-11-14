@@ -78,8 +78,20 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
   global.fetch = async (url, init) => {
     if (url === '/api/income/issuer') { gets++; return Response.json({ issuer: null }); }
     if (url === '/api/income/clients') { gets++; return Response.json({ clients: [{ id: 'c1', name: 'Sample A' }] }); }
-    if (url === '/api/income/contracts' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ id: 'made' }); }
-    if (url === '/api/income/invoices' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ invoice: { id: 'made-invoice' } }); }
+    if (url === '/api/income/contracts' && init.method === 'POST') {
+      const body = JSON.parse(init.body);
+      if (body.onceAction === 'scope') return Response.json({ scope: 'a'.repeat(64) });
+      assert.equal(body.operationScope, 'a'.repeat(64));
+      posts.push(body);
+      return Response.json({ id: 'made' });
+    }
+    if (url === '/api/income/invoices' && init.method === 'POST') {
+      const body = JSON.parse(init.body);
+      if (body.onceAction === 'scope') return Response.json({ scope: 'b'.repeat(64) });
+      assert.equal(body.operationScope, 'b'.repeat(64));
+      posts.push(body);
+      return Response.json({ invoice: { id: 'made-invoice' } });
+    }
     throw Error('予定外の通信: ' + url);
   };
   const Probe = () => { api = fx.useAgentChat(); return null; };

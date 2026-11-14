@@ -32,8 +32,9 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
       await submitOnce({
         scope: `expense-schedule:${orgSlug}`,
         input: body,
-        send: (operationId) => expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...body, operationId })),
-        resolve: (operationId) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/schedules', orgSlug, jsonInit('POST', { operationId, onceAction: 'resolve' })).then((d) => d.once.state),
+        readScope: () => expenseApi<{ scope: string }>('/api/expense/schedules', orgSlug, jsonInit('POST', { onceAction: 'scope' })).then((r) => r.scope),
+        send: (operationId, operationScope) => expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...body, operationId, operationScope })),
+        resolve: (operationId, operationScope) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/schedules', orgSlug, jsonInit('POST', { operationId, operationScope, onceAction: 'resolve' })).then((d) => d.once.state),
       })
       if (!byAgent) toast.success('単発の支出を追加しました')
       onSaved()

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
-import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
+import { assertOnceScope, createOnce, isOnceResolve, isOnceScopeRequest, onceOperationId, onceScopeKey, resolveOnce, type OnceScope } from '@/lib/submit-once'
 
 class RequestForbidden extends Error {}
 class RequestOnceError extends Error {
@@ -86,6 +86,8 @@ export async function POST(req: NextRequest) {
     }
     const fail = (status: number, message: string) => new RequestOnceError(status, message)
     const once: OnceScope = { family: 'kintai-request', organizationId: ctx.organizationId, actorId: ctx.employeeId, operationId: onceOperationId(body, fail), fail }
+    if (isOnceScopeRequest(body)) return NextResponse.json({ scope: onceScopeKey(once) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    assertOnceScope(body, once)
     // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
     if (isOnceResolve(body)) {
       const resolved = await prisma.$transaction(tx => resolveOnce(tx, once, id => tx.kintaiRequest.findFirst({ where: { id, employeeId: ctx.employeeId }, select: { id: true } })))
