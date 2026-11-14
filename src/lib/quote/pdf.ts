@@ -110,13 +110,13 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   return `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4; margin: 16mm 0; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; font-family: ${PDF_FONT_STACK}; color: #16233d; font-size: 10.5pt; }
-  .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
+  .page { position: relative; width: 210mm; padding: 0 15mm; }
   /* 紙面の寸法をmmで指定する。ビューポート幅や複数ページ分の文書の高さに
      依存せず、固定配置によって下書きの全ページに同じ透かしを繰り返す。 */
-  .watermark { position: fixed; top: 125mm; left: 0; width: 210mm; text-align: center;
+  .watermark { position: fixed; top: 109mm; left: 0; width: 210mm; text-align: center;
     font-size: 64pt; font-weight: 800; color: rgba(255,30,114,0.10);
     transform: rotate(-24deg); letter-spacing: 0.1em; pointer-events: none; z-index: 0; }
   .inner { position: relative; z-index: 1; }
@@ -149,6 +149,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   .summary th { text-align: left; padding: 2mm 3mm; font-size: 9.5pt; font-weight: 500; color: #5a678a; }
   .summary td { text-align: right; padding: 2mm 3mm; font-size: 10pt; white-space: nowrap; }
   .summary tr.grand th, .summary tr.grand td { border-top: 1.5px solid #16233d; font-weight: 800; font-size: 12pt; color: #16233d; padding-top: 3mm; }
+  .closing { break-inside: avoid; }
   .notes { margin-top: 8mm; border-top: 1px solid #dbe3f2; padding-top: 4mm; font-size: 9.5pt; line-height: 1.8; }
   .notes h2 { font-size: 10pt; margin: 0 0 1.5mm; color: #5a678a; font-weight: 600; }
   .notes .block { margin-bottom: 4mm; }
@@ -211,6 +212,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
       <tr class="grand"><th>合計</th><td>${yen(totals.totalInclTax)}</td></tr>
     </table></div>
 
+    <div class="closing">
     <div class="notes">
       ${q.deliveryTerms ? `<div class="block"><h2>納期</h2>${nl2br(q.deliveryTerms)}</div>` : ''}
       ${q.paymentTerms ? `<div class="block"><h2>お支払い条件</h2>${nl2br(q.paymentTerms)}</div>` : ''}
@@ -223,6 +225,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
     </div>
 
     <div class="foot">${esc(q.title)}</div>
+    </div>
   </div>
 </div>
 </body></html>`
@@ -260,7 +263,7 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' },
+      preferCSSPageSize: true,
     })
     return new Uint8Array(pdf)
   } finally {

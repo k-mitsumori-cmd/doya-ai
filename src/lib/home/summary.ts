@@ -13,11 +13,12 @@
 // ⚠️ 1ツールが落ちてもホーム全体は落とさない（Promise.allSettled で個別に握る）。
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
-import { jstStartOfMonthUtc } from '@/lib/usage-summary'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
-import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
-import { ROLE_HIERARCHY as SFA_ROLES } from '@/lib/sfa/types'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { ROLE_HIERARCHY as SFA_ROLES, type SfaRole } from '@/lib/sfa/types'
 import { ROLE_HIERARCHY as HR_ROLES } from '@/lib/hr/constants'
 import { ROLE_HIERARCHY as INCOME_ROLES } from '@/lib/income/roles'
 import { EXPENSE_ROLES } from '@/lib/expense/constants'
@@ -158,8 +159,7 @@ function jstMonthKey(d: Date): string {
 }
 
 /** 直近 n か月（今月を含む）の JST 月初 UTC と月キー */
-function lastMonths(n: number): { key: string; start: Date }[] {
-  const thisMonth = jstStartOfMonthUtc()
+function lastMonths(n: number, thisMonth: Date): { key: string; start: Date }[] {
   const j = new Date(thisMonth.getTime() + 9 * 3600_000)
   const out: { key: string; start: Date }[] = []
   for (let i = n - 1; i >= 0; i--) {
@@ -198,7 +198,7 @@ async function loadContract(userId: string) {
   }
 }
 
-async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
+async function loadSales(userId: string, monthStart: Date, months: ReturnType<typeof lastMonths>, now: Date) {
   const membership = await prisma.sfaMember.findFirst({
     where: { userId, status: 'ACTIVE', role: { in: Object.keys(SFA_ROLES) } },
     include: { organization: true },
@@ -207,37 +207,59 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   if (!membership) return null
   const orgId = membership.organizationId
   const slug = membership.organization.slug
-  const now = new Date()
+  const eventWindow = { gte: new Date(now.getTime() - 7 * 86400_000), lte: new Date(now.getTime() + 45 * 86400_000) }
 
-  const [deals, wonForTrend, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await Promise.all([
-    prisma.sfaDeal.findMany({
-      where: { organizationId: orgId, isActive: true, OR: [{ status: 'open' }, { status: 'won', wonAt: { gte: monthStart } }] },
-      select: { id: true, name: true, amount: true, probability: true, status: true, stageId: true, expectedCloseDate: true },
-      take: 2000,
-    }),
-    prisma.sfaDeal.findMany({
-      where: { organizationId: orgId, isActive: true, status: 'won', wonAt: { gte: trendStart } },
-      select: { amount: true, wonAt: true },
-      take: 5000,
-    }),
-    prisma.sfaPipeline.findFirst({
-      where: { organizationId: orgId },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-      include: { stages: { orderBy: { order: 'asc' } } },
-    }),
-    prisma.sfaTask.count({ where: { organizationId: orgId, status: 'open' } }),
-    prisma.sfaTask.count({ where: { organizationId: orgId, status: 'open', dueDate: { lt: now } } }),
-    prisma.sfaLead.count({ where: { organizationId: orgId, isActive: true, createdAt: { gte: monthStart } } }),
-    prisma.sfaTask.findMany({
-      where: { organizationId: orgId, status: 'open', dueDate: { not: null } },
-      orderBy: { dueDate: 'asc' },
-      select: { id: true, title: true, dueDate: true },
-      take: 20,
-    }),
-  ])
+  const [open, monthlyWon, upcomingDeals, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
+    userId,
+    organizationId: orgId,
+    organizationSlug: slug,
+    role: membership.role as SfaRole,
+    memberId: membership.id,
+  }, (tx, scope) => Promise.all([
+      tx.sfaDeal.groupBy({
+        by: ['stageId', 'probability'],
+        where: sfaRecordWhere(scope, 'deal', false, { status: 'open' }),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      Promise.all(months.map(async ({ start }, index) => {
+        const next = months[index + 1]?.start
+        const totals = await tx.sfaDeal.aggregate({
+          where: sfaRecordWhere(scope, 'deal', false, {
+            status: 'won',
+            wonAt: { gte: start, ...(next ? { lt: next } : {}) },
+          }),
+          _sum: { amount: true },
+          _count: { _all: true },
+        })
+        return { at: start, amount: toNum(totals._sum.amount), count: totals._count._all }
+      })),
+      tx.sfaDeal.findMany({
+        where: sfaRecordWhere(scope, 'deal', false, {
+          status: 'open',
+          expectedCloseDate: eventWindow,
+        }),
+        orderBy: [{ expectedCloseDate: 'asc' }, { id: 'asc' }],
+        select: { id: true, name: true, expectedCloseDate: true },
+        take: 40,
+      }),
+      tx.sfaPipeline.findFirst({
+        where: { organizationId: orgId },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        include: { stages: { orderBy: { order: 'asc' } } },
+      }),
+      tx.sfaTask.count({ where: sfaRecordWhere(scope, 'task', false, { status: 'open' }) }),
+      tx.sfaTask.count({ where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: { lt: now } }) }),
+      tx.sfaLead.count({ where: sfaRecordWhere(scope, 'lead', false, { isActive: true, createdAt: { gte: monthStart } }) }),
+      tx.sfaTask.findMany({
+        where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: eventWindow }),
+        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
+        select: { id: true, title: true, dueDate: true },
+        take: 20,
+      }),
+    ]))
 
-  const open = deals.filter((d) => d.status === 'open')
-  const won = deals.filter((d) => d.status === 'won')
+  const currentWon = monthlyWon[monthlyWon.length - 1]
   const stageList = pipeline?.stages ?? []
   const stages = stageList
     .filter((s) => !s.isWon && !s.isLost)
@@ -246,26 +268,26 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
       return {
         name: s.name,
         color: s.color,
-        count: inStage.length,
-        amount: inStage.reduce((a, d) => a + toNum(d.amount), 0),
+        count: inStage.reduce((a, d) => a + d._count._all, 0),
+        amount: inStage.reduce((a, d) => a + toNum(d._sum.amount), 0),
       }
     })
 
   return {
     orgName: membership.organization.name,
     slug,
-    wonThisMonth: won.reduce((a, d) => a + toNum(d.amount), 0),
-    wonCountThisMonth: won.length,
-    openPipeline: open.reduce((a, d) => a + toNum(d.amount), 0),
-    weightedPipeline: Math.round(open.reduce((a, d) => a + (toNum(d.amount) * Math.min(100, Math.max(0, d.probability))) / 100, 0)),
-    openDeals: open.length,
+    wonThisMonth: currentWon?.amount ?? 0,
+    wonCountThisMonth: currentWon?.count ?? 0,
+    openPipeline: open.reduce((a, d) => a + toNum(d._sum.amount), 0),
+    weightedPipeline: Math.round(open.reduce((a, d) => a + (toNum(d._sum.amount) * Math.min(100, Math.max(0, d.probability))) / 100, 0)),
+    openDeals: open.reduce((a, d) => a + d._count._all, 0),
     stages,
     openTasks,
     overdueTasks,
     newLeads,
-    wonForTrend: wonForTrend.map((d) => ({ amount: toNum(d.amount), at: d.wonAt! })),
+    wonForTrend: monthlyWon,
     events: [
-      ...open
+      ...upcomingDeals
         .filter((d) => d.expectedCloseDate)
         .map((d) => ({ id: `deal-${d.id}`, date: d.expectedCloseDate!.toISOString(), title: `受注予定: ${d.name}`, kind: 'deal' as const, href: `/sfa/${slug}/deals` })),
       ...upcomingTasks.map((t) => ({ id: `task-${t.id}`, date: t.dueDate!.toISOString(), title: t.title, kind: 'task' as const, href: `/sfa/${slug}/tasks` })),
@@ -273,7 +295,7 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   }
 }
 
-async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
+async function loadQuotes(userId: string, months: ReturnType<typeof lastMonths>, now: Date) {
   const membership =
     (await prisma.quoteMember.findFirst({
       where: { userId, status: 'ACTIVE', role: 'owner' },
@@ -291,15 +313,22 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
   // （名前で外すと、利用者が自分で付けた「【自動点検】…」の下書きまで消えるため。2026-10-26 統括の監査）
   const watchQuoteIds = await systemWatchRecordIdsAll(prisma, 'quote-document', [orgId]).catch(() => [])
   const [confirmed, draftCount, sentCount, expiring] = await Promise.all([
-    prisma.quoteDocument.findMany({
-      where: { organizationId: orgId, status: { in: ['confirmed', 'sent'] }, confirmedAt: { gte: trendStart } },
-      select: { totalExclTax: true, confirmedAt: true },
-      take: 5000,
-    }),
+    Promise.all(months.map(async ({ start }, index) => {
+      const next = months[index + 1]?.start
+      const totals = await prisma.quoteDocument.aggregate({
+        where: {
+          organizationId: orgId,
+          status: { in: ['confirmed', 'sent'] },
+          confirmedAt: { gte: start, ...(next ? { lt: next } : {}) },
+        },
+        _sum: { totalExclTax: true },
+      })
+      return { at: start, amount: toNum(totals._sum.totalExclTax) }
+    })),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft', ...excludeIds(watchQuoteIds) } }),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'sent' } }),
     prisma.quoteDocument.findMany({
-      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: new Date() } },
+      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: now } },
       orderBy: { expiryDate: 'asc' },
       select: { id: true, title: true, expiryDate: true },
       take: 10,
@@ -307,63 +336,83 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
   ])
   return {
     orgName: membership.organization.name,
-    confirmedThisMonth: confirmed.filter((q) => q.confirmedAt && q.confirmedAt >= monthStart).reduce((a, q) => a + toNum(q.totalExclTax), 0),
+    confirmedThisMonth: confirmed[confirmed.length - 1]?.amount ?? 0,
     draftCount,
     sentCount,
-    forTrend: confirmed.map((q) => ({ amount: toNum(q.totalExclTax), at: q.confirmedAt! })),
+    forTrend: confirmed,
     events: expiring.map((q) => ({ id: `quote-${q.id}`, date: q.expiryDate.toISOString(), title: `見積の有効期限: ${q.title}`, kind: 'quote' as const, href: `/quote/documents/${q.id}` })),
   }
 }
 
 async function loadProjects(userId: string) {
-  const membership = await prisma.promaneMember.findFirst({
-    where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
-    include: { workspace: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (!membership) return null
-  const ws = membership.workspace
-  const [projects, members] = await Promise.all([
-    prisma.promaneProject.findMany({
-      where: { workspaceId: ws.id },
-      select: {
-        id: true, name: true, status: true, contractAmount: true, endDate: true,
-        expenses: { select: { amount: true } },
-        tasks: { select: { id: true, status: true } },
-      },
-      take: 500,
-    }),
-    prisma.promaneMember.findMany({
+  return prisma.$transaction(async (tx) => {
+    const membership = await tx.promaneMember.findFirst({
+      where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
+      include: { workspace: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (!membership) return null
+    const ws = membership.workspace
+    const role = await ceilToolRole({
+      tool: 'promane', userId, organizationId: ws.id, toolRole: membership.role,
+    }, tx)
+    if (!role) return null
+    const members = await tx.promaneMember.findMany({
       where: { workspaceId: ws.id },
       select: { hourlyRate: true, timeEntries: { select: { duration: true, hourlyRateSnapshot: true, projectId: true, taskId: true } } },
-    }),
-  ])
-  const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
-  const rows = projects.map((p) => {
-    const taskIds = p.tasks.map((t) => t.id)
-    let labor = 0
-    for (const m of members) {
-      for (const te of m.timeEntries) {
-        if (timeEntryBelongsToProject(te, p.id, taskIds)) labor += laborCostForEntry(te, m.hourlyRate)
+    })
+    const laborByProject = new Map<string, number>()
+    const legacyLaborByTask = new Map<string, number>()
+    for (const member of members) {
+      for (const entry of member.timeEntries) {
+        const costs = entry.projectId == null ? legacyLaborByTask : laborByProject
+        const id = entry.projectId ?? entry.taskId
+        if (id != null) costs.set(id, (costs.get(id) ?? 0) + laborCostForEntry(entry, member.hourlyRate))
       }
     }
-    const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
-    const revenue = safe(p.contractAmount)
-    return { ...p, revenue, cost: Math.round(labor + expense), profit: Math.round(revenue - labor - expense) }
-  })
-  const active = rows.filter((p) => p.status === 'ordered' || p.status === 'in_progress')
-  return {
-    href: `/promane/${ws.slug}/reports`,
-    activeProjects: active.length,
-    revenue: rows.reduce((a, p) => a + p.revenue, 0),
-    cost: rows.reduce((a, p) => a + p.cost, 0),
-    profit: rows.reduce((a, p) => a + p.profit, 0),
-    openTasks: rows.reduce((a, p) => a + p.tasks.filter((t) => t.status !== 'done').length, 0),
-    top: [...rows].sort((a, b) => b.revenue - a.revenue).slice(0, 5).map((p) => ({ name: p.name, revenue: p.revenue, profit: p.profit })),
-    events: rows
-      .filter((p) => p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status))
-      .map((p) => ({ id: `project-${p.id}`, date: p.endDate!.toISOString(), title: `納期: ${p.name}`, kind: 'project' as const, href: `/promane/${ws.slug}/projects/${p.id}` })),
-  }
+    const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
+    const pageSize = 500
+    let afterId: string | undefined
+    let activeProjects = 0
+    let revenue = 0
+    let cost = 0
+    let profit = 0
+    let openTasks = 0
+    const top: { name: string; revenue: number; profit: number }[] = []
+    const events: HomeEvent[] = []
+    while (true) {
+      const projects = await tx.promaneProject.findMany({
+        where: { workspaceId: ws.id, ...(afterId ? { id: { gt: afterId } } : {}) },
+        orderBy: { id: 'asc' },
+        take: pageSize,
+        select: {
+          id: true, name: true, status: true, contractAmount: true, endDate: true,
+          expenses: { select: { amount: true } },
+          tasks: { select: { id: true, status: true } },
+        },
+      })
+      for (const p of projects) {
+        const labor = p.tasks.reduce((total, task) => total + (legacyLaborByTask.get(task.id) ?? 0), laborByProject.get(p.id) ?? 0)
+        const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
+        const projectRevenue = safe(p.contractAmount)
+        const projectProfit = Math.round(projectRevenue - labor - expense)
+        if (p.status === 'ordered' || p.status === 'in_progress') activeProjects++
+        revenue += projectRevenue
+        cost += Math.round(labor + expense)
+        profit += projectProfit
+        openTasks += p.tasks.filter((task) => task.status !== 'done').length
+        top.push({ name: p.name, revenue: projectRevenue, profit: projectProfit })
+        top.sort((a, b) => b.revenue - a.revenue)
+        if (top.length > 5) top.pop()
+        if (p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status)) {
+          events.push({ id: `project-${p.id}`, date: p.endDate.toISOString(), title: `納期: ${p.name}`, kind: 'project', href: `/promane/${ws.slug}/projects/${p.id}` })
+        }
+      }
+      if (projects.length < pageSize) break
+      afterId = projects[projects.length - 1].id
+    }
+    return { href: `/promane/${ws.slug}/reports`, activeProjects, revenue, cost, profit, openTasks, top, events }
+  }, { isolationLevel: 'RepeatableRead', maxWait: 5_000, timeout: 20_000 })
 }
 
 async function loadAttendance(userId: string, monthStart: Date) {
@@ -454,14 +503,15 @@ function settle<T>(r: PromiseSettledResult<T | null>): { state: HomeToolState; v
 }
 
 export async function getHomeSummary(userId: string): Promise<HomeSummary> {
-  const monthStart = jstStartOfMonthUtc()
-  const months = lastMonths(6)
-  const trendStart = months[0].start
+  const requestTime = new Date()
+  const jst = new Date(requestTime.getTime() + 9 * 3600_000)
+  const monthStart = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 3600_000)
+  const months = lastMonths(6, monthStart)
 
   const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, incomeR, expenseR] = await Promise.allSettled([
     loadContract(userId),
-    loadSales(userId, monthStart, trendStart),
-    loadQuotes(userId, monthStart, trendStart),
+    loadSales(userId, monthStart, months, requestTime),
+    loadQuotes(userId, months, requestTime),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
     loadPeople(userId),
@@ -490,7 +540,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
     if (p) p.quoted += q.amount
   }
 
-  const now = Date.now()
+  const now = requestTime.getTime()
   const horizon = now + 45 * 86400_000
   const events = [...(sales.value?.events ?? []), ...(quotes.value?.events ?? []), ...(projects.value?.events ?? [])]
     .filter((e) => {

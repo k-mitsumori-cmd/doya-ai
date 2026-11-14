@@ -111,8 +111,12 @@ async function getAccessToken(): Promise<string> {
   const credentials = JSON.parse(
     credentialsJson.replace(/[\n\r\t]/g, (m) => (m === '\n' ? '\\n' : m === '\r' ? '\\r' : '\\t')),
   )
+  // Gaxios supplies an HTTP agent for configured proxies. Native fetch does not use that agent.
+  const hasProxy = Boolean(process.env.HTTPS_PROXY || process.env.https_proxy ||
+    process.env.HTTP_PROXY || process.env.http_proxy)
   const auth = new GoogleAuth({
     credentials,
+    ...(hasProxy ? {} : { clientOptions: { transporterOptions: { fetchImplementation: fetch } } }),
     scopes: [
       'https://www.googleapis.com/auth/analytics.readonly',
       'https://www.googleapis.com/auth/webmasters.readonly',
