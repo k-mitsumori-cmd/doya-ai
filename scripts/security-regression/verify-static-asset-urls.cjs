@@ -30,5 +30,6 @@ inspect(sourceRoot)
 // 2026-10-24: 古い見た目の分岐（勤怠のマイページの絵など）を消したので 127 → 120 件。
 // 2026-10 UX 改修（FIX-PLAN STA）で全面の読み込み中のキャラクター画像を Skeleton に置き換え、
 // 統合（2026-10-25）でその改修が足した古い見た目の分岐（全面の読み込みの絵）も消したので 110 件
-assert.ok(encodedAssets >= 110, 'Expected existing percent-encoded character artwork references')
+// 勤怠の出勤簿・承認・共通レイアウトで古いキャラクター画像の参照4件を置き換えた。
+assert.ok(encodedAssets >= 106, 'Expected existing percent-encoded character artwork references')
 console.log(`PASS static image URLs: ${encodedAssets} encoded references, no raw non-ASCII paths`)
