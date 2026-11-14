@@ -344,18 +344,26 @@ function MiniStat({ title, bear, value, unit, sub, empty, href, cta }: {
 
 /* ---------------- 月次推移 ---------------- */
 
-function TrendChart({ trend }: { trend: HomeSummary['trend'] }) {
-  const empty = trend.every((p) => p.won === 0 && p.quoted === 0)
+function TrendChart({ trend, salesState, quotesState }: {
+  trend: HomeSummary['trend']
+  salesState: HomeSummary['sales']['state']
+  quotesState: HomeSummary['quotes']['state']
+}) {
+  const series = [
+    ...(salesState === 'ready' ? [{ name: '受注（営業管理）', values: trend.map((p) => p.won) }] : []),
+    ...(quotesState === 'ready' ? [{ name: '確定見積（税抜）', values: trend.map((p) => p.quoted), tone: 'cyan' as const }] : []),
+  ]
+  const failed = [
+    ...(salesState === 'error' ? ['受注'] : []),
+    ...(quotesState === 'error' ? ['確定見積'] : []),
+  ]
+  const empty = failed.length === 0 && series.length === 0
   return (
     <div className={styles.chartWrap}>
-      <AreaChart
-        labels={trend.map((p) => `${Number(p.month.slice(5))}月`)}
-        series={[
-          { name: '受注（営業管理）', values: trend.map((p) => p.won) },
-          { name: '確定見積（税抜）', values: trend.map((p) => p.quoted), tone: 'cyan' },
-        ]}
-        format={man}
-      />
+      {series.length > 0 ? (
+        <AreaChart labels={trend.map((p) => `${Number(p.month.slice(5))}月`)} series={series} format={man} />
+      ) : null}
+      {failed.length > 0 ? <p className={styles.chartEmpty}>{failed.join('・')}の推移を読み込めませんでした。</p> : null}
       {empty ? <p className={styles.chartEmpty}>まだ受注・確定見積のデータがありません</p> : null}
     </div>
   )
@@ -364,6 +372,9 @@ function TrendChart({ trend }: { trend: HomeSummary['trend'] }) {
 /* ---------------- パイプライン ---------------- */
 
 function Pipeline({ sales }: { sales: HomeSummary['sales'] }) {
+  if (sales.state === 'error') {
+    return <p className={styles.chartEmpty}>営業状況を読み込めませんでした。</p>
+  }
   if (sales.state !== 'ready') {
     return <EmptyCard text="営業管理で商談を登録すると、段階ごとの金額がここに並びます。" href="/sfa" cta="営業管理をはじめる" />
   }
@@ -579,7 +590,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
       {error ? <p className={styles.error} role="alert">{error}</p> : null}
 
       <section className={styles.kpis} aria-label="今月の主要な数字">
-        <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
+        <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : s.sales.state === 'error' ? '読み込めませんでした' : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
         <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? s.sales.weightedPipeline : null} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
@@ -593,7 +604,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
             <h2>売上の推移</h2>
             <span className={styles.cardMeta}>直近6か月</span>
           </div>
-          <TrendChart trend={s.trend} />
+          <TrendChart trend={s.trend} salesState={s.sales.state} quotesState={s.quotes.state} />
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}>
