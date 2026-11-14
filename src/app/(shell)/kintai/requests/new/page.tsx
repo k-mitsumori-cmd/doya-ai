@@ -55,12 +55,12 @@ export default function NewRequestPage() {
         <Skeleton lines={5} height={18} />
       </div>
     }>
-      <NewRequestContent />
+      <NewRequestContent isActive={isActive} />
     </Suspense>
   )
 }
 
-function NewRequestContent() {
+function NewRequestContent({ isActive }: { isActive: boolean | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
