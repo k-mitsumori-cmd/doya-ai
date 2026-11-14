@@ -67,10 +67,10 @@ async function withBrowserLock<T>(key: string, work: () => Promise<T>): Promise<
   return work()
 }
 
-/** サーバーが答えを返した失敗（4xx）は、登録されていない。通信の失敗と 5xx は、結果が分からない */
+/** 認証・権限・保存先の変更は、以前の送信結果を示さないので控えを残す。 */
 function isDefiniteFailure(error: unknown): boolean {
   const status = (error as { status?: unknown } | null)?.status
-  return typeof status === 'number' && status >= 400 && status < 500 && status !== 412
+  return typeof status === 'number' && status >= 400 && status < 500 && ![401, 403, 412].includes(status)
 }
 
 export async function submitOnce<T>(options: {

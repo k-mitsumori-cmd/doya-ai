@@ -216,6 +216,23 @@ test('区分が変わって送信を拒否された場合、保存状態が不�
   assert.equal(ids[0], ids[1])
 })
 
+test('再送が認証・権限エラーになっても、再ログイン後に同じ控えを使う', async () => {
+  const ids: string[] = []
+  const send = async (id: string) => {
+    ids.push(id)
+    if (ids.length === 1) throw new TypeError('lost')
+    if (ids.length === 2) throw httpError(401)
+    if (ids.length === 3) throw httpError(403)
+    return 'ok'
+  }
+  const save = () => submitOnce({ scope: 's', input: { a: 1 }, readScope, send, resolve: never })
+  await assert.rejects(save(), TypeError)
+  await assert.rejects(save(), { status: 401 })
+  await assert.rejects(save(), { status: 403 })
+  assert.equal(await save(), 'ok')
+  assert.equal(new Set(ids).size, 1)
+})
+
 test('旧控えを現在の区分で照会し、保存済みのときは送信せず別利用者用の控えを残す', async () => {
   const { localStorage } = (globalThis as unknown as { window: { localStorage: Storage } }).window
   const legacy = JSON.stringify({ operationId: OP, fingerprint: onceFingerprint({ a: 1 }), at: Date.now() })
