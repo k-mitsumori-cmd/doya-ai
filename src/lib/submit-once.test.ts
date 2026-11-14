@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
 import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from './submit-once'
-import { ONCE_SAVED_MESSAGE, onceFingerprint, submitOnce, SubmitOnceSavedError } from './submit-once-client'
+import { ONCE_SAVED_MESSAGE, ONCE_STORAGE_UNAVAILABLE_MESSAGE, onceFingerprint, submitOnce, SubmitOnceSavedError } from './submit-once-client'
 
 const OP = '11111111-1111-4111-8111-111111111111'
 class Fail extends Error { constructor(readonly status: number, message: string) { super(message) } }
@@ -168,9 +168,21 @@ test('控えが1日より古いと、内容が同じでも先に確かめる', a
   assert.equal(asked, 1); assert.notEqual(ids[0], '22222222-2222-4222-8222-222222222222')
 })
 
-test('ブラウザに控えられないときは、番号なしで今までどおり送る', async () => {
+test('ブラウザに控えられないときは保存APIを呼ばない', async () => {
   (globalThis as { window?: unknown }).window = { localStorage: { setItem: () => { throw new Error('blocked') } } }
-  const ids: (string | undefined)[] = []
-  assert.equal(await submitOnce({ scope: 's', input: { a: 1 }, send: async (id) => { ids.push(id); return 'ok' }, resolve: never }), 'ok')
-  assert.deepEqual(ids, [undefined])
+  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send: never, resolve: never }), {
+    message: ONCE_STORAGE_UNAVAILABLE_MESSAGE,
+  })
+})
+
+test('試し書きに成功しても操作IDを控えられない場合は保存APIを呼ばない', async () => {
+  const storage = (globalThis as unknown as { window: { localStorage: Storage } }).window.localStorage
+  const setItem = storage.setItem
+  storage.setItem = (key, value) => {
+    if (key.startsWith('submit-once:pending:')) throw new Error('quota')
+    setItem(key, value)
+  }
+  await assert.rejects(submitOnce({ scope: 's', input: { a: 1 }, send: never, resolve: never }), {
+    message: ONCE_STORAGE_UNAVAILABLE_MESSAGE,
+  })
 })
