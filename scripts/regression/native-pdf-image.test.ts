@@ -73,6 +73,10 @@ test('quote pagination keeps the footer with content and preserves long estimate
       const pageText = execFileSync('pdftotext', ['-raw', '-f', String(page), '-l', String(page), '-', '-'], { input: pdf }).toString().replace(/\s/g, '')
       assert.ok(pageText.includes('社内確認用'), `Draft watermark must be present on page ${page}/${pageCount}`)
       if (long) {
+        const boxes = execFileSync('pdftotext', ['-bbox', '-f', String(page), '-l', String(page), '-', '-'], { input: pdf }).toString()
+        const heading = /<word[^>]*yMin="([\d.]+)"[^>]*>品目<\/word>/.exec(boxes)
+        assert.ok(heading, `Column heading must be present on page ${page}/${pageCount}`)
+        assert.ok(Number(heading[1]) >= 16 * 72 / 25.4, `Column heading must have a printable top margin on page ${page}/${pageCount}`)
         const itemNames = pageText.match(/検査明細\d{3}/g) ?? []
         const descriptions = pageText.match(/明細の説明です。内容を省略せず次のページへ続けます。/g) ?? []
         assert.equal(descriptions.length, itemNames.length, `Each line item and description must stay on the same page (${page}/${pageCount})`)
