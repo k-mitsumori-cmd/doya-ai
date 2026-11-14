@@ -291,7 +291,7 @@ export default function SiteDetailClient({ initial, created }: { initial: SiteDe
       if (!res.ok || !json?.popup?.id) throw new Error(json?.error || '追加に失敗しました。')
       router.push(`/popup/edit/${json.popup.id}`)
     } catch (e) {
-      setActionError({ message: (e as Error).message, issues: [] })
+      setActionError({ message: /[ぁ-んァ-ヶ一-龠]/.test(String((e as Error)?.message ?? '')) ? (e as Error).message : '追加に失敗しました。時間をおいて、もう一度お試しください。', issues: [] })
       setBusy(null)
     }
   }

@@ -168,7 +168,6 @@ export default function MensetsuSettingsPage() {
       <main className="mx-auto max-w-4xl px-4 py-8">
         <EmptyState
           kind="not-generated"
-          art="/mensetsu/empty-interviews.webp"
           title="まだ組織がありません"
           description="メンバーや記録の設定は、組織ごとに決めます。先に面接の準備の画面で組織を作成してください。"
           action={<Button href="/mensetsu" icon="UserCheck">組織を作成する</Button>}

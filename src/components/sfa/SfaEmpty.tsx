@@ -8,7 +8,7 @@
 import type { ReactNode } from 'react'
 import { EmptyState } from '@/components/ds'
 
-export default function SfaEmpty({ title, description, action, filtered, bare, legacy }: {
+export default function SfaEmpty({ title, description, action, filtered, bare, art, legacy }: {
   title: string
   description?: ReactNode
   /** 次にやることは1つだけ */
@@ -17,6 +17,8 @@ export default function SfaEmpty({ title, description, action, filtered, bare, l
   filtered?: boolean
   /** カード（ds の Card など）の中に置くとき。外側の枠を付けない */
   bare?: boolean
+  /** 商談の空の状態だけ、商談の絵を渡す。ほかの画面（活動・タスク・リード・顧客）は、合わない絵を避けて共通のクマにする */
+  art?: string
   legacy: ReactNode
 }) {
   return (
@@ -26,7 +28,7 @@ export default function SfaEmpty({ title, description, action, filtered, bare, l
         title={title}
         description={description}
         action={action}
-        art={filtered ? undefined : '/sfa/empty-deals.webp'}
+        art={filtered ? undefined : art}
       />
     </div>
   )

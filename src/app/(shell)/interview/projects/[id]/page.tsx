@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import Head from 'next/head'
 import { alertDialog, ConfirmDialog } from '@/components/ds/dialog'
+import { Button, EmptyState } from '@/components/ds'
 import { interviewUserMessage } from '@/lib/interview/user-message'
 
 interface ProjectDetail {
@@ -467,17 +468,12 @@ export default function ProjectOverviewPage() {
           </Link>
         </div>
         {project.materials.length === 0 ? (
-          <div className="text-center py-8">
-            <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">cloud_upload</span>
-            <p className="text-sm text-slate-500 leading-relaxed mb-4">素材がまだアップロードされていません</p>
-            <Link
-              href={`/interview/projects/${projectId}/materials`}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20"
-            >
-              <span className="material-symbols-outlined text-base">upload_file</span>
-              素材をアップロード
-            </Link>
-          </div>
+          <EmptyState
+            art="/interview/empty-interviews.webp"
+            title="素材がまだありません"
+            description="取材の音声や動画、メモをアップロードすると、文字起こしが始まります。"
+            action={<Button href={`/interview/projects/${projectId}/materials`} icon="Plus">素材をアップロード</Button>}
+          />
         ) : (
           <div className="space-y-2">
             {project.materials.map((m) => {
@@ -534,19 +530,12 @@ export default function ProjectOverviewPage() {
           )}
         </div>
         {project.drafts.length === 0 ? (
-          <div className="text-center py-8">
-            <span className="material-symbols-outlined text-5xl text-slate-300 mb-3">edit_note</span>
-            <p className="text-sm text-slate-500 leading-relaxed mb-4">記事がまだ生成されていません</p>
-            {project.transcriptions.some((t) => t.status === 'COMPLETED') && (
-              <Link
-                href={`/interview/projects/${projectId}/skill`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0066ff] text-white rounded-xl text-sm hover:bg-[#0047d6] transition-colors shadow-lg shadow-[#0066ff]/20"
-              >
-                <span className="material-symbols-outlined text-base">menu_book</span>
-                スキルを選んで生成
-              </Link>
-            )}
-          </div>
+          <EmptyState
+            art="/interview/empty-interviews.webp"
+            title="記事がまだありません"
+            description={project.transcriptions.some((t) => t.status === 'COMPLETED') ? '文字起こしができました。スキルを選ぶと、記事の下書きを作れます。' : '素材の文字起こしが終わると、ここから記事を作れます。'}
+            action={project.transcriptions.some((t) => t.status === 'COMPLETED') ? <Button href={`/interview/projects/${projectId}/skill`} icon="BookOpen">スキルを選んで生成</Button> : undefined}
+          />
         ) : (
           <div className="space-y-2">
             {project.drafts.map((d) => (

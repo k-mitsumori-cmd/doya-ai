@@ -9,6 +9,7 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { findInterviewUploadAttempt } from '@/lib/interview/upload-attempt'
 import { ShellCostBadge } from '@/components/shell/power'
 import { confirmDialog } from '@/components/ds/dialog'
+import { Button, EmptyState } from '@/components/ds'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -1345,20 +1346,12 @@ export default function MaterialsPage() {
         ) : projectError && materials.length === 0 ? (
           <div className="rounded-2xl border border-red-100 bg-white p-8 text-center text-sm font-bold text-slate-500">素材を表示できません</div>
         ) : materials.length === 0 ? (
-          <motion.div
-            className="text-center py-16 bg-gradient-to-b from-slate-50 to-white rounded-2xl border-2 border-dashed border-slate-200"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <span className="material-symbols-outlined text-slate-200 text-7xl mb-4 block">inventory_2</span>
-            </motion.div>
-            <p className="text-base font-bold text-slate-400 mb-1">まだ素材がありません</p>
-            <p className="text-sm text-slate-400">上のエリアからファイルをアップロードしてください</p>
-          </motion.div>
+          <EmptyState
+            art="/interview/empty-interviews.webp"
+            title="まだ素材がありません"
+            description="上のエリアに、取材の音声・動画・メモのファイルを入れてください。"
+            action={<Button icon="Plus" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>アップロードの欄へ</Button>}
+          />
         ) : (
           <motion.div
             className="space-y-3"

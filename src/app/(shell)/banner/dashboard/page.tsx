@@ -1570,9 +1570,9 @@ function BannerTestPageInner() {
                   <div className="hidden sm:flex items-center gap-2 mb-2 sm:mb-3 max-w-2xl">
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
                       <Sparkles className="w-3 h-3 text-yellow-400" />
-                      <span className="text-[10px] sm:text-xs text-white/80 font-medium whitespace-nowrap">スタイル</span>
+                      <span className="text-xs sm:text-xs text-white/80 font-medium whitespace-nowrap">スタイル</span>
                     </div>
-                    <p className="text-[10px] sm:text-xs text-gray-300 drop-shadow-lg line-clamp-1 leading-relaxed">
+                    <p className="text-xs sm:text-xs text-gray-300 drop-shadow-lg line-clamp-1 leading-relaxed">
                       {selectedTemplate.prompt && selectedTemplate.prompt.length > 10 
                         ? (selectedTemplate.prompt.length > 100 
                             ? selectedTemplate.prompt.substring(0, 100) + '...'
@@ -1647,7 +1647,7 @@ function BannerTestPageInner() {
                       <>
                         <button
                           onClick={() => handleDownload(selectedBanner)}
-                          className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
+                          className="min-h-[40px] min-w-[40px] px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
                         >
                           <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span className="whitespace-nowrap">ダウンロード</span>
@@ -1668,7 +1668,7 @@ function BannerTestPageInner() {
                         </button>
                         <button 
                           onClick={() => setSelectedBanner(null)}
-                          className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm"
+                          className="min-h-[40px] min-w-[40px] px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm"
                         >
                           <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span className="whitespace-nowrap">戻る</span>
@@ -1715,7 +1715,7 @@ function BannerTestPageInner() {
           {/* 一部表示中の案内 */}
           {!isLoadingTemplates && templates.length > 0 && (
             <div className={`px-2 sm:px-4 md:px-8 lg:px-12 pt-2 ${gt.notice}`}>
-              <div className={`flex items-center gap-2 text-[11px] sm:text-xs ${gt.noticeText}`}>
+              <div className={`flex items-center gap-2 text-xs sm:text-xs ${gt.noticeText}`}>
                 <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
                 <span>
                   {templates.length}件のテンプレート{isFetchingAll && ' (読み込み中...)'}
@@ -1812,7 +1812,7 @@ function BannerTestPageInner() {
                       placeholder="例: 新規事業立ち上げセミナー / 採用強化キャンペーン / 春の新商品発売"
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5">
+                    <p className="text-xs sm:text-xs text-gray-400 mt-1.5">
                       選択したスタイルを維持しながら、このテキストを反映したバナーを生成します
                     </p>
                   </div>
@@ -1821,7 +1821,7 @@ function BannerTestPageInner() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold">サイズを選択</label>
-                      <span className="text-[10px] sm:text-xs text-gray-400">サイズ</span>
+                      <span className="text-xs sm:text-xs text-gray-400">サイズ</span>
                     </div>
                     <div className="flex flex-wrap gap-2 sm:gap-3">
                       {SIZE_PRESETS.map((size) => {
@@ -1830,7 +1830,7 @@ function BannerTestPageInner() {
                           <button
                             key={size.id}
                             onClick={() => setSelectedSize(size)}
-                            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all text-xs sm:text-sm font-medium ${
+                            className={`min-h-[40px] flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all text-xs sm:text-sm font-medium ${
                               selectedSize.id === size.id
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -1838,7 +1838,7 @@ function BannerTestPageInner() {
                           >
                             <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>{size.label}</span>
-                            <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
+                            <span className="text-xs sm:text-xs opacity-70">{size.ratio}</span>
                           </button>
                         )
                       })}
@@ -1861,14 +1861,14 @@ function BannerTestPageInner() {
                                 }}
                               />
                               <p className="text-xs sm:text-sm font-bold text-white mt-2">{displayWidth}×{displayHeight}</p>
-                              <p className="text-[10px] sm:text-xs text-gray-400">縦横の比率</p>
+                              <p className="text-xs sm:text-xs text-gray-400">縦横の比率</p>
                             </>
                           )
                         })()}
                       </div>
                     </div>
                     {/* 注釈 */}
-                    <p className="text-[9px] sm:text-[10px] text-yellow-500/80 mt-2 text-center">
+                    <p className="text-xs sm:text-xs text-yellow-500/80 mt-2 text-center">
                       AIの仕様により、選択したサイズと異なるサイズで生成される場合があります。ご了承ください。
                     </p>
                   </div>
@@ -1879,10 +1879,10 @@ function BannerTestPageInner() {
                       <label className="text-xs sm:text-sm font-bold">生成枚数</label>
                       <div className="flex items-center gap-1.5">
                         <span className="text-lg sm:text-xl font-bold text-blue-400 whitespace-nowrap">{generateCount}枚</span>
-                        <span className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap">最大{planLimits.maxCount}枚</span>
+                        <span className="text-xs sm:text-xs text-gray-400 whitespace-nowrap">最大{planLimits.maxCount}枚</span>
                       </div>
                     </div>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
+                    <p className="text-xs sm:text-xs text-gray-400 mb-2 sm:mb-3">
                       1〜{planLimits.maxCount}枚から選択。
                       {userPlan === 'FREE' ? (
                         <span className="text-yellow-400"> PROプランでは1回最大5枚まで選べます。</span>
@@ -1916,7 +1916,7 @@ function BannerTestPageInner() {
                       <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-700/50">
                         <div className="flex items-center gap-2">
                           <Crown className="w-4 h-4 text-yellow-400" />
-                          <p className="text-[10px] sm:text-xs text-yellow-200">
+                          <p className="text-xs sm:text-xs text-yellow-200">
                             <span className="font-bold">PROプラン</span>にアップグレードすると最大5枚まで生成可能
                           </p>
                         </div>
@@ -1928,7 +1928,7 @@ function BannerTestPageInner() {
                   {/* ロゴ・人物写真アップロード */}
                   <div>
                     <label className="text-xs sm:text-sm font-bold mb-2 block">ロゴ / 人物写真（任意）</label>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">アップロードした画像をバナーに反映します（AIが画像内に合成します）。</p>
+                    <p className="text-xs sm:text-xs text-gray-400 mb-2 sm:mb-3">アップロードした画像をバナーに反映します（AIが画像内に合成します）。</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {/* ロゴアップロード */}
                       <div className="bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-700">
@@ -1938,13 +1938,13 @@ function BannerTestPageInner() {
                             {logoPreview ? (
                               <img src={logoPreview} alt="アップロードしたロゴ" className="w-full h-full object-contain" />
                             ) : (
-                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">ロゴ</span>
+                              <span className="text-xs sm:text-xs text-gray-500 font-bold">ロゴ</span>
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5 truncate">{logoFile ? logoFile.name : '未設定'}</p>
+                            <p className="text-xs sm:text-xs text-gray-400 mb-1.5 truncate">{logoFile ? logoFile.name : '未設定'}</p>
                             <label className="cursor-pointer">
-                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-[10px] sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
+                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
                                 <Upload className="w-3 h-3" />
                                 アップロード
                               </span>
@@ -1971,9 +1971,9 @@ function BannerTestPageInner() {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5 truncate">{personFile ? personFile.name : '未設定'}</p>
+                            <p className="text-xs sm:text-xs text-gray-400 mb-1.5 truncate">{personFile ? personFile.name : '未設定'}</p>
                             <label className="cursor-pointer">
-                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-[10px] sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
+                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
                                 <Upload className="w-3 h-3" />
                                 アップロード
                               </span>
@@ -1986,7 +1986,7 @@ function BannerTestPageInner() {
                             )}
                           </div>
                         </div>
-                        <p className="text-[8px] sm:text-[10px] text-gray-500 mt-2">※ 人物写真は1名（1枚）のみ対応です</p>
+                        <p className="text-xs sm:text-xs text-gray-500 mt-2">※ 人物写真は1名（1枚）のみ対応です</p>
                       </div>
                     </div>
                   </div>
@@ -1996,7 +1996,7 @@ function BannerTestPageInner() {
                     <label className="text-xs sm:text-sm font-bold mb-2 sm:mb-3 block">
                       カラー指定（任意）
                     </label>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mb-3">
+                    <p className="text-xs sm:text-xs text-gray-400 mb-3">
                       バナーのメインカラーとサブカラーを指定できます。
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -2022,7 +2022,7 @@ function BannerTestPageInner() {
                           <button
                             type="button"
                             onClick={() => setMainColor('')}
-                            className="mt-2 text-[10px] text-gray-400 hover:text-white transition-colors"
+                            className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
                           >
                             クリア
                           </button>
@@ -2050,7 +2050,7 @@ function BannerTestPageInner() {
                           <button
                             type="button"
                             onClick={() => setSubColor('')}
-                            className="mt-2 text-[10px] text-gray-400 hover:text-white transition-colors"
+                            className="mt-2 text-xs text-gray-400 hover:text-white transition-colors"
                           >
                             クリア
                           </button>
@@ -2064,7 +2064,7 @@ function BannerTestPageInner() {
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs sm:text-sm font-bold flex items-center gap-2">
                         <span>詳細な生成指示</span>
-                        <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full">法人プラン</span>
+                        <span className="px-2 py-0.5 bg-brand-500 text-xs font-bold rounded-full">法人プラン</span>
                       </label>
                       {currentPlan === 'ENTERPRISE' && (
                         <button
@@ -2098,7 +2098,7 @@ function BannerTestPageInner() {
                       </div>
                     ) : showCustomPrompt ? (
                       <div className="space-y-3">
-                        <p className="text-[10px] sm:text-xs text-gray-400">
+                        <p className="text-xs sm:text-xs text-gray-400">
                           選択したスタイルに加えて、追加の指示を入力できます。背景、色、レイアウト、装飾などを細かく指定できます。
                         </p>
                         <textarea
@@ -2120,7 +2120,7 @@ function BannerTestPageInner() {
                           )}
                         </div>
                         <div className="bg-brand-800/30 rounded-lg p-3 border border-brand-600/50">
-                          <p className="text-[10px] text-brand-200">
+                          <p className="text-xs text-brand-200">
                             ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
                           </p>
                         </div>
@@ -2295,7 +2295,7 @@ function BannerTestPageInner() {
                                 <Sparkles className="w-6 h-6 text-white" />
                               </div>
                               <span className="text-white font-bold text-sm">クリックして修正</span>
-                              <span className="px-2 py-0.5 bg-brand-500 text-[10px] font-bold rounded-full text-white">法人プラン</span>
+                              <span className="px-2 py-0.5 bg-brand-500 text-xs font-bold rounded-full text-white">法人プラン</span>
                             </>
                           ) : (
                             <>
@@ -2326,7 +2326,7 @@ function BannerTestPageInner() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setZoomImage({ url: banner.imageUrl, title: `バナー ${idx + 1}` })}
-                          className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                          className="min-h-[40px] min-w-[40px] flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
                         >
                           <Maximize2 className="w-4 h-4" />
                           拡大
@@ -2369,7 +2369,7 @@ function BannerTestPageInner() {
                         >
                           <FileText className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">法人プラン</span>
+                          <span className="px-1.5 py-0.5 bg-white/20 text-xs font-bold rounded">法人プラン</span>
                         </button>
                       ) : (
                         <button
@@ -2382,7 +2382,7 @@ function BannerTestPageInner() {
                         >
                           <Lock className="w-4 h-4" />
                           プロンプトを見る
-                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">法人プラン</span>
+                          <span className="px-1.5 py-0.5 bg-gray-600 text-xs font-bold rounded">法人プラン</span>
                         </button>
                       )}
                     </div>
@@ -2659,15 +2659,15 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       画像を修正
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-xs sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
-                    <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">AIに指示を出して画像を修正できます</p>
+                    <p className="text-white/80 text-xs sm:text-xs md:text-sm">AIに指示を出して画像を修正できます</p>
                   </div>
                 </div>
                 <button
                   onClick={() => !isEditing && setShowEditModal(false)}
                   disabled={isEditing}
-                  className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50 shrink-0"
+                  className="min-h-[40px] min-w-[40px] p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50 shrink-0"
                 >
                   <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </button>
@@ -2854,14 +2854,14 @@ function BannerTestPageInner() {
                   <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg md:text-xl font-bold text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       プロンプト詳細
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-[10px] sm:text-xs font-bold rounded-full">法人プラン</span>
+                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 text-xs sm:text-xs font-bold rounded-full">法人プラン</span>
                     </h3>
-                    <p className="text-white/80 text-[10px] sm:text-xs md:text-sm">この画像を生成したプロンプトを確認できます</p>
+                    <p className="text-white/80 text-xs sm:text-xs md:text-sm">この画像を生成したプロンプトを確認できます</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowPromptModal(false)}
-                  className="p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors shrink-0"
+                  className="min-h-[40px] min-w-[40px] p-1.5 sm:p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors shrink-0"
                 >
                   <X className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </button>
@@ -2887,7 +2887,7 @@ function BannerTestPageInner() {
                   {/* ダウンロードボタン */}
                   <button
                     onClick={() => handleDownload(viewingPromptBanner)}
-                    className="mt-2 sm:mt-3 w-full py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
+                    className="min-h-[40px] min-w-[40px] mt-2 sm:mt-3 w-full py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
                   >
                     <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     画像をダウンロード
@@ -2905,7 +2905,7 @@ function BannerTestPageInner() {
                           navigator.clipboard.writeText(prompt)
                           toast.success('プロンプトをコピーしました')
                         }}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-[10px] sm:text-xs font-medium rounded-lg transition-colors flex items-center gap-1 sm:gap-1.5"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs sm:text-xs font-medium rounded-lg transition-colors flex items-center gap-1 sm:gap-1.5"
                       >
                         <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         コピー
@@ -2924,7 +2924,7 @@ function BannerTestPageInner() {
                           URL.revokeObjectURL(url)
                           toast.success('プロンプトをダウンロードしました')
                         }}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] sm:text-xs font-medium rounded-lg transition-colors flex items-center gap-1 sm:gap-1.5"
+                        className="px-2 sm:px-3 py-1 sm:py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-xs font-medium rounded-lg transition-colors flex items-center gap-1 sm:gap-1.5"
                       >
                         <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         DL
@@ -2932,15 +2932,15 @@ function BannerTestPageInner() {
                     </div>
                   </div>
                   <div className="bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl p-3 sm:p-4 h-[150px] sm:h-[200px] md:h-[250px] overflow-y-auto">
-                    <pre className="text-[10px] sm:text-xs md:text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                    <pre className="text-xs sm:text-xs md:text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
                       {viewingPromptBanner.prompt || selectedTemplate?.prompt || '（プロンプト情報なし）'}
                     </pre>
                   </div>
                   
                   {/* プロンプト活用ヒント */}
                   <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-indigo-900/30 rounded-lg border border-indigo-700/50">
-                    <h5 className="text-[10px] sm:text-xs font-bold text-indigo-300 mb-1.5 sm:mb-2">プロンプト活用のヒント</h5>
-                    <ul className="text-[10px] sm:text-xs text-indigo-200/80 space-y-0.5 sm:space-y-1">
+                    <h5 className="text-xs sm:text-xs font-bold text-indigo-300 mb-1.5 sm:mb-2">プロンプト活用のヒント</h5>
+                    <ul className="text-xs sm:text-xs text-indigo-200/80 space-y-0.5 sm:space-y-1">
                       <li>• このプロンプトをベースに修正して新しい画像を生成できます</li>
                       <li>• 色やレイアウトの指示を変更して別バリエーションを作成</li>
                       <li>• 他のAI画像生成ツールでも使用可能です</li>
@@ -3001,7 +3001,7 @@ function BannerTestPageInner() {
       <div className={nextStyles.heroWrap}>
         <BannerModeChooser current="template" />
         <ToolHero
-          title="好きな見本を選んで、文字を入れるだけ。"
+          title={<>好きな見本を選んで、<wbr />文字を入れるだけ。</>}
           lead={`プロが作った見本の雰囲気のまま、あなたのサービスのバナーを${generateCount}枚つくります。`}
           tool="banner"
           artAlt=""

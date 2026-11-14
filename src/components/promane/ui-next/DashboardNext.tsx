@@ -53,7 +53,7 @@ export default function DashboardNext({ canWrite, workspaceSlug, data, myData, c
       {/* 「これ1つで全部進む」帯。旗の判定は画面側の小さな部品だけで行う（このファイルはサーバーの部品のまま） */}
       {canWrite && <PromaneOneButton newHref={newHref} />}
       <ToolHero
-        title="案件の進み具合と収支を、ひと目で"
+        title={<>案件の進み具合と収支を、<wbr />ひと目で</>}
         lead="タスク・工数・売上をワークスペースにまとめ、赤字になりそうな案件を早めに見つけます。"
         action={canWrite ? <Button href={newHref} icon="Plus">新規プロジェクト</Button> : undefined}
         art={PROMANE_UI_NEXT_ART.hero}

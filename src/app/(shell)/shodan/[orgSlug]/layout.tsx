@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
 import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
+import { SITE_CONFIG } from '@/lib/seo'
 import ShodanShellFrame from '@/components/shodan/ShodanShellFrame'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata = {
-  title: 'ドヤ商談準備 | 商談先のURLだけで提案準備を一括生成',
+  // ⚠️ 入れ子の layout には title.template が届かないので、サイト名まで書いた absolute にする（ほかのツールと同じ形）
+  title: { absolute: `ドヤ商談準備 | 商談先のURLだけで提案準備を一括生成 | ${SITE_CONFIG.name}` },
   description: '商談先のURLを入れるだけで、企業リサーチ・課題仮説・解決策・提案資料までAIが一括作成。',
 }
 

@@ -175,7 +175,7 @@ export default function SeoCheckPage() {
             <p className="text-sm font-black text-gray-900 leading-none truncate max-w-xs sm:max-w-md">
               {article.title}
             </p>
-            <p className="text-[10px] font-bold text-gray-400 mt-1">品質チェック</p>
+            <p className="text-xs font-bold text-gray-400 mt-1">品質チェック</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -208,7 +208,7 @@ export default function SeoCheckPage() {
               )}
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">エラー</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">エラー</p>
               <p className="text-2xl font-black text-gray-900">{errorCount}</p>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function SeoCheckPage() {
               <AlertTriangle className={`w-6 h-6 ${warningCount > 0 ? 'text-amber-600' : 'text-gray-400'}`} />
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">警告</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">警告</p>
               <p className="text-2xl font-black text-gray-900">{warningCount}</p>
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function SeoCheckPage() {
               <FileText className="w-6 h-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">未対応</p>
+              <p className="text-xs font-black text-gray-400 uppercase tracking-widest">未対応</p>
               <p className="text-2xl font-black text-gray-900">{pendingCount}</p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export default function SeoCheckPage() {
                 <t.icon className="w-4 h-4" />
                 {t.label}
                 {count > 0 && (
-                  <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] ${
+                  <span className={`ml-1 px-1.5 py-0.5 rounded text-xs ${
                     activeTab === t.id ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
                     {count}
@@ -358,7 +358,7 @@ export default function SeoCheckPage() {
                       <h4 className="text-sm font-black text-gray-900">{item.title}</h4>
                       <p className="text-xs text-gray-500 font-bold mt-1">{item.description}</p>
                       {item.location && (
-                        <p className="mt-2 flex items-center gap-1 truncate text-[10px] font-bold text-gray-400">
+                        <p className="mt-2 flex items-center gap-1 truncate text-xs font-bold text-gray-400">
                           <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden />
                           <span className="truncate">{item.location}</span>
                         </p>
@@ -370,11 +370,11 @@ export default function SeoCheckPage() {
                   {item.before && item.after && !item.applied && (
                     <div className="mt-4 grid sm:grid-cols-2 gap-3">
                       <div className="p-3 rounded-xl bg-red-50 border border-red-100">
-                        <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Before</p>
+                        <p className="text-xs font-black text-red-500 uppercase tracking-widest mb-1">Before</p>
                         <p className="text-xs text-red-800 font-bold">{item.before}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1">After</p>
+                        <p className="text-xs font-black text-emerald-500 uppercase tracking-widest mb-1">After</p>
                         <p className="text-xs text-emerald-800 font-bold">{item.after}</p>
                       </div>
                     </div>
