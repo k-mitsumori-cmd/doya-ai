@@ -55,7 +55,7 @@ jobs:
             return 1
           }
           has_poppler() {
-            command -v pdfinfo >/dev/null && command -v pdftotext >/dev/null
+            command -v pdfinfo >/dev/null && command -v pdftotext >/dev/null && command -v pdffonts >/dev/null
           }
           packages=()
           has_postgres || packages+=(postgresql)
