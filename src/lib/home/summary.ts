@@ -200,7 +200,7 @@ async function loadContract(userId: string) {
   }
 }
 
-async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
+async function loadSales(userId: string, monthStart: Date, months: ReturnType<typeof lastMonths>) {
   const membership = await prisma.sfaMember.findFirst({
     where: { userId, status: 'ACTIVE', role: { in: Object.keys(SFA_ROLES) } },
     include: { organization: true },
@@ -211,22 +211,39 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   const slug = membership.organization.slug
   const now = new Date()
 
-  const [deals, wonForTrend, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
+  const [open, monthlyWon, upcomingDeals, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
     userId,
     organizationId: orgId,
     organizationSlug: slug,
     role: membership.role as SfaRole,
     memberId: membership.id,
   }, (tx, scope) => Promise.all([
-      tx.sfaDeal.findMany({
-        where: sfaRecordWhere(scope, 'deal', false, { isActive: true, OR: [{ status: 'open' }, { status: 'won', wonAt: { gte: monthStart } }] }),
-        select: { id: true, name: true, amount: true, probability: true, status: true, stageId: true, expectedCloseDate: true },
-        take: 2000,
+      tx.sfaDeal.groupBy({
+        by: ['stageId', 'probability'],
+        where: sfaRecordWhere(scope, 'deal', false, { status: 'open' }),
+        _sum: { amount: true },
+        _count: { _all: true },
       }),
+      Promise.all(months.map(async ({ start }, index) => {
+        const next = months[index + 1]?.start
+        const totals = await tx.sfaDeal.aggregate({
+          where: sfaRecordWhere(scope, 'deal', false, {
+            status: 'won',
+            wonAt: { gte: start, ...(next ? { lt: next } : {}) },
+          }),
+          _sum: { amount: true },
+          _count: { _all: true },
+        })
+        return { at: start, amount: toNum(totals._sum.amount), count: totals._count._all }
+      })),
       tx.sfaDeal.findMany({
-        where: sfaRecordWhere(scope, 'deal', false, { isActive: true, status: 'won', wonAt: { gte: trendStart } }),
-        select: { amount: true, wonAt: true },
-        take: 5000,
+        where: sfaRecordWhere(scope, 'deal', false, {
+          status: 'open',
+          expectedCloseDate: { gte: new Date(now.getTime() - 7 * 86400_000), lte: new Date(now.getTime() + 45 * 86400_000) },
+        }),
+        orderBy: [{ expectedCloseDate: 'asc' }, { id: 'asc' }],
+        select: { id: true, name: true, expectedCloseDate: true },
+        take: 40,
       }),
       tx.sfaPipeline.findFirst({
         where: { organizationId: orgId },
@@ -244,8 +261,7 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
       }),
     ]))
 
-  const open = deals.filter((d) => d.status === 'open')
-  const won = deals.filter((d) => d.status === 'won')
+  const currentWon = monthlyWon[monthlyWon.length - 1]
   const stageList = pipeline?.stages ?? []
   const stages = stageList
     .filter((s) => !s.isWon && !s.isLost)
@@ -254,26 +270,26 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
       return {
         name: s.name,
         color: s.color,
-        count: inStage.length,
-        amount: inStage.reduce((a, d) => a + toNum(d.amount), 0),
+        count: inStage.reduce((a, d) => a + d._count._all, 0),
+        amount: inStage.reduce((a, d) => a + toNum(d._sum.amount), 0),
       }
     })
 
   return {
     orgName: membership.organization.name,
     slug,
-    wonThisMonth: won.reduce((a, d) => a + toNum(d.amount), 0),
-    wonCountThisMonth: won.length,
-    openPipeline: open.reduce((a, d) => a + toNum(d.amount), 0),
-    weightedPipeline: Math.round(open.reduce((a, d) => a + (toNum(d.amount) * Math.min(100, Math.max(0, d.probability))) / 100, 0)),
-    openDeals: open.length,
+    wonThisMonth: currentWon?.amount ?? 0,
+    wonCountThisMonth: currentWon?.count ?? 0,
+    openPipeline: open.reduce((a, d) => a + toNum(d._sum.amount), 0),
+    weightedPipeline: Math.round(open.reduce((a, d) => a + (toNum(d._sum.amount) * Math.min(100, Math.max(0, d.probability))) / 100, 0)),
+    openDeals: open.reduce((a, d) => a + d._count._all, 0),
     stages,
     openTasks,
     overdueTasks,
     newLeads,
-    wonForTrend: wonForTrend.map((d) => ({ amount: toNum(d.amount), at: d.wonAt! })),
+    wonForTrend: monthlyWon,
     events: [
-      ...open
+      ...upcomingDeals
         .filter((d) => d.expectedCloseDate)
         .map((d) => ({ id: `deal-${d.id}`, date: d.expectedCloseDate!.toISOString(), title: `受注予定: ${d.name}`, kind: 'deal' as const, href: `/sfa/${slug}/deals` })),
       ...upcomingTasks.map((t) => ({ id: `task-${t.id}`, date: t.dueDate!.toISOString(), title: t.title, kind: 'task' as const, href: `/sfa/${slug}/tasks` })),
@@ -468,7 +484,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
 
   const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, incomeR, expenseR] = await Promise.allSettled([
     loadContract(userId),
-    loadSales(userId, monthStart, trendStart),
+    loadSales(userId, monthStart, months),
     loadQuotes(userId, monthStart, trendStart),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
