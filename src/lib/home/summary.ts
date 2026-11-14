@@ -13,6 +13,7 @@
 // ⚠️ 1ツールが落ちてもホーム全体は落とさない（Promise.allSettled で個別に握る）。
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
+import { ceilToolRole } from '@/lib/company-roles/access.server'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { withSfaRecordRead } from '@/lib/sfa/record-authority'
@@ -352,6 +353,10 @@ async function loadProjects(userId: string) {
     })
     if (!membership) return null
     const ws = membership.workspace
+    const role = await ceilToolRole({
+      tool: 'promane', userId, organizationId: ws.id, toolRole: membership.role,
+    }, tx)
+    if (!role) return null
     const members = await tx.promaneMember.findMany({
       where: { workspaceId: ws.id },
       select: { hourlyRate: true, timeEntries: { select: { duration: true, hourlyRateSnapshot: true, projectId: true, taskId: true } } },
