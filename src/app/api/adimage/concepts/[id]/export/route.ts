@@ -5,6 +5,7 @@ export const maxDuration = 300
 // GET /api/adimage/concepts/[id]/export — 媒体別フォルダに整理したZIPで一括ダウンロード
 // そのまま入稿できる状態で渡すのが目的なので、フォルダ名とファイル名に媒体・配置・実寸を入れる。
 import archiver from 'archiver'
+import sharp from 'sharp'
 import { NextRequest, NextResponse } from 'next/server'
 import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
@@ -19,6 +20,25 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     return await exportConcept(req, ctxParam)
   } catch {
     return privateApiJson({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+  }
+}
+
+// PNG files end with the empty IEND chunk and its CRC.
+const PNG_END = Buffer.from('0000000049454e44ae426082', 'hex')
+
+async function isExportablePng(buf: Buffer, size: string): Promise<boolean> {
+  if (!buf.subarray(-PNG_END.length).equals(PNG_END)) return false
+
+  try {
+    const image = sharp(buf, { failOn: 'warning' })
+    const { format, width, height } = await image.metadata()
+    if (format !== 'png' || `${width}x${height}` !== size) return false
+
+    // Metadata alone cannot detect a truncated pixel stream.
+    await image.raw().toBuffer()
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -53,7 +73,7 @@ async function exportConcept(req: NextRequest, ctxParam: Ctx) {
   const missing: string[] = []
   for (const cr of concept.creatives) {
     const buf = await downloadBuffer(cr.imagePath).catch(() => null)
-    if (!buf?.length) {
+    if (!buf?.length || !await isExportablePng(buf, cr.size)) {
       missing.push(`${findPlacement(cr.placementKey)?.name || cr.placementKey}（${cr.size}）`)
       continue
     }

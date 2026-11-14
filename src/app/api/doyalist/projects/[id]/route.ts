@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { privateApiJson, privateApiResponse } from '@/lib/private-api-response'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -38,13 +39,13 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const id = await resolveId(ctx)
     const guard = await requireOwnedProject(userId, id)
     if ('error' in guard) {
-      return NextResponse.json({ error: guard.error }, { status: guard.status })
+      return privateApiJson({ error: guard.error }, { status: guard.status })
     }
 
     const [firstCompanies, statusGroups, approaches, approachCount] = await Promise.all([
@@ -65,7 +66,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const statusCounts = Object.fromEntries(statusGroups.map((group) => [group.status, group._count._all]))
     const companyCount = statusGroups.reduce((sum, group) => sum + group._count._all, 0)
 
-    return streamDoyalistJsonIterable({
+    return privateApiResponse(streamDoyalistJsonIterable({
       success: true,
       project: guard.project,
       approaches,
@@ -74,10 +75,10 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         approachCount,
         statusCounts,
       },
-    }, 'companies', iterateDoyalistCompanies(id, firstCompanies))
+    }, 'companies', iterateDoyalistCompanies(id, firstCompanies)))
   } catch {
     console.error('[doyalist/projects/[id]][GET] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
     )
@@ -93,13 +94,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const id = await resolveId(ctx)
     const guard = await requireOwnedProject(userId, id)
     if ('error' in guard) {
-      return NextResponse.json({ error: guard.error }, { status: guard.status })
+      return privateApiJson({ error: guard.error }, { status: guard.status })
     }
 
     let body: Record<string, unknown>
@@ -107,22 +108,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       body = await readOperationalJson(req, MAX_DOYALIST_PROJECT_BODY_BYTES)
     } catch (error) {
       if (error instanceof OperationalBodyError) {
-        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+        return privateApiJson({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
       }
       throw error
     }
     const input = parseDoyalistProjectInput(body, 'update')
-    if (!input.ok) return NextResponse.json({ error: input.error }, { status: 400 })
+    if (!input.ok) return privateApiJson({ error: input.error }, { status: 400 })
 
     const project = await prisma.doyalistProject.update({
       where: { id },
       data: input.data,
     })
 
-    return NextResponse.json({ success: true, project })
+    return privateApiJson({ success: true, project })
   } catch {
     console.error('[doyalist/projects/[id]][PATCH] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'プロジェクトの更新に失敗しました' },
       { status: 500 }
     )
@@ -138,13 +139,13 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     const id = await resolveId(ctx)
     const guard = await requireOwnedProject(userId, id)
     if ('error' in guard) {
-      return NextResponse.json({ error: guard.error }, { status: guard.status })
+      return privateApiJson({ error: guard.error }, { status: guard.status })
     }
 
     await prisma.doyalistProject.update({
@@ -152,10 +153,10 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
       data: { status: 'archived' },
     })
 
-    return NextResponse.json({ success: true })
+    return privateApiJson({ success: true })
   } catch {
     console.error('[doyalist/projects/[id]][DELETE] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'プロジェクトの削除に失敗しました' },
       { status: 500 }
     )

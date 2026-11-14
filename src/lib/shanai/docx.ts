@@ -100,7 +100,7 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
       children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [text(b.heading || '', { bold: true, size: 30 })], spacing: { before: 360, after: 200 } }))
       if (headingCount >= 2 && photos.length > 0) {
         const p = photos.shift()!
-        children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [await imageRun(p.data, 480)], spacing: { after: 80 } }))
+        children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [await imageRun(p.data, 480)], keepNext: Boolean(p.caption), spacing: { after: 80 } }))
         if (p.caption) children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [text(p.caption, { size: 18, color: '777777' })], spacing: { after: 240 } }))
       }
       continue
@@ -128,7 +128,7 @@ export async function buildArticleDocx(input: DocxInput): Promise<Buffer> {
   }
 
   for (const p of photos) {
-    children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [await imageRun(p.data, 480)], spacing: { before: 200, after: 80 } }))
+    children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [await imageRun(p.data, 480)], keepNext: Boolean(p.caption), spacing: { before: 200, after: 80 } }))
     if (p.caption) children.push(new Paragraph({ alignment: AlignmentType.CENTER, children: [text(p.caption, { size: 18, color: '777777' })], spacing: { after: 240 } }))
   }
 

@@ -2001,7 +2001,7 @@ return NextResponse.json({
 - [ ] URL パラメータの `id` だけでデータを返していない（必ずオーナーシップ確認）
 - [ ] ゲストアクセスの場合は `guestId` で分離している
 - [ ] 公開 API の場合は返すフィールドを制限している（内部 ID やメールアドレスを含めない）
-- [ ] 管理者 API の場合は `verifyAdminSession()` で管理者認証している
+- [ ] 保護する管理者 API は、各 HTTP メソッドの先頭で `requireAdmin()` を呼び、拒否応答があれば業務データの読み書き前に返している
 - [ ] `$queryRaw` / `$executeRaw`（生 SQL）は使用していない（SQL インジェクション防止）
 
 #### 禁止事項
@@ -2526,7 +2526,7 @@ Error: Page not found
 
 #### 管理画面のマーケティング表示
 
-`ServicePopupGuard` が対象とするHubSpotのCTAは、`/admin` とその配下で常に非表示にする。管理者認証は一般のNextAuthとは独立しているため、通常セッションの状態に依存させない。`/administrator` など別のURLは管理画面の範囲に含めない。
+`ServicePopupGuard` が対象とするHubSpotのCTAは、`/admin` とその配下で常に非表示にする。CTA の非表示はパスで決め、管理者・Google の各セッション状態に依存させない。`/administrator` など別のURLは管理画面の範囲に含めない。
 
 既存のCTAコンテナだけをCSSで対象にし、CAPTCHA・課金モーダル・サポートの表示を維持する。サーバー描画の初期表示、クライアント遷移、遅れて挿入されたCTAでも同じ条件を適用する。公開の紹介ページへ移動した後は、従来の表示条件へ戻す。
 
@@ -2703,7 +2703,7 @@ Error: Page not found
 
 | 項目 | 仕様 |
 |------|------|
-| 認証方式 | JWT（ユーザー認証とは独立） |
+| 認証方式 | 有効な管理者 JWT・DB セッションと、NextAuth が検証した `@surisuta.jp` の Google セッションを両方確認 |
 | パスワード要件 | 12文字以上・大文字小文字数字記号を全て含む |
 | セッション有効期限 | 24時間 |
 | レート制限 | 15分間に5回失敗でロック |
@@ -2713,18 +2713,22 @@ Error: Page not found
 
 #### 管理画面 API の作り方
 
-```typescript
-// 管理者 API は verifyAdminSession() で認証する（NextAuth とは別系統）
-import { verifyAdminSession } from '@/lib/admin-auth'
+保護する管理 API では、各 HTTP メソッドの先頭で共通ガードを呼びます。ガードが応答を返した場合は、そのまま返します。ログイン・ログアウトの処理と二重認証の詳細は [管理者認証](./05-auth-payments.md) を参照してください。
 
-export async function GET(req: NextRequest) {
-  const admin = await verifyAdminSession(req)
-  if (!admin) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  // 管理者のみアクセス可能な処理
+```typescript
+import { NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-guard'
+
+export async function GET() {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
+  // 管理者と社内 Google セッションを確認した後の処理
+  return NextResponse.json({ ok: true })
 }
 ```
+
+管理者の識別情報が必要な場合は、管理者 Cookie の値を `verifyAdminSession` に渡し、戻り値の `valid` を確認してから `adminUser` を使います。認証に失敗した場合も `{ valid: false }` が返ります。
 
 ### 18.5 管理画面の未実装事項
 

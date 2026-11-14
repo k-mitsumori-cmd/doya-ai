@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { privateApiJson, privateApiResponse } from '@/lib/private-api-response'
 import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -19,15 +20,15 @@ async function paginatedProjects(req: NextRequest, userId: string) {
   const params = req.nextUrl.searchParams
   const limit = Number(params.get('limit'))
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > HISTORY_PAGE_SIZE) {
-    return NextResponse.json({ error: 'ページ件数が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'ページ件数が正しくありません' }, { status: 400 })
   }
   const cursor = params.get('cursor')
   if (params.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
   const search = params.get('search')?.trim() || ''
   if (search.length > 200) {
-    return NextResponse.json({ error: '検索語は200文字以内にしてください' }, { status: 400 })
+    return privateApiJson({ error: '検索語は200文字以内にしてください' }, { status: 400 })
   }
   const owner = { userId, status: { not: 'archived' } }
   const where = {
@@ -39,7 +40,7 @@ async function paginatedProjects(req: NextRequest, userId: string) {
     ] } : {}),
   }
   if (cursor && !await prisma.doyalistProject.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
-    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
   }
   const [rows, total, allTotal, thisMonth, totalCompanies] = await Promise.all([
     prisma.doyalistProject.findMany({
@@ -55,7 +56,7 @@ async function paginatedProjects(req: NextRequest, userId: string) {
     prisma.doyalistCompany.count({ where: { project: owner } }),
   ])
   const page = rows.slice(0, limit)
-  return NextResponse.json({
+  return privateApiJson({
     success: true,
     projects: page.map((p) => ({
       id: p.id, name: p.name, description: p.description, industry: p.industry,
@@ -66,7 +67,7 @@ async function paginatedProjects(req: NextRequest, userId: string) {
     total,
     nextCursor: rows.length > limit ? page[page.length - 1].id : null,
     summary: { allTotal, thisMonth, totalCompanies },
-  }, { headers: { 'Cache-Control': 'private, no-store' } })
+  })
 }
 
 /**
@@ -78,7 +79,7 @@ export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     if (req?.nextUrl?.searchParams.has('limit')) {
@@ -128,10 +129,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return streamDoyalistJsonIterable({ success: true }, 'projects', projects())
+    return privateApiResponse(streamDoyalistJsonIterable({ success: true }, 'projects', projects()))
   } catch {
     console.error('[doyalist/projects][GET] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
     )
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return privateApiJson({ error: 'ログインが必要です' }, { status: 401 })
     }
 
     let body: Record<string, unknown>
@@ -155,22 +156,22 @@ export async function POST(req: NextRequest) {
       body = await readOperationalJson(req, MAX_DOYALIST_PROJECT_BODY_BYTES)
     } catch (error) {
       if (error instanceof OperationalBodyError) {
-        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+        return privateApiJson({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
       }
       throw error
     }
     const input = parseDoyalistProjectInput(body, 'create')
-    if (!input.ok) return NextResponse.json({ error: input.error }, { status: 400 })
+    if (!input.ok) return privateApiJson({ error: input.error }, { status: 400 })
 
     // A stale tab has no durable operation identity. Reject before creating an
     // orphan project; the current client prepares project+receipt atomically.
-    return NextResponse.json({
+    return privateApiJson({
       error: '画面を更新して、前の抽出の保存状況を確認してから操作してください。',
       code: 'OPERATION_REQUIRED',
-    }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    }, { status: 409 })
   } catch {
     console.error('[doyalist/projects][POST] failed')
-    return NextResponse.json(
+    return privateApiJson(
       { error: 'プロジェクトの作成に失敗しました' },
       { status: 500 }
     )

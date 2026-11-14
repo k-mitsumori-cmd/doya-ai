@@ -719,6 +719,7 @@ body { max-width: 800px; margin: 0 auto; padding: 2rem; font-family: -apple-syst
 ${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
 @media print {
   body { padding: 0; max-width: 100%; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
   @page { margin: 2cm; }
 }
 </style>

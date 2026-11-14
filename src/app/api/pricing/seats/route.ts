@@ -150,6 +150,10 @@ export async function POST(req: NextRequest) {
         await cancelSeatPreparation(claim)
         return json({ code: 'TRIALING', error: '無料の期間のあいだは、人数を変えられません。期間が終わってからお手続きください。' }, 409)
       }
+      if (decision.direction === 'up' && t.collectionMethod !== 'charge_automatically') {
+        await cancelSeatPreparation(claim)
+        return json({ code: 'SEAT_COLLECTION_METHOD', error: '自動支払いの契約を確認できないため、画面から増席できません。運営にお問い合わせください。' }, 409)
+      }
       const grantPoints = decision.direction === 'up' && doyaPowerLedgerAllowed()
       const pointsAt = Date.now()
       if (grantPoints) {
@@ -198,6 +202,7 @@ export async function POST(req: NextRequest) {
       if (!currentContract || currentContract.subscriptionId !== request.subscriptionId ||
         currentContract.seatItemId !== request.seatItemId || currentContract.interval !== request.interval ||
         currentContract.status !== request.status ||
+        (request.direction === 'up' && currentContract.collectionMethod !== 'charge_automatically') ||
         (currentContract.seats !== request.from && currentContract.seats !== request.to)) {
         return json({ code: 'SEAT_OPERATION_RECONCILE', error: '現在の契約との対応を確認できませんでした。変更を保留しています。運営にお問い合わせください。' }, 409)
       }
@@ -210,7 +215,8 @@ export async function POST(req: NextRequest) {
       stage = 'after'
       const config = teamPriceConfig()
       const seatItem = config.ok ? findSeatItem(updated.items.data as any[], new Set([config.seat.monthly, config.seat.yearly])) : null
-      if (!seatItem || seatItem.id !== request.seatItemId || seatItem.quantity !== request.to) {
+      if (!seatItem || seatItem.id !== request.seatItemId || seatItem.quantity !== request.to ||
+        (request.direction === 'up' && updated.collection_method !== 'charge_automatically')) {
         // Keep the reservation. A mismatched response cannot authorize cache
         // publication, points, another change, or new admissions.
         return json({ code: 'SEATS_NOT_CHANGED', error: '人数変更の結果を確認できませんでした。時間をおいて、現在の人数をご確認ください。' }, 409)

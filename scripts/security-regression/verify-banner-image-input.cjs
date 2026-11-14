@@ -1,6 +1,9 @@
 process.env.NODE_ENV = 'development';
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),crypto=require('node:crypto'),assert=require('node:assert/strict');
-const args=process.argv.slice(2),option=k=>{const i=args.indexOf(k);return i<0?null:args[i+1]},repo=path.resolve(option('--repo-root')||path.join(__dirname,'../..')),candidate=path.resolve(option('--candidate-root')||repo),output=option('--output')||path.join(process.env.DOYA_BANNER_IMAGE_INPUT_EVIDENCE_DIR||fs.mkdtempSync(path.join(require('node:os').tmpdir(),'doya-banner-image-input-')),(option('--page-file')||'').includes('/test/')?'test-result.json':'result.json');
+function legacyPageFile(file = '') {
+  return file.includes('/test/') || path.basename(file) === 'banner-legacy-test-page.tsx'
+}
+const args=process.argv.slice(2),option=k=>{const i=args.indexOf(k);return i<0?null:args[i+1]},repo=path.resolve(option('--repo-root')||path.join(__dirname,'../..')),candidate=path.resolve(option('--candidate-root')||repo),output=option('--output')||path.join(process.env.DOYA_BANNER_IMAGE_INPUT_EVIDENCE_DIR||fs.mkdtempSync(path.join(require('node:os').tmpdir(),'doya-banner-image-input-')),legacyPageFile(option('--page-file'))?'test-result.json':'result.json');
 assert(!fs.existsSync(output));fs.mkdirSync(path.dirname(output),{recursive:true});
 const ts=require(repo+'/node_modules/typescript'),React=require(repo+'/node_modules/react'),{JSDOM}=require(repo+'/node_modules/jsdom');
 const dom=new JSDOM('<!doctype html><body></body>');global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true;

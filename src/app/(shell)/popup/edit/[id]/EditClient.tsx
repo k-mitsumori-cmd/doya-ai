@@ -3,7 +3,7 @@
 // ドヤポップアップ 案の編集: 文言・色・形・リンク・表示条件、その場のプレビュー、日別の推移
 // ⚠️ 保存する値はサーバ側（popup-write.ts）で検査し直す。ここの検査は表示用。
 // ⚠️ 色・角丸などはトークン（.pd-*）で描く。ポップアップ自体の色（利用者が選ぶ色）は値として扱う。
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, ImagePlus, Loader2, Monitor, Pause, Play, Save, Smartphone } from 'lucide-react'
 import type { PopupDto } from '@/lib/popup/dto'
 import type { EditSiteInfo, PopupDaily } from '@/lib/popup/popup-read'
@@ -109,20 +109,30 @@ export default function EditClient({ initialPopup, site }: { initialPopup: Popup
   const [statsError, setStatsError] = useState(false)
   const { show, node: toast } = useToast()
 
+  const statsController = useRef<AbortController | null>(null)
+
   const loadStats = useCallback(async () => {
+    statsController.current?.abort()
+    const controller = new AbortController()
+    statsController.current = controller
+    setStats(null)
     setStatsError(false)
     try {
-      const r = await fetch(`/api/popup/popups/${initialPopup.id}/stats?days=${days}`, { cache: 'no-store' })
+      const r = await fetch(`/api/popup/popups/${initialPopup.id}/stats?days=${days}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
       if (!r.ok) throw new Error('stats')
-      setStats(await r.json())
+      const next: PopupDaily = await r.json()
+      if (!controller.signal.aborted) setStats(next)
     } catch {
-      setStatsError(true)
+      if (!controller.signal.aborted) setStatsError(true)
     }
   }, [initialPopup.id, days])
 
   useEffect(() => {
-    setStats(null)
     void loadStats()
+    return () => statsController.current?.abort()
   }, [loadStats])
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(popup), [draft, popup])

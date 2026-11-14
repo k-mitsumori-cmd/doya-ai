@@ -36,7 +36,15 @@ async function inspect(buffer, expected) {
       const texts = Array.from(result.document.getElementsByTagNameNS('http://schemas.openxmlformats.org/wordprocessingml/2006/main', 't')).map(n => n.textContent);
       assert.ok(texts.includes(input.title));
       assert.ok(texts.includes('本文1') && texts.includes('本文2'));
-      for (let i = 0; i < count; i++) assert.ok(texts.includes('写真' + i));
+      const wordNs = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      const paragraphs = Array.from(result.document.getElementsByTagNameNS(wordNs, 'p'));
+      for (let i = 0; i < count; i++) {
+        const caption = paragraphs.find(p => p.textContent === '写真' + i);
+        assert.ok(caption, 'Caption missing');
+        const photo = caption.previousElementSibling;
+        assert.ok(photo?.getElementsByTagNameNS(wordNs, 'drawing').length, 'Caption must follow its photo');
+        assert.ok(photo.getElementsByTagNameNS(wordNs, 'keepNext').length, 'Photo must stay with its caption');
+      }
       const media = Object.values(result.zip.files).filter(f => f.name.startsWith('word/media/') && !f.dir);
       assert.equal(media.length, count + (thumbnail ? 1 : 0) ? 1 : 0);
       for (const f of media) assert.equal((await sharp(await f.async('nodebuffer')).metadata()).format, 'jpeg');
