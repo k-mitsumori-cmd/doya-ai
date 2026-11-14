@@ -149,6 +149,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   .summary th { text-align: left; padding: 2mm 3mm; font-size: 9.5pt; font-weight: 500; color: #5a678a; }
   .summary td { text-align: right; padding: 2mm 3mm; font-size: 10pt; white-space: nowrap; }
   .summary tr.grand th, .summary tr.grand td { border-top: 1.5px solid #16233d; font-weight: 800; font-size: 12pt; color: #16233d; padding-top: 3mm; }
+  .closing { break-inside: avoid; }
   .notes { margin-top: 8mm; border-top: 1px solid #dbe3f2; padding-top: 4mm; font-size: 9.5pt; line-height: 1.8; }
   .notes h2 { font-size: 10pt; margin: 0 0 1.5mm; color: #5a678a; font-weight: 600; }
   .notes .block { margin-bottom: 4mm; }
@@ -211,6 +212,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
       <tr class="grand"><th>合計</th><td>${yen(totals.totalInclTax)}</td></tr>
     </table></div>
 
+    <div class="closing">
     <div class="notes">
       ${q.deliveryTerms ? `<div class="block"><h2>納期</h2>${nl2br(q.deliveryTerms)}</div>` : ''}
       ${q.paymentTerms ? `<div class="block"><h2>お支払い条件</h2>${nl2br(q.paymentTerms)}</div>` : ''}
@@ -223,6 +225,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
     </div>
 
     <div class="foot">${esc(q.title)}</div>
+    </div>
   </div>
 </div>
 </body></html>`
