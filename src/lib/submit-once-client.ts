@@ -11,6 +11,7 @@ export type OnceResolutionState = 'found' | 'gone' | 'cancelled'
 
 /** 前回の送信が保存ずみだったため、今回は送らなかったときの例外（理由の文をそのまま画面に出す） */
 export class SubmitOnceSavedError extends Error {}
+export class SubmitOnceStorageError extends Error {}
 
 export const ONCE_SAVED_MESSAGE = '前回の送信が保存されていました。二重に登録しないよう、今回の内容は保存していません。一覧で確かめてから、必要なら、もう一度お試しください。'
 
@@ -81,7 +82,7 @@ export async function submitOnce<T>(options: {
   resolve: (operationId: string) => Promise<OnceResolutionState>
 }): Promise<T> {
   const { scope, input, send, resolve } = options
-  if (typeof window === 'undefined' || !storageWorks()) throw new Error(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
+  if (typeof window === 'undefined' || !storageWorks()) throw new SubmitOnceStorageError(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
   const key = `submit-once:pending:v1:${scope}`
   return withBrowserLock(key, async () => {
     const fingerprint = onceFingerprint(input)
@@ -99,7 +100,7 @@ export async function submitOnce<T>(options: {
       try {
         window.localStorage.setItem(key, JSON.stringify({ operationId, fingerprint, at: Date.now() }))
       } catch {
-        throw new Error(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
+        throw new SubmitOnceStorageError(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
       }
     }
     try {
