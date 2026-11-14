@@ -13,7 +13,6 @@
 // ⚠️ 1ツールが落ちてもホーム全体は落とさない（Promise.allSettled で個別に握る）。
 // ⚠️ 契約情報（User.plan / Subscription）は表示のみ。変更は既存の課金画面に任せる。
 import { prisma } from '@/lib/prisma'
-import { jstStartOfMonthUtc } from '@/lib/usage-summary'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
@@ -160,8 +159,7 @@ function jstMonthKey(d: Date): string {
 }
 
 /** 直近 n か月（今月を含む）の JST 月初 UTC と月キー */
-function lastMonths(n: number): { key: string; start: Date }[] {
-  const thisMonth = jstStartOfMonthUtc()
+function lastMonths(n: number, thisMonth: Date): { key: string; start: Date }[] {
   const j = new Date(thisMonth.getTime() + 9 * 3600_000)
   const out: { key: string; start: Date }[] = []
   for (let i = n - 1; i >= 0; i--) {
@@ -200,7 +198,7 @@ async function loadContract(userId: string) {
   }
 }
 
-async function loadSales(userId: string, monthStart: Date, months: ReturnType<typeof lastMonths>) {
+async function loadSales(userId: string, monthStart: Date, months: ReturnType<typeof lastMonths>, now: Date) {
   const membership = await prisma.sfaMember.findFirst({
     where: { userId, status: 'ACTIVE', role: { in: Object.keys(SFA_ROLES) } },
     include: { organization: true },
@@ -209,7 +207,6 @@ async function loadSales(userId: string, monthStart: Date, months: ReturnType<ty
   if (!membership) return null
   const orgId = membership.organizationId
   const slug = membership.organization.slug
-  const now = new Date()
 
   const [open, monthlyWon, upcomingDeals, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
     userId,
@@ -478,13 +475,15 @@ function settle<T>(r: PromiseSettledResult<T | null>): { state: HomeToolState; v
 }
 
 export async function getHomeSummary(userId: string): Promise<HomeSummary> {
-  const monthStart = jstStartOfMonthUtc()
-  const months = lastMonths(6)
+  const requestTime = new Date()
+  const jst = new Date(requestTime.getTime() + 9 * 3600_000)
+  const monthStart = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 3600_000)
+  const months = lastMonths(6, monthStart)
   const trendStart = months[0].start
 
   const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, incomeR, expenseR] = await Promise.allSettled([
     loadContract(userId),
-    loadSales(userId, monthStart, months),
+    loadSales(userId, monthStart, months, requestTime),
     loadQuotes(userId, monthStart, trendStart),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
@@ -514,7 +513,7 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
     if (p) p.quoted += q.amount
   }
 
-  const now = Date.now()
+  const now = requestTime.getTime()
   const horizon = now + 45 * 86400_000
   const events = [...(sales.value?.events ?? []), ...(quotes.value?.events ?? []), ...(projects.value?.events ?? [])]
     .filter((e) => {
