@@ -110,13 +110,13 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   return `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8">
 <style>
-  @page { size: A4; margin: 0; }
+  @page { size: A4; margin: 16mm 0; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; font-family: ${PDF_FONT_STACK}; color: #16233d; font-size: 10.5pt; }
-  .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
+  .page { position: relative; width: 210mm; padding: 0 15mm; }
   /* 紙面の寸法をmmで指定する。ビューポート幅や複数ページ分の文書の高さに
      依存せず、固定配置によって下書きの全ページに同じ透かしを繰り返す。 */
-  .watermark { position: fixed; top: 125mm; left: 0; width: 210mm; text-align: center;
+  .watermark { position: fixed; top: 109mm; left: 0; width: 210mm; text-align: center;
     font-size: 64pt; font-weight: 800; color: rgba(255,30,114,0.10);
     transform: rotate(-24deg); letter-spacing: 0.1em; pointer-events: none; z-index: 0; }
   .inner { position: relative; z-index: 1; }
@@ -260,7 +260,7 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' },
+      preferCSSPageSize: true,
     })
     return new Uint8Array(pdf)
   } finally {
