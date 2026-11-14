@@ -344,68 +344,70 @@ async function loadQuotes(userId: string, months: ReturnType<typeof lastMonths>,
 }
 
 async function loadProjects(userId: string) {
-  const membership = await prisma.promaneMember.findFirst({
-    where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
-    include: { workspace: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (!membership) return null
-  const ws = membership.workspace
-  const members = await prisma.promaneMember.findMany({
-    where: { workspaceId: ws.id },
-    select: { hourlyRate: true, timeEntries: { select: { duration: true, hourlyRateSnapshot: true, projectId: true, taskId: true } } },
-  })
-  const laborByProject = new Map<string, number>()
-  const legacyLaborByTask = new Map<string, number>()
-  for (const member of members) {
-    for (const entry of member.timeEntries) {
-      const costs = entry.projectId == null ? legacyLaborByTask : laborByProject
-      const id = entry.projectId ?? entry.taskId
-      if (id != null) costs.set(id, (costs.get(id) ?? 0) + laborCostForEntry(entry, member.hourlyRate))
-    }
-  }
-  const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
-  const pageSize = 500
-  let afterId: string | undefined
-  let activeProjects = 0
-  let revenue = 0
-  let cost = 0
-  let profit = 0
-  let openTasks = 0
-  const top: { name: string; revenue: number; profit: number }[] = []
-  const events: HomeEvent[] = []
-  while (true) {
-    const projects = await prisma.promaneProject.findMany({
-      where: { workspaceId: ws.id, ...(afterId ? { id: { gt: afterId } } : {}) },
-      orderBy: { id: 'asc' },
-      take: pageSize,
-      select: {
-        id: true, name: true, status: true, contractAmount: true, endDate: true,
-        expenses: { select: { amount: true } },
-        tasks: { select: { id: true, status: true } },
-      },
+  return prisma.$transaction(async (tx) => {
+    const membership = await tx.promaneMember.findFirst({
+      where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
+      include: { workspace: true },
+      orderBy: { createdAt: 'asc' },
     })
-    for (const p of projects) {
-      const labor = p.tasks.reduce((total, task) => total + (legacyLaborByTask.get(task.id) ?? 0), laborByProject.get(p.id) ?? 0)
-      const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
-      const projectRevenue = safe(p.contractAmount)
-      const projectProfit = Math.round(projectRevenue - labor - expense)
-      if (p.status === 'ordered' || p.status === 'in_progress') activeProjects++
-      revenue += projectRevenue
-      cost += Math.round(labor + expense)
-      profit += projectProfit
-      openTasks += p.tasks.filter((task) => task.status !== 'done').length
-      top.push({ name: p.name, revenue: projectRevenue, profit: projectProfit })
-      top.sort((a, b) => b.revenue - a.revenue)
-      if (top.length > 5) top.pop()
-      if (p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status)) {
-        events.push({ id: `project-${p.id}`, date: p.endDate.toISOString(), title: `納期: ${p.name}`, kind: 'project', href: `/promane/${ws.slug}/projects/${p.id}` })
+    if (!membership) return null
+    const ws = membership.workspace
+    const members = await tx.promaneMember.findMany({
+      where: { workspaceId: ws.id },
+      select: { hourlyRate: true, timeEntries: { select: { duration: true, hourlyRateSnapshot: true, projectId: true, taskId: true } } },
+    })
+    const laborByProject = new Map<string, number>()
+    const legacyLaborByTask = new Map<string, number>()
+    for (const member of members) {
+      for (const entry of member.timeEntries) {
+        const costs = entry.projectId == null ? legacyLaborByTask : laborByProject
+        const id = entry.projectId ?? entry.taskId
+        if (id != null) costs.set(id, (costs.get(id) ?? 0) + laborCostForEntry(entry, member.hourlyRate))
       }
     }
-    if (projects.length < pageSize) break
-    afterId = projects[projects.length - 1].id
-  }
-  return { href: `/promane/${ws.slug}/reports`, activeProjects, revenue, cost, profit, openTasks, top, events }
+    const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
+    const pageSize = 500
+    let afterId: string | undefined
+    let activeProjects = 0
+    let revenue = 0
+    let cost = 0
+    let profit = 0
+    let openTasks = 0
+    const top: { name: string; revenue: number; profit: number }[] = []
+    const events: HomeEvent[] = []
+    while (true) {
+      const projects = await tx.promaneProject.findMany({
+        where: { workspaceId: ws.id, ...(afterId ? { id: { gt: afterId } } : {}) },
+        orderBy: { id: 'asc' },
+        take: pageSize,
+        select: {
+          id: true, name: true, status: true, contractAmount: true, endDate: true,
+          expenses: { select: { amount: true } },
+          tasks: { select: { id: true, status: true } },
+        },
+      })
+      for (const p of projects) {
+        const labor = p.tasks.reduce((total, task) => total + (legacyLaborByTask.get(task.id) ?? 0), laborByProject.get(p.id) ?? 0)
+        const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
+        const projectRevenue = safe(p.contractAmount)
+        const projectProfit = Math.round(projectRevenue - labor - expense)
+        if (p.status === 'ordered' || p.status === 'in_progress') activeProjects++
+        revenue += projectRevenue
+        cost += Math.round(labor + expense)
+        profit += projectProfit
+        openTasks += p.tasks.filter((task) => task.status !== 'done').length
+        top.push({ name: p.name, revenue: projectRevenue, profit: projectProfit })
+        top.sort((a, b) => b.revenue - a.revenue)
+        if (top.length > 5) top.pop()
+        if (p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status)) {
+          events.push({ id: `project-${p.id}`, date: p.endDate.toISOString(), title: `納期: ${p.name}`, kind: 'project', href: `/promane/${ws.slug}/projects/${p.id}` })
+        }
+      }
+      if (projects.length < pageSize) break
+      afterId = projects[projects.length - 1].id
+    }
+    return { href: `/promane/${ws.slug}/reports`, activeProjects, revenue, cost, profit, openTasks, top, events }
+  }, { isolationLevel: 'RepeatableRead', maxWait: 5_000, timeout: 20_000 })
 }
 
 async function loadAttendance(userId: string, monthStart: Date) {
