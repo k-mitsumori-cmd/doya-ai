@@ -5,6 +5,7 @@ import { LpKitPage } from '@/components/lp-kit'
 import { SEO_ACCENT, SEO_LP_CONTENT } from './lp-content'
 import { SEO_VISUALS } from './lp-visuals'
 
-export default function SeoLpKit() {
-  return <LpKitPage content={SEO_LP_CONTENT} visuals={SEO_VISUALS} accent={SEO_ACCENT} />
+export default function SeoLpKit({ hero }: { hero?: string }) {
+  const variant = hero === 'a' || hero === 'b' ? hero : undefined
+  return <LpKitPage content={SEO_LP_CONTENT} visuals={SEO_VISUALS} accent={SEO_ACCENT} heroVariant={variant} />
 }

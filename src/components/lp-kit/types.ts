@@ -30,6 +30,8 @@ export type LpKitContent = {
     subCtaLabel: string
     note: string
     facts: string[]
+    /** 案B: 右に置く既存の絵（縦横比を指定して、読み込み時にずれないようにする） */
+    image?: { src: string; alt: string; width: number; height: number }
   }
   stage: {
     heading: PhraseSpec
@@ -79,6 +81,8 @@ export type LpKitContent = {
 export type LpKitVisuals = {
   /** 実演の画面。t は経過時間(ms)、tab は今の段階の番号 */
   demo: (t: number, tab: number) => ReactNode
+  /** ヒーロー案A: 右に置く製品画面の縮小版（実演の簡易版） */
+  heroA?: ReactNode
   /** 流れの図（実演の下） */
   flow: ReactNode
   /** 作れる物の見本（showcase.items と同じ数） */

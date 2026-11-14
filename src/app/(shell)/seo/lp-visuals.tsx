@@ -2,8 +2,8 @@
 // ドヤ記事作成 LP の「画面の再現」。製品の画面をコードで描く（画像は使わない）。
 // ⚠️ 表示するのはサンプルのデータ。実在の会社名・人名・他社 URL は入れない（example.com は予約済みの例示用ドメイン）。
 import { Check, FileText, Link2, Search } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { cx } from '@/components/lp-kit/hooks'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { cx, useInView, useMotion } from '@/components/lp-kit/hooks'
 import type { LpKitVisuals } from '@/components/lp-kit/types'
 import './lp-visuals.css'
 
@@ -100,6 +100,51 @@ function Demo({ t, tab }: { t: number; tab: number }) {
         </div>
       </div>
     </>
+  )
+}
+
+/* ================= ヒーロー案A: 実演の縮小版（入力 → 構成 → 点検 → 完成を、短く繰り返す） ================= */
+const HM_DONE = 4800
+const HM_HOLD = 3200
+function HeroMini() {
+  const { ok } = useMotion()
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { margin: '40px' })
+  const [t, setT] = useState(HM_DONE)
+  const [boot, setBoot] = useState(false)
+  useLayoutEffect(() => {
+    if (!ok) { setT(HM_DONE); return }
+    setBoot(true); setT(0)
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setBoot(false)))
+    return () => cancelAnimationFrame(r)
+  }, [ok])
+  useEffect(() => {
+    if (!ok || !inView) return
+    let last = performance.now()
+    const id = window.setInterval(() => {
+      const n = performance.now(); const dt = n - last; last = n
+      setT((p) => (p + dt > HM_DONE + HM_HOLD ? 0 : p + dt))
+    }, 60)
+    return () => window.clearInterval(id)
+  }, [ok, inView])
+  const typed = Math.max(0, Math.min(KEYWORD.length, Math.floor((t - 200) / 55)))
+  const done = t >= 4400
+  return (
+    <div ref={ref} className={cx('hm', boot && 'boot')} role="img" aria-label="記事の条件を入れると、構成が作られ、点検が済むまでの画面のサンプル">
+      <div className="hm-bar"><i /><i /><i /><span>ドヤ記事作成</span></div>
+      <div className="hm-body">
+        <div className="hm-input"><span>キーワード</span><b>{KEYWORD.slice(0, typed)}<i className={cx('sv-caret', t < 1300 && 'blink')} /></b></div>
+        <ol className="hm-rows">
+          {OUTLINE.slice(0, 4).map((r, i) => (
+            <li key={r} className={cx('sv-in', t >= 1400 + i * 330 && 'on')}>
+              <em>{i + 1}</em><span>{r}</span>
+              <Check size={13} className={cx('sv-tick', t >= 3000 + i * 300 && 'on')} aria-hidden="true" />
+            </li>
+          ))}
+        </ol>
+        <p className={cx('hm-done', done && 'on')}><Check size={14} aria-hidden="true" />公開前の点検が済みました</p>
+      </div>
+    </div>
   )
 }
 
@@ -297,6 +342,7 @@ const wrap = (n: ReactNode) => <div className="sv-fill">{n}</div>
 
 export const SEO_VISUALS: LpKitVisuals = {
   demo: (t, tab) => <Demo t={t} tab={tab} />,
+  heroA: <HeroMini />,
   flow: <Flow />,
   outputs: [
     wrap(<div className="sv-card-pad"><Article /></div>),

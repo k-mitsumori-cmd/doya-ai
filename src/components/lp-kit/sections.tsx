@@ -57,32 +57,50 @@ export function Header({ c }: { c: LpKitContent }) {
 }
 
 /* ---------------- 段1 ヒーロー ---------------- */
-export function Hero({ c }: { c: LpKitContent }) {
+export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; variant?: 'a' | 'b' }) {
   const h = c.hero
+  const split = (variant === 'a' && !!v.heroA) || (variant === 'b' && !!h.image)
   return (
-    <section className="lpk-hero" id="top">
+    <section className={cx('lpk-hero', split && 'split')} id="top">
       <div className="lpk-wrap lpk-hero-in">
-        <p className="lpk-eyebrow lpk-up" style={{ ['--d' as string]: '0ms' }}>{c.serviceName}</p>
-        <PhraseHeading as="h1" spec={h.heading} mode="load" className="lpk-h1" />
-        <p className="lpk-sub lpk-up" style={{ ['--d' as string]: '320ms' }}>{h.sub}</p>
-        <div className="lpk-cta-row lpk-up" style={{ ['--d' as string]: '400ms' }}>
-          <CtaLink href={c.ctaHref}>
-            {h.ctaLabel}
-            <ArrowRight size={18} aria-hidden="true" />
-          </CtaLink>
-          <a href="#demo" className="lpk-btn lpk-btn-sec lpk-press" onClick={() => window.dispatchEvent(new Event('lpk:replay'))}>
-            {h.subCtaLabel}
-          </a>
+        <div className="lpk-hero-head">
+          <p className="lpk-eyebrow lpk-up" style={{ ['--d' as string]: '0ms' }}>{c.serviceName}</p>
+          <PhraseHeading as="h1" spec={h.heading} mode="load" className="lpk-h1" />
         </div>
-        <p className="lpk-note lpk-up" style={{ ['--d' as string]: '460ms' }}>{h.note}</p>
-        <ul className="lpk-facts lpk-up" style={{ ['--d' as string]: '520ms' }}>
-          {h.facts.map((f) => (
-            <li key={f}>
-              <Check size={16} aria-hidden="true" />
-              {f}
-            </li>
-          ))}
-        </ul>
+        {split && (
+          <div
+            className="lpk-hero-vis lpk-up"
+            style={{ ['--d' as string]: '280ms', ['--ar' as string]: variant === 'b' && h.image ? `${h.image.width} / ${h.image.height}` : '16 / 10' }}
+          >
+            {variant === 'a' ? (
+              v.heroA
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={h.image!.src} alt={h.image!.alt} width={h.image!.width} height={h.image!.height} decoding="async" fetchPriority="high" />
+            )}
+          </div>
+        )}
+        <div className="lpk-hero-rest">
+          <p className="lpk-sub lpk-up" style={{ ['--d' as string]: '320ms' }}>{h.sub}</p>
+          <div className="lpk-cta-row lpk-up" style={{ ['--d' as string]: '400ms' }}>
+            <CtaLink href={c.ctaHref}>
+              {h.ctaLabel}
+              <ArrowRight size={18} aria-hidden="true" />
+            </CtaLink>
+            <a href="#demo" className="lpk-btn lpk-btn-sec lpk-press" onClick={() => window.dispatchEvent(new Event('lpk:replay'))}>
+              {h.subCtaLabel}
+            </a>
+          </div>
+          <p className="lpk-note lpk-up" style={{ ['--d' as string]: '460ms' }}>{h.note}</p>
+          <ul className="lpk-facts lpk-up" style={{ ['--d' as string]: '520ms' }}>
+            {h.facts.map((f) => (
+              <li key={f}>
+                <Check size={16} aria-hidden="true" />
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </section>
   )
@@ -238,7 +256,7 @@ export function FeaturesSection({ c, v }: { c: LpKitContent; v: LpKitVisuals }) 
             </div>
             <SpotlightCard className="lpk-fpanel lpk-fpanel-d">
               {f.items.map((it, i) => (
-                <div key={it.title} className={cx('lpk-fp', i === active && near && 'is-active')} aria-hidden={i !== active}>
+                <div key={it.title} className={cx('lpk-fp', i === active && 'cur', i === active && near && 'is-active')} aria-hidden={i !== active}>
                   {v.features[i]}
                 </div>
               ))}

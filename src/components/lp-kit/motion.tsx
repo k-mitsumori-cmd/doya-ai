@@ -288,12 +288,11 @@ export function ScrollColorText({ phrases, breakPc = [], breakSp = [], className
       raf = 0
       const r = el.getBoundingClientRect()
       const vh = window.innerHeight
-      // 上端が画面の 85% の高さに来たら 0、下端が 45% の高さに来たら 1
+      // 上端が画面の 85% の高さに来たら 0、文字の中心が画面の中央に来たら 1（中央に置いたとき、全部の色がついている）
       const start = vh * 0.85
-      const end = vh * 0.45
-      const p = Math.min(1, Math.max(0, (start - r.top) / (start - end + r.height)))
+      const p = Math.min(1, Math.max(0, (start - r.top) / (start - (vh * 0.5 - r.height / 2))))
       const n = spans.length
-      spans.forEach((s, i) => s.classList.toggle('lit', p * (n + 0.5) > i + 0.2))
+      spans.forEach((s, i) => s.classList.toggle('lit', p * (n + 0.3) > i + 0.2))
     }
     const on = () => {
       if (!raf) raf = requestAnimationFrame(update)

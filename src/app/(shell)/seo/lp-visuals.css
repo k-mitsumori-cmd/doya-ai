@@ -111,3 +111,22 @@
   .sv-flow-n { grid-row: auto; margin-bottom: 4px; }
   .sv-flow-ar { display: block; position: absolute; right: -28px; top: 50%; transform: translateY(-50%); }
 }
+
+/* ヒーロー案A: 実演の縮小版 */
+.hm { height: 100%; display: flex; flex-direction: column; background: #fff; }
+.hm-bar { position: relative; flex: none; display: flex; align-items: center; justify-content: center; height: 30px; border-bottom: 1px solid var(--line); background: #f7faff; font-size: 11px; font-weight: 700; color: var(--muted); }
+.hm-bar i { position: absolute; left: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.hm-bar i:nth-child(2) { left: 24px; }
+.hm-bar i:nth-child(3) { left: 36px; }
+.hm-body { flex: 1; min-height: 0; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.hm-input { display: grid; gap: 2px; }
+.hm-input span { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
+.hm-input b { display: flex; align-items: center; min-height: 32px; padding: 0 10px; background: #f7faff; border: 1.5px solid var(--line); border-radius: 8px; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; letter-spacing: 0.02em; }
+.hm-rows { display: grid; gap: 4px; }
+.hm-rows li { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; font-size: 11px; font-weight: 700; background: #fff; }
+.hm-rows li em { display: grid; place-items: center; width: 16px; height: 16px; border-radius: 5px; background: var(--blue); color: #fff; font-size: 10px; font-style: normal; letter-spacing: 0; flex: none; }
+.hm-done { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 3px 10px; border-radius: 999px; background: #e2f6ea; color: #0a8f4e; font-size: 11px; font-weight: 700; opacity: 0; transition: opacity 0.5s var(--ease-demo); }
+.hm-done.on { opacity: 1; }
+.hm.boot * { transition: none !important; }
+@media (min-width: 1024px) { .hm-body { padding: 18px 20px; gap: 12px; } .hm-input b { min-height: 40px; font-size: 14px; } .hm-rows { gap: 8px; } .hm-rows li { height: 36px; font-size: 13px; } .hm-bar { height: 36px; font-size: 12px; } .hm-done { font-size: 13px; padding: 5px 14px; } .hm-rows li em { width: 20px; height: 20px; font-size: 11px; } }
+@media (max-width: 767px) { .hm-rows li:nth-child(4) { display: none; } }

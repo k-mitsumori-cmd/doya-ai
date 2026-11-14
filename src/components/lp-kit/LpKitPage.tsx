@@ -10,7 +10,7 @@ import './lp-kit.css'
 // （ページ全体を包む div に付ける。className が固定の要素なので、React が上書きしない）
 const JS_FLAG = `document.currentScript.parentElement.classList.add('lpk-js')`
 
-export function LpKitPage({ content, visuals, accent = '#ffd400' }: { content: LpKitContent; visuals: LpKitVisuals; accent?: string }) {
+export function LpKitPage({ content, visuals, accent = '#ffd400', heroVariant }: { content: LpKitContent; visuals: LpKitVisuals; accent?: string; heroVariant?: 'a' | 'b' }) {
   const [still, setStill] = useState(false)
   const motion = useMotionState(still)
   return (
@@ -20,7 +20,7 @@ export function LpKitPage({ content, visuals, accent = '#ffd400' }: { content: L
           <script dangerouslySetInnerHTML={{ __html: JS_FLAG }} />
           <Header c={content} />
           <main>
-            <Hero c={content} />
+            <Hero c={content} v={visuals} variant={heroVariant} />
             <StageSection c={content} v={visuals} />
             <StatsSection c={content} />
             <ShowcaseSection c={content} v={visuals} />

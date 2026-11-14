@@ -40,7 +40,7 @@
 .lpk-sec-navy { background: var(--ink); color: #fff; }
 @media (min-width: 768px) {
   .lpk-wrap { padding: 0 24px; }
-  .lpk-sec { padding: 96px 0; }
+  .lpk-sec { padding: 72px 0; }
 }
 @media (min-width: 1024px) { .lpk-sec { padding: 96px 0; } }
 
@@ -122,6 +122,28 @@
 .lpk-facts svg { color: var(--blue); }
 @media (max-width: 480px) { .lpk-cta-row .lpk-btn, .lpk-cta-row .lpk-sparkwrap, .lpk-cta-row .lpk-magnet { width: 100%; } .lpk-cta-row .lpk-sparkwrap a { width: 100%; } }
 
+/* ヒーロー: 右に絵や画面を置く案（?hero=a / ?hero=b）。無指定は文字だけ（中央寄せ） */
+.lpk-hero-vis { border-radius: 20px; overflow: hidden; border: 1px solid var(--line); background: #fff; box-shadow: var(--shadow); aspect-ratio: var(--ar, 16 / 10); width: 100%; }
+.lpk-hero-vis img { width: 100%; height: 100%; object-fit: cover; }
+.lpk-hero.split { text-align: left; padding: 28px 0 40px; }
+.lpk-hero.split .lpk-hero-in { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.lpk-hero.split .lpk-hero-head { order: 1; }
+.lpk-hero.split .lpk-hero-vis { order: 2; }
+.lpk-hero.split .lpk-hero-rest { order: 3; }
+.lpk-hero.split .lpk-sub { margin-left: 0; margin-top: 4px; }
+.lpk-hero.split .lpk-cta-row, .lpk-hero.split .lpk-facts { justify-content: flex-start; }
+.lpk-hero.split .lpk-cta-row { margin-top: 20px; }
+.lpk-hero.split .lpk-eyebrow { margin-bottom: 12px; }
+@media (min-width: 768px) { .lpk-hero.split { padding: 48px 0 64px; } .lpk-hero.split .lpk-h1 { font-size: 44px; } }
+@media (min-width: 1024px) {
+  .lpk-hero.split .lpk-hero-in { grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr); grid-template-areas: 'head vis' 'rest vis'; column-gap: 56px; row-gap: 0; align-items: center; }
+  .lpk-hero.split .lpk-hero-head { grid-area: head; align-self: end; }
+  .lpk-hero.split .lpk-hero-rest { grid-area: rest; align-self: start; margin-top: 20px; }
+  .lpk-hero.split .lpk-hero-vis { grid-area: vis; }
+  .lpk-hero.split .lpk-h1 { font-size: 46px; }
+  .lpk-hero.split .lpk-cta-row { margin-top: 28px; }
+}
+
 /* ---- 段2 実演の舞台 ---- */
 .lpk-stage-wrap { max-width: 1232px; margin: 40px auto 0; padding: 0 16px; }
 .lpk-tabs { position: relative; display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); max-width: 560px; margin: 0 auto 20px; padding: 4px; background: #fff; border: 1px solid var(--line); border-radius: 999px; }
@@ -171,11 +193,11 @@
 .lpk-cards { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 40px -16px 0; padding: 4px 16px 16px; scrollbar-width: none; }
 .lpk-cards::-webkit-scrollbar { display: none; }
 .lpk-cardli { flex: 0 0 84%; scroll-snap-align: center; }
-@media (min-width: 768px) {
-  .lpk-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; overflow: visible; margin: 56px 0 0; padding: 0; }
+@media (min-width: 768px) { .lpk-cards { margin: 56px -24px 0; padding: 4px 24px 16px; gap: 20px; } .lpk-cardli { flex: 0 0 42%; } }
+@media (min-width: 1024px) {
+  .lpk-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; overflow: visible; margin: 56px 0 0; padding: 0; }
   .lpk-cardli { flex: none; }
 }
-@media (min-width: 1024px) { .lpk-cards { grid-template-columns: repeat(3, 1fr); } }
 .lpk-tilt { position: relative; transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform 0.25s var(--ease-out), box-shadow 0.25s; will-change: transform; }
 .lpk-glare { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity 0.25s; background: radial-gradient(260px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.6), transparent 60%); }
 .lpk-tilt.tilting .lpk-glare { opacity: 1; }
@@ -202,6 +224,8 @@
 .lpk-feat-card h3 { margin-top: 14px; font-size: 20px; line-height: 1.4; font-weight: 800; letter-spacing: 0.02em; }
 .lpk-feat-card > p { margin-top: 8px; font-size: 15px; color: var(--muted); }
 .lpk-feat-card .lpk-fpanel { margin-top: 20px; box-shadow: none; background: #f5f9ff; }
+.lpk-feat-card .lpk-fpanel { height: 190px; }
+@media (min-width: 768px) { .lpk-feat-card .lpk-fpanel { height: 300px; } }
 @media (min-width: 768px) { .lpk-feat-card { padding: 32px; } .lpk-fpanel { height: 340px; } }
 .lpk-feat-d { display: none; }
 @media (min-width: 1024px) {
@@ -220,7 +244,7 @@
   .lpk-feat-more p { margin-top: 6px; font-size: 15px; color: var(--muted); }
   .lpk-fpanel-d { height: 480px; }
   .lpk-fpanel-d .lpk-fp { opacity: 0; transition: opacity 0.4s var(--ease-out); }
-  .lpk-fpanel-d .lpk-fp.is-active { opacity: 1; }
+  .lpk-fpanel-d .lpk-fp.cur { opacity: 1; }
 }
 .lpk-spot::before { content: ''; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity 0.25s; background: radial-gradient(260px circle at var(--sx, 50%) var(--sy, 50%), rgba(0, 102, 255, 0.12), transparent 70%); }
 .lpk-spot.lit::before { opacity: 1; }
@@ -231,7 +255,7 @@
 .lpk-scrolltext { font-size: 28px; line-height: 1.5; font-weight: 800; letter-spacing: 0.02em; max-width: 860px; margin: 0 auto; word-break: keep-all; }
 @media (min-width: 768px) { .lpk-scrolltext { font-size: 40px; } }
 @media (min-width: 1024px) { .lpk-scrolltext { font-size: 48px; } }
-.lpk-js .lpk-scrolltext .lpk-ph { color: #4a6190; transition: color 0.35s; }
+.lpk-js .lpk-scrolltext .lpk-ph { color: #8da2cc; transition: color 0.35s; }
 .lpk-js .lpk-scrolltext .lpk-ph.lit { color: #fff; }
 
 /* ---- 段7 使い方 ---- */
