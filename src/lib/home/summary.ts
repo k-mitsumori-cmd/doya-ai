@@ -294,7 +294,7 @@ async function loadSales(userId: string, monthStart: Date, months: ReturnType<ty
   }
 }
 
-async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
+async function loadQuotes(userId: string, months: ReturnType<typeof lastMonths>, now: Date) {
   const membership =
     (await prisma.quoteMember.findFirst({
       where: { userId, status: 'ACTIVE', role: 'owner' },
@@ -312,15 +312,22 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
   // （名前で外すと、利用者が自分で付けた「【自動点検】…」の下書きまで消えるため。2026-10-26 統括の監査）
   const watchQuoteIds = await systemWatchRecordIdsAll(prisma, 'quote-document', [orgId]).catch(() => [])
   const [confirmed, draftCount, sentCount, expiring] = await Promise.all([
-    prisma.quoteDocument.findMany({
-      where: { organizationId: orgId, status: { in: ['confirmed', 'sent'] }, confirmedAt: { gte: trendStart } },
-      select: { totalExclTax: true, confirmedAt: true },
-      take: 5000,
-    }),
+    Promise.all(months.map(async ({ start }, index) => {
+      const next = months[index + 1]?.start
+      const totals = await prisma.quoteDocument.aggregate({
+        where: {
+          organizationId: orgId,
+          status: { in: ['confirmed', 'sent'] },
+          confirmedAt: { gte: start, ...(next ? { lt: next } : {}) },
+        },
+        _sum: { totalExclTax: true },
+      })
+      return { at: start, amount: toNum(totals._sum.totalExclTax) }
+    })),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'draft', ...excludeIds(watchQuoteIds) } }),
     prisma.quoteDocument.count({ where: { organizationId: orgId, status: 'sent' } }),
     prisma.quoteDocument.findMany({
-      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: new Date() } },
+      where: { organizationId: orgId, status: 'sent', expiryDate: { gte: now } },
       orderBy: { expiryDate: 'asc' },
       select: { id: true, title: true, expiryDate: true },
       take: 10,
@@ -328,10 +335,10 @@ async function loadQuotes(userId: string, monthStart: Date, trendStart: Date) {
   ])
   return {
     orgName: membership.organization.name,
-    confirmedThisMonth: confirmed.filter((q) => q.confirmedAt && q.confirmedAt >= monthStart).reduce((a, q) => a + toNum(q.totalExclTax), 0),
+    confirmedThisMonth: confirmed[confirmed.length - 1]?.amount ?? 0,
     draftCount,
     sentCount,
-    forTrend: confirmed.map((q) => ({ amount: toNum(q.totalExclTax), at: q.confirmedAt! })),
+    forTrend: confirmed,
     events: expiring.map((q) => ({ id: `quote-${q.id}`, date: q.expiryDate.toISOString(), title: `見積の有効期限: ${q.title}`, kind: 'quote' as const, href: `/quote/documents/${q.id}` })),
   }
 }
@@ -479,12 +486,11 @@ export async function getHomeSummary(userId: string): Promise<HomeSummary> {
   const jst = new Date(requestTime.getTime() + 9 * 3600_000)
   const monthStart = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 3600_000)
   const months = lastMonths(6, monthStart)
-  const trendStart = months[0].start
 
   const [contractR, salesR, quotesR, projectsR, attendanceR, peopleR, incomeR, expenseR] = await Promise.allSettled([
     loadContract(userId),
     loadSales(userId, monthStart, months, requestTime),
-    loadQuotes(userId, monthStart, trendStart),
+    loadQuotes(userId, months, requestTime),
     loadProjects(userId),
     loadAttendance(userId, monthStart),
     loadPeople(userId),
