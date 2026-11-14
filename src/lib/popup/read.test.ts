@@ -43,6 +43,7 @@ function fakeDb() {
   const stats = [
     { popupId: 'p1', day: day('2026-10-18'), target: 'main', impressions: 100, clicks: 7, closes: 20 },
     { popupId: 'p1', day: day('2026-10-15'), target: 'main', impressions: 50, clicks: 3, closes: 5 },
+    { popupId: 'p1', day: day('2026-10-19'), target: 'main', impressions: 800, clicks: 80, closes: 8 }, // 集計日より先
     { popupId: 'p1', day: day('2026-09-01'), target: 'main', impressions: 999, clicks: 99, closes: 9 }, // 期間外
     { popupId: 'p2', day: day('2026-10-17'), target: 'link:1', impressions: 0, clicks: 2, closes: 0 },
     { popupId: 'p3', day: day('2026-10-18'), target: 'main', impressions: 500, clicks: 50, closes: 0 }, // 他人
@@ -53,7 +54,7 @@ function fakeDb() {
     const s = sites.find((x) => x.id === p.siteId)!
     return (w.id === undefined || p.id === w.id) && (w.userId === undefined || p.userId === w.userId) && (w.siteId === undefined || p.siteId === w.siteId) && (!w.site || siteOk(s, w.site))
   }
-  const statOk = (r: any, w: any) => (!w.popupId || (typeof w.popupId === 'string' ? r.popupId === w.popupId : w.popupId.in.includes(r.popupId))) && (!w.day?.gte || r.day >= w.day.gte)
+  const statOk = (r: any, w: any) => (!w.popupId || (typeof w.popupId === 'string' ? r.popupId === w.popupId : w.popupId.in.includes(r.popupId))) && (!w.day?.gte || r.day >= w.day.gte) && (!w.day?.lte || r.day <= w.day.lte)
   const withPopups = (s: any, include: any) => (include?.popups ? { ...s, popups: popups.filter((p) => p.siteId === s.id).sort((a, b) => a.sortOrder - b.sortOrder) } : s)
   const db = {
     popupSite: {
@@ -124,6 +125,7 @@ test('getPopupDaily: 日別を0で埋め、他人の案は null', async () => {
   assert.equal(d!.series[6].day, jstDay(NOW).toISOString().slice(0, 10))
   assert.equal(d!.totals.impressions, 150)
   assert.equal(d!.totals.ctr, 6.7)
+  assert.deepEqual(d!.byTarget, { main: 10 })
 })
 
 test('getPopupSummary（ホームの集客の数字・popup.stats の正本）', async () => {
