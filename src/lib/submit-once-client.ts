@@ -5,7 +5,7 @@
 // - 通信に失敗したあと同じ内容で送り直す: 同じ番号で送る。サーバーは前にできた物を返す。
 // - 内容を変えて送る: 先に前回の送信の状態を確かめる。保存ずみなら、今回は送らずに知らせる。
 // - 控えが1日より古い: 別の登録かもしれないので、内容が同じでも先に状態を確かめる。
-// - ブラウザに控えられない: 今までどおり番号なしで送る（画面を止めない）。
+// - ブラウザに控えられない: 結果不明時の二重登録を防ぐため、送信前に止める。
 
 export type OnceResolutionState = 'found' | 'gone' | 'cancelled'
 
@@ -13,6 +13,8 @@ export type OnceResolutionState = 'found' | 'gone' | 'cancelled'
 export class SubmitOnceSavedError extends Error {}
 
 export const ONCE_SAVED_MESSAGE = '前回の送信が保存されていました。二重に登録しないよう、今回の内容は保存していません。一覧で確かめてから、必要なら、もう一度お試しください。'
+
+export const ONCE_STORAGE_UNAVAILABLE_MESSAGE = '二重登録を防ぐための送信情報をブラウザに保存できませんでした。ブラウザのサイトデータの保存を許可してから、もう一度お試しください。'
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -75,11 +77,11 @@ export async function submitOnce<T>(options: {
   scope: string
   /** 送る中身（番号を除く） */
   input: unknown
-  send: (operationId: string | undefined) => Promise<T>
+  send: (operationId: string) => Promise<T>
   resolve: (operationId: string) => Promise<OnceResolutionState>
 }): Promise<T> {
   const { scope, input, send, resolve } = options
-  if (typeof window === 'undefined' || !storageWorks()) return send(undefined)
+  if (typeof window === 'undefined' || !storageWorks()) throw new Error(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
   const key = `submit-once:pending:v1:${scope}`
   return withBrowserLock(key, async () => {
     const fingerprint = onceFingerprint(input)
@@ -94,7 +96,11 @@ export async function submitOnce<T>(options: {
         if (state !== 'cancelled') throw new SubmitOnceSavedError(ONCE_SAVED_MESSAGE)
       }
       operationId = crypto.randomUUID()
-      window.localStorage.setItem(key, JSON.stringify({ operationId, fingerprint, at: Date.now() }))
+      try {
+        window.localStorage.setItem(key, JSON.stringify({ operationId, fingerprint, at: Date.now() }))
+      } catch {
+        throw new Error(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
+      }
     }
     try {
       const result = await send(operationId)
