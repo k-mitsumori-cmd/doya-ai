@@ -1,0 +1,113 @@
+/* ドヤ記事作成 LP の画面の再現（lp-visuals.tsx）。.lpk の中で使う。 */
+.sv-cap { font-size: 12px; line-height: 1.4; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); }
+.sv-pane { position: relative; padding: 16px; overflow: hidden; min-width: 0; }
+.sv-left { background: #f7faff; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+@media (min-width: 768px) { .sv-pane { padding: 24px; } .sv-left { border-bottom: 0; border-right: 1px solid var(--line); gap: 14px; } }
+.sv-field { display: grid; gap: 4px; }
+.sv-flabel { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; }
+.sv-input { display: flex; align-items: center; min-height: 40px; padding: 0 12px; background: #fff; border: 1.5px solid var(--line); border-radius: 10px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; }
+.sv-caret { display: inline-block; width: 2px; height: 18px; margin-left: 2px; background: var(--blue); opacity: 0; }
+.sv-caret.blink { opacity: 1; animation: sv-blink 0.9s steps(1) infinite; }
+@keyframes sv-blink { 50% { opacity: 0; } }
+.sv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sv-chips span { font-size: 12px; line-height: 1.4; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--line); }
+.sv-urls { display: grid; gap: 4px; }
+.sv-urls li { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; font-size: 12px; font-weight: 700; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.sv-urls li svg { color: var(--blue); flex: none; }
+.sv-urls li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sv-urls li em { margin-left: auto; font-style: normal; font-size: 11px; color: #0a8f4e; opacity: 0; transition: opacity 0.4s; }
+.sv-urls li em.ok { opacity: 1; }
+.sv-go { margin-top: auto; display: inline-flex; align-items: center; justify-content: center; align-self: flex-start; min-height: 40px; padding: 0 20px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 13px; font-weight: 700; transition: transform 150ms var(--ease-pop), background-color 0.3s; }
+.sv-go.pressed { transform: scale(0.94); }
+.sv-go.sent { background: #0a8f4e; }
+
+.sv-in { opacity: 0; transform: translateY(10px); transition: opacity 0.7s var(--ease-demo), transform 0.7s var(--ease-demo); }
+.sv-in.on { opacity: 1; transform: none; }
+
+.sv-rhead { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; height: 28px; }
+.sv-card-pad .sv-rhead { position: static; padding: 0 0 8px; }
+.sv-badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--soft); color: var(--blue); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.sv-badge.done { background: #e2f6ea; color: #0a8f4e; }
+@media (min-width: 768px) { .sv-rhead { top: 24px; left: 24px; right: 24px; } }
+
+.sv-empty { position: absolute; left: 16px; right: 16px; top: 56px; bottom: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; border: 2px dashed var(--line); border-radius: 16px; color: var(--muted); font-size: 13px; font-weight: 700; opacity: 0; transition: opacity 0.5s var(--ease-demo); }
+.sv-empty.on { opacity: 1; }
+.sv-skel { display: grid; gap: 6px; width: 60%; }
+.sv-skel i { height: 8px; border-radius: 4px; background: var(--soft); }
+.sv-skel i:nth-child(2) { width: 80%; }
+.sv-skel i:nth-child(3) { width: 55%; }
+@media (min-width: 768px) { .sv-empty { left: 24px; right: 24px; top: 72px; bottom: 24px; } }
+
+.sv-outline { position: absolute; left: 16px; right: 16px; top: 52px; display: grid; gap: 2px; }
+.sv-outline.static { position: static; gap: 6px; }
+.sv-outline li { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; font-weight: 700; }
+.sv-outline.static li { height: 34px; }
+.sv-outline li b { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 6px; background: var(--blue); color: #fff; font-size: 11px; letter-spacing: 0; }
+.sv-tick { margin-left: auto; color: #0a8f4e; opacity: 0; transform: scale(0.5); transition: opacity 0.4s, transform 0.4s var(--ease-pop); flex: none; }
+.sv-tick.on { opacity: 1; transform: none; }
+.sv-audit { position: absolute; left: 16px; right: 16px; top: 236px; display: grid; gap: 0; }
+.sv-audit.show { position: static; }
+.sv-audit li { display: flex; align-items: center; gap: 8px; height: 24px; font-size: 12px; font-weight: 700; border-bottom: 1px solid var(--soft); }
+.sv-audit li:last-child { border-bottom: 0; }
+.sv-audit li svg { color: #0a8f4e; flex: none; }
+.sv-audit li em { margin-left: auto; font-style: normal; color: var(--muted); font-weight: 700; }
+@media (min-width: 768px) {
+  .sv-outline { left: 24px; right: 24px; top: 72px; gap: 4px; }
+  .sv-outline li { height: 34px; font-size: 13px; }
+  .sv-audit { left: 24px; right: 24px; top: 322px; }
+  .sv-audit li { height: 30px; font-size: 13px; }
+}
+.sv-article { position: absolute; left: 12px; right: 12px; top: 52px; bottom: 12px; display: flex; flex-direction: column; padding: 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); opacity: 0; transform: translateY(10px); transition: opacity 0.7s var(--ease-demo), transform 0.7s var(--ease-demo); z-index: 2; pointer-events: none; }
+.sv-article.on { opacity: 1; transform: none; }
+@media (min-width: 768px) { .sv-article { left: 24px; right: 24px; top: 68px; bottom: 24px; padding: 20px; } }
+.sv-export { margin-top: auto; display: flex; flex-wrap: wrap; gap: 6px; }
+.sv-export span { font-size: 11px; line-height: 1.4; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--soft); color: var(--blue); }
+
+.sv-art { display: grid; gap: 7px; align-content: start; }
+.sv-art-kicker { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); line-height: 1.4; }
+.sv-art h4 { margin: 0; font-size: 15px; line-height: 1.4; font-weight: 800; letter-spacing: 0.02em; }
+.sv-art h5 { margin: 4px 0 0; font-size: 12px; line-height: 1.4; font-weight: 800; letter-spacing: 0.02em; }
+.sv-bars { display: grid; gap: 5px; }
+.sv-bars i { display: block; height: 6px; border-radius: 3px; background: var(--line); }
+.sv-art.compact h4 { font-size: 14px; }
+.sv-fill { position: absolute; inset: 0; }
+.sv-card-pad { padding: 16px; height: 100%; overflow: hidden; }
+.sv-svg { width: 100%; height: 100%; }
+.sv-eye { position: relative; height: 100%; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; color: #fff; background: linear-gradient(135deg, #0066ff 0%, #009bff 62%, #00e0ff 120%); overflow: hidden; }
+.sv-eye p { position: relative; z-index: 1; font-size: 22px; line-height: 1.4; font-weight: 800; letter-spacing: 0.02em; }
+.sv-eye-tag { position: relative; z-index: 1; font-size: 12px; font-weight: 800; padding: 3px 12px; border-radius: 999px; background: var(--accent); color: #0a1f44; letter-spacing: 0.08em; }
+.sv-eye i { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.16); }
+.sv-eye-a { width: 120px; height: 120px; right: -30px; top: -30px; }
+.sv-eye-b { width: 44px; height: 44px; right: 48px; bottom: 22px; background: var(--accent) !important; }
+.sv-eye-c { width: 36px; height: 36px; right: 120px; top: 30px; }
+.sv-code { margin: 0; height: 100%; padding: 18px; background: #0a1f44; color: #cfe0ff; font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0; overflow: hidden; white-space: pre; }
+.sv-code .t { color: #8ec5ff; }
+.sv-code .d { color: var(--accent); }
+
+/* 機能の画面（小さな実演は、見えているときだけ動く） */
+.sv-f { padding: 20px; display: grid; gap: 12px; align-content: start; height: 100%; }
+@media (min-width: 768px) { .sv-f { padding: 28px; gap: 14px; } }
+.sv-question { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--soft); font-size: 13px; font-weight: 700; }
+.sv-question svg { color: var(--blue); flex: none; }
+.sv-tree { display: grid; gap: 8px; }
+.sv-tree li { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 13px; font-weight: 700; }
+.sv-tree li b { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--blue); color: #fff; font-size: 11px; letter-spacing: 0; flex: none; }
+.sv-tree li small { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
+.sv-link { font-size: 12px; font-weight: 700; color: var(--blue); padding: 6px 12px; border-radius: 999px; background: var(--soft); justify-self: start; }
+@keyframes sv-pop { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.lpk-fp.is-active .sv-a, .lpk-feat-card.in .sv-a { animation: sv-pop 0.6s var(--ease-demo) both; animation-delay: var(--d, 0ms); }
+
+/* 流れの図 */
+.sv-flow { display: grid; gap: 8px; max-width: 1152px; margin: 0 auto; }
+.sv-flow li { position: relative; align-content: start; display: grid; grid-template-columns: 28px 1fr; column-gap: 12px; align-items: center; padding: 12px 16px; background: #fff; border: 1px solid var(--line); border-radius: 16px; }
+.sv-flow li b { font-size: 14px; line-height: 1.4; font-weight: 800; letter-spacing: 0.02em; }
+.sv-flow li small { grid-column: 2; font-size: 12px; line-height: 1.5; color: var(--muted); font-weight: 500; }
+.sv-flow-n { grid-row: 1 / 3; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--blue); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 0; }
+.sv-flow-ar { display: none; }
+@media (min-width: 1024px) {
+  .sv-flow { grid-template-columns: repeat(5, 1fr); gap: 28px; }
+  .sv-flow li { grid-template-columns: 1fr; row-gap: 4px; padding: 18px 16px; text-align: left; }
+  .sv-flow li small { grid-column: 1; }
+  .sv-flow-n { grid-row: auto; margin-bottom: 4px; }
+  .sv-flow-ar { display: block; position: absolute; right: -28px; top: 50%; transform: translateY(-50%); }
+}
