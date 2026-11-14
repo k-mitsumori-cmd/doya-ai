@@ -6,6 +6,7 @@ import { SEO_ACCENT, SEO_LP_CONTENT } from './lp-content'
 import { SEO_VISUALS } from './lp-visuals'
 
 export default function SeoLpKit({ hero }: { hero?: string }) {
-  const variant = hero === 'a' || hero === 'b' ? hero : undefined
+  // 既定は案A（製品画面）。?hero=b で絵、?hero=text で文字だけ
+  const variant = hero === 'b' ? 'b' : hero === 'text' || hero === 'none' ? undefined : 'a'
   return <LpKitPage content={SEO_LP_CONTENT} visuals={SEO_VISUALS} accent={SEO_ACCENT} heroVariant={variant} />
 }

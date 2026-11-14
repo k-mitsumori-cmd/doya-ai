@@ -164,7 +164,7 @@
 .lpk-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
 .lpk-win-title { font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
 .lpk-pause { position: absolute; right: 8px; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; font-size: 12px; font-weight: 700; color: var(--muted); border-radius: 999px; border: 1px solid var(--line); background: #fff; }
-.lpk-demo { display: grid; grid-template-columns: 1fr; grid-template-rows: 246px 1fr; height: 584px; }
+.lpk-demo { display: grid; grid-template-columns: 1fr; grid-template-rows: 266px 1fr; height: 604px; }
 @media (min-width: 768px) { .lpk-demo { grid-template-columns: 340px 1fr; grid-template-rows: none; height: 480px; } }
 .lpk-caption { margin-top: 12px; text-align: center; font-size: 12px; line-height: 1.6; color: var(--muted); }
 .lpk-stage.boot * { transition: none !important; }
@@ -360,3 +360,26 @@
 .lpk-still .lpk-marquee { mask-image: none; -webkit-mask-image: none; }
 .lpk-still .lpk-mark { background-size: 100% 0.32em !important; }
 .lpk-still .lpk-bear-f.b { display: none; }
+
+/* 実演へ移る小さな矢印（最初の画面の下端） */
+.lpk-hero { padding-bottom: 56px; }
+.lpk-hero.split { padding-bottom: 56px; }
+.lpk-cue { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: inline-flex; flex-direction: column; align-items: center; min-width: 44px; min-height: 44px; font-size: 12px; line-height: 1.2; font-weight: 700; letter-spacing: 0.08em; color: var(--blue); }
+.lpk-cue svg { animation: lpk-cue 1.6s var(--ease-out) infinite; }
+.lpk-cue:hover { color: #0057d9; }
+.lpk-cue:active { transform: translateX(-50%) scale(0.92); }
+@keyframes lpk-cue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
+.lpk-stage-sec { scroll-margin-top: 64px; }
+@media (min-width: 1024px) { .lpk-cue { bottom: 12px; } }
+/* スマホ: 高さを詰める（事実の1行は注記と重なるので出さない。事実の帯は3列にする） */
+@media (max-width: 767px) {
+  .lpk-hero .lpk-facts { display: none; }
+  .lpk-hero, .lpk-hero.split { padding-bottom: 64px; }
+  .lpk-stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .lpk-stat-num { flex-direction: column; align-items: center; gap: 0; font-size: 36px; }
+  .lpk-stat-unit { font-size: 12px; }
+  .lpk-stat-label { font-size: 12px; line-height: 1.5; }
+  .lpk-sec-stats { padding: 40px 0 36px; }
+  .lpk-marquee { margin-top: 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .lpk .lpk-cue svg { animation: none !important; } }

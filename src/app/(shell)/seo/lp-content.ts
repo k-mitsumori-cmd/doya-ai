@@ -10,8 +10,8 @@ const FREE_LIMIT = SVC.pricing.free.limit // 例: 記事3本/月まで
 const FREE_N = FREE_LIMIT.match(/\d+/)?.[0]
 const FREE_PHRASE = FREE_N ? `月${FREE_N}本` : FREE_LIMIT
 
-/** 書き出しの形式（lp-data.ts の FAQ「書いた記事はどこに出せますか？」より） */
-export const EXPORT_FORMATS = ['テキスト', 'Markdown', 'HTML', 'JSON']
+/** 書き出しの形式。実際の書き出し画面（articles/[id]/export）の形式に合わせる（lp-data.ts の FAQ には JSON とあるが、書き出し画面には無い。要確認） */
+export const EXPORT_FORMATS = ['HTML', 'Markdown', 'note', 'テキスト']
 export const SEO_ACCENT = '#ffd400' // gold（文章の道具に合う黄色の線）
 
 export const SEO_LP_CONTENT: LpKitContent = {
@@ -35,26 +35,26 @@ export const SEO_LP_CONTENT: LpKitContent = {
   },
   stage: {
     heading: { phrases: ['記事が', 'できるまでの', '流れを、', '画面で', '見る。'] },
-    lead: 'キーワードを入れてから、構成、点検、完成まで。製品の画面を再現して、順に動かしています。下の札を押すと、その段階から見られます。',
+    lead: 'キーワードを入れてから、構成、本文、チェック、完成まで。製品の画面を再現して、順に動かしています。下の札を押すと、その段階から見られます。',
     windowTitle: SVC.name,
     tabs: [
-      { id: 'input', label: '入力', from: 0 },
-      { id: 'outline', label: '構成', from: 2600 },
-      { id: 'audit', label: '点検', from: 5200 },
-      { id: 'done', label: '完成', from: 7600 },
+      { id: 'input', label: 'キーワード', from: 0 },
+      { id: 'outline', label: '構成', from: 2200 },
+      { id: 'write', label: '本文', from: 4400 },
+      { id: 'check', label: 'チェック', from: 6400 },
     ],
-    duration: 8000,
+    duration: 8400,
     hold: 3200,
     caption: 'サンプルのデータで再現した画面です。実際の画面や出力は、入力した内容によって変わります。',
   },
   stats: {
     items: [
-      { value: Number(FREE_N ?? 3), unit: '本 / 月', label: '無料プランで作れる記事の数' },
-      { value: EXPORT_FORMATS.length, unit: '形式', label: '書き出しの形式（テキスト・Markdown・HTML・JSON）' },
-      { value: STEPS.length, unit: 'ステップ', label: '入力から点検まで、使う手順の数' },
+      { value: Number(FREE_N ?? 3), unit: '本 / 月', label: '無料プランで作れる記事' },
+      { value: EXPORT_FORMATS.length, unit: '形式', label: '書き出しの形式' },
+      { value: STEPS.length, unit: 'ステップ', label: '使う手順の数' },
     ],
     marqueeLabel: '書き出しと、いっしょに作れるもの',
-    marquee: [...EXPORT_FORMATS, 'note 向けの書き出し', '図解', 'アイキャッチ', 'リンク切れの確認'],
+    marquee: [...EXPORT_FORMATS, '図解', 'アイキャッチ', 'リンク切れの確認'],
   },
   showcase: {
     heading: { phrases: ['作れるものを、', '先に', '見る。'] },
@@ -64,7 +64,7 @@ export const SEO_LP_CONTENT: LpKitContent = {
       { title: '検索意図から作った構成', keyword: 'BtoB マーケティング AI活用', note: '見出しごとに役割を決めてから、本文に進みます。' },
       { title: '図解', keyword: 'AI活用 導入ステップ', note: '本文に合わせた図解の画像を作れます。' },
       { title: 'アイキャッチ', keyword: 'BtoB マーケティング AI活用', note: '記事に添えるアイキャッチ画像も作れます。' },
-      { title: '書き出した HTML', keyword: 'BtoB マーケティング AI活用', note: 'テキスト、Markdown、HTML、JSON で書き出せます。' },
+      { title: '書き出した HTML', keyword: 'BtoB マーケティング AI活用', note: 'HTML、Markdown、note、テキストで書き出せます。' },
       { title: '無料でできる範囲', keyword: '無料プランの内容', note: `${FREE_LIMIT}。クレジットカードの登録は不要です。` },
     ],
   },
@@ -97,7 +97,7 @@ export const SEO_LP_CONTENT: LpKitContent = {
       { q: FAQ[0].q, a: `無料プランは${FREE_LIMIT}ご利用いただけます。有料プランの内容と料金は、料金ページでご確認ください。1つの契約で全サービスのプロプランが使えます。` },
       FAQ[1],
       { q: 'LLMO（AI検索）を意識した作りですか？', a: FAQ[2].a },
-      FAQ[3],
+      { q: FAQ[3].q, a: '本文はエディタで編集でき、HTML・Markdown・note・テキストで書き出せます。note に貼り付けやすい形式にも対応しています。' },
       // 利用規約 第5条（src/app/terms/page.tsx）の文言に合わせた「できないこと」
       { q: '生成された記事の内容は保証されますか？', a: '利用規約の第5条で、本サービスの内容について、正確性、完全性、有用性等を保証しないと定めています。詳しくは利用規約をご覧ください。' },
     ],

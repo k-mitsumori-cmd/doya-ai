@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-// ?hero=a: 右に製品画面の縮小版 / ?hero=b: 右に既存のドヤくんの絵 / 無指定: 文字だけ
+// 既定（?hero 無指定 / a）: 右に製品画面の縮小版 / ?hero=b: 右に既存のドヤくんの絵 / ?hero=text: 文字だけ
 export default async function Page({ searchParams }: { searchParams: Promise<{ hero?: string }> }) {
   const { hero } = await searchParams
   return <SeoLpKit hero={hero} />

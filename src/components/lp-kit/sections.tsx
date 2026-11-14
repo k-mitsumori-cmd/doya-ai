@@ -15,6 +15,17 @@ const ICONS: Record<IconKey, typeof Search> = {
   search: Search, list: ListTree, check: ShieldCheck, pen: PenLine, file: FileText, shield: ShieldCheck, link: Link2, layers: Layers,
 }
 
+/* ---------------- 実演の段へ移る（滑らかに。動きを減らす設定では即移動） ---------------- */
+export function goDemo(e: React.MouseEvent) {
+  const el = document.getElementById('demo')
+  if (!el) return
+  e.preventDefault()
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  el.scrollIntoView({ behavior: (reduce ? 'instant' : 'smooth') as ScrollBehavior, block: 'start' })
+  window.dispatchEvent(new Event('lpk:replay'))
+  history.replaceState(null, '', '#demo')
+}
+
 /* ---------------- 主ボタン（押すと火花が出て、少し間を置いて移る） ---------------- */
 export function CtaLink({ href, className, children, spark = true }: { href: string; className?: string; children: ReactNode; spark?: boolean }) {
   const router = useRouter()
@@ -87,7 +98,7 @@ export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; vari
               {h.ctaLabel}
               <ArrowRight size={18} aria-hidden="true" />
             </CtaLink>
-            <a href="#demo" className="lpk-btn lpk-btn-sec lpk-press" onClick={() => window.dispatchEvent(new Event('lpk:replay'))}>
+            <a href="#demo" className="lpk-btn lpk-btn-sec lpk-press" onClick={goDemo}>
               {h.subCtaLabel}
             </a>
           </div>
@@ -102,6 +113,10 @@ export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; vari
           </ul>
         </div>
       </div>
+      <a href="#demo" className="lpk-cue lpk-press" onClick={goDemo} aria-label="実演の段へ移る">
+        <span>実演へ</span>
+        <ChevronDown size={18} aria-hidden="true" />
+      </a>
     </section>
   )
 }
@@ -463,7 +478,7 @@ export function FinalCta({ c }: { c: LpKitContent }) {
                 <ArrowRight size={18} aria-hidden="true" />
               </CtaLink>
             </span>
-            <a href="#demo" className="lpk-btn lpk-btn-ghost lpk-press" onClick={() => window.dispatchEvent(new Event('lpk:replay'))}>{h.subCtaLabel}</a>
+            <a href="#demo" className="lpk-btn lpk-btn-ghost lpk-press" onClick={goDemo}>{h.subCtaLabel}</a>
           </div>
           <p className="lpk-note lpk-note-onnavy">{h.note}</p>
         </div>

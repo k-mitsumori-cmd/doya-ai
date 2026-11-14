@@ -130,3 +130,17 @@
 .hm.boot * { transition: none !important; }
 @media (min-width: 1024px) { .hm-body { padding: 18px 20px; gap: 12px; } .hm-input b { min-height: 40px; font-size: 14px; } .hm-rows { gap: 8px; } .hm-rows li { height: 36px; font-size: 13px; } .hm-bar { height: 36px; font-size: 12px; } .hm-done { font-size: 13px; padding: 5px 14px; } .hm-rows li em { width: 20px; height: 20px; font-size: 11px; } }
 @media (max-width: 767px) { .hm-rows li:nth-child(4) { display: none; } }
+
+/* 実画面に合わせた項目（記事タイプ・想定読者・本文の進み・チェックの結果） */
+.sv-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sv-two > div { display: grid; gap: 2px; }
+.sv-two b { display: flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 8px; background: #fff; border: 1.5px solid var(--line); font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
+.sv-urllabel { margin-bottom: -6px; }
+.sv-bar { display: block; flex: 1; max-width: 72px; height: 6px; margin-left: auto; border-radius: 3px; background: var(--soft); overflow: hidden; }
+.sv-bar u { display: block; height: 100%; width: 0; background: var(--blue); transition: width 0.9s var(--ease-demo); }
+.sv-outline li .sv-tick { margin-left: 0; }
+.sv-allok { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 3px 12px; border-radius: 999px; background: #e2f6ea; color: #0a8f4e; font-size: 12px; font-weight: 700; margin-top: 10px; }
+.sv-article .sv-allok { margin-top: 8px; }
+@media (max-width: 767px) { .sv-urls li:nth-child(n + 2), .sv-left .sv-urllabel { display: none; } }
+.sv-bar { opacity: 0; transition: opacity 0.4s; }
+.sv-bar.show { opacity: 1; }

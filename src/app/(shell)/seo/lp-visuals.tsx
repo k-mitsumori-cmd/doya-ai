@@ -1,99 +1,100 @@
 'use client'
 // ドヤ記事作成 LP の「画面の再現」。製品の画面をコードで描く（画像は使わない）。
 // ⚠️ 表示するのはサンプルのデータ。実在の会社名・人名・他社 URL は入れない（example.com は予約済みの例示用ドメイン）。
-import { Check, FileText, Link2, Search } from 'lucide-react'
+import { Check, FileText, Link2 } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { cx, useInView, useMotion } from '@/components/lp-kit/hooks'
 import type { LpKitVisuals } from '@/components/lp-kit/types'
 import './lp-visuals.css'
 
+// ⚠️ 項目名・ラベルは実際の製品画面（create/page.tsx、Tool.tsx、articles/[id]/{outline,check,export}）に合わせている。
+//    チェックの結果は「問題ありません」までにとどめ、実際の画面にない件数や文言は作らない。
 const KEYWORD = 'BtoB マーケティング AI活用'
 const OUTLINE = ['AI活用で変わる業務', '導入前に決めること', 'ツール選定の比較軸', '小さく始める手順', '運用とふり返り', 'よくある失敗と対策']
-const AUDIT = [
-  ['主張の整合性', '確認済み'],
-  ['参考情報との重複', '問題なし'],
-  ['根拠が薄い箇所', '2件を修正'],
-  ['リンク切れ', '0件'],
-]
+const CHECKS = ['レギュレーション', 'コピペ', 'ファクト']
 const URLS = ['example.com/guide-1', 'example.com/guide-2', 'example.com/guide-3']
+const EXPORTS = ['HTML', 'Markdown', 'note', 'テキスト']
 
 const on = (t: number, at: number) => t >= at
 
-/* ================= 実演（入力 → 構成 → 点検 → 完成） ================= */
+/* ================= 実演（キーワード → 構成 → 本文 → チェック → 完成） ================= */
 function Demo({ t, tab }: { t: number; tab: number }) {
-  const typed = Math.max(0, Math.min(KEYWORD.length, Math.floor((t - 300) / 55)))
-  const typing = t >= 300 && typed < KEYWORD.length
-  const pressed = t >= 2300 && t < 2560
-  const outlineN = OUTLINE.filter((_, i) => on(t, 2750 + i * 300)).length
-  const auditN = AUDIT.filter((_, i) => on(t, 5350 + i * 450)).length
-  const done = t >= 7600
+  const typed = Math.max(0, Math.min(KEYWORD.length, Math.floor((t - 250) / 50)))
+  const typing = t >= 250 && typed < KEYWORD.length
+  const pressed = t >= 1950 && t < 2180
+  const outlineN = OUTLINE.filter((_, i) => on(t, 2400 + i * 260)).length
+  const writtenN = OUTLINE.filter((_, i) => on(t, 4600 + i * 260)).length
+  const checkN = CHECKS.filter((_, i) => on(t, 6550 + i * 450)).length
+  const done = t >= 8200
+  const head = tab === 0 ? 'Step 1: 記事の軸' : tab === 1 ? '構成生成' : tab === 2 ? '本文執筆' : done ? '完成' : '品質チェック'
+  const badge = tab === 0 ? '入力中' : tab === 1 ? `${outlineN} / ${OUTLINE.length}` : tab === 2 ? `${writtenN} / ${OUTLINE.length}` : done ? '完成' : `${checkN} / ${CHECKS.length}`
   return (
     <>
       <div className="sv-pane sv-left">
-        <p className="sv-cap">記事の条件</p>
+        <p className="sv-cap">SEO記事を作成する</p>
         <div className="sv-field">
-          <span className="sv-flabel">キーワード</span>
+          <span className="sv-flabel">主キーワード</span>
           <span className="sv-input">
             {KEYWORD.slice(0, typed)}
-            <i className={cx('sv-caret', (typing || (t < 300 && tab === 0)) && 'blink')} />
+            <i className={cx('sv-caret', (typing || t < 250) && tab === 0 && 'blink')} />
           </span>
         </div>
-        <div className="sv-chips">
-          <span className={cx('sv-in', on(t, 1400) && 'on')}>読者: マーケ責任者</span>
-          <span className={cx('sv-in', on(t, 1650) && 'on')}>目的: 比較検討</span>
+        <div className="sv-two">
+          <div className={cx('sv-in', on(t, 1100) && 'on')}><span className="sv-flabel">記事タイプ</span><b>比較記事</b></div>
+          <div className={cx('sv-in', on(t, 1300) && 'on')}><span className="sv-flabel">想定読者</span><b>マーケ担当者</b></div>
         </div>
+        <span className="sv-flabel sv-urllabel">参考URL</span>
         <ul className="sv-urls">
           {URLS.map((u, i) => (
-            <li key={u} className={cx('sv-in', on(t, 1900 + i * 150) && 'on')}>
+            <li key={u} className={cx('sv-in', on(t, 1500 + i * 150) && 'on')}>
               <Link2 size={13} aria-hidden="true" />
               <span>{u}</span>
-              <em className={cx(on(t, 2400 + i * 200) && 'ok')}>{on(t, 2400 + i * 200) ? '要点化' : ''}</em>
             </li>
           ))}
         </ul>
-        <span className={cx('sv-go', pressed && 'pressed', on(t, 2560) && 'sent')}>
-          {on(t, 2560) ? '構成を作成しました' : '構成を作る'}
+        <span className={cx('sv-go', pressed && 'pressed', on(t, 2180) && 'sent')}>
+          {on(t, 2180) ? '生成中...' : '記事を生成する'}
         </span>
       </div>
 
       <div className="sv-pane sv-right">
         <div className="sv-rhead">
-          <p className="sv-cap">{tab === 0 ? 'できあがる記事' : tab === 1 ? '検索意図から構成を作成中' : tab === 2 ? '公開前の点検' : '完成'}</p>
-          <span className={cx('sv-badge', done && 'done')}>
-            {tab === 0 ? '待機中' : tab === 1 ? `${outlineN} / ${OUTLINE.length}` : tab === 2 ? `${auditN} / ${AUDIT.length}` : '点検済み'}
-          </span>
+          <p className="sv-cap">{head}</p>
+          <span className={cx('sv-badge', done && 'done')}>{badge}</span>
         </div>
 
-        <div className={cx('sv-empty', t < 2600 && 'on')}>
+        <div className={cx('sv-empty', t < 2400 && 'on')}>
           <FileText size={28} aria-hidden="true" />
-          <p>条件を入れると、ここに構成が出ます</p>
+          <p>キーワードを入れると、ここに構成が出ます</p>
           <div className="sv-skel"><i /><i /><i /></div>
         </div>
 
         <ol className="sv-outline">
           {OUTLINE.map((r, i) => (
-            <li key={r} className={cx('sv-in', on(t, 2750 + i * 300) && 'on')}>
+            <li key={r} className={cx('sv-in', on(t, 2400 + i * 260) && 'on')}>
               <b>{i + 1}</b>
               <span>{r}</span>
-              <Check size={14} className={cx('sv-tick', on(t, 5250 + i * 120) && 'on')} aria-hidden="true" />
+              <i className={cx('sv-bar', on(t, 4400) && 'show')} aria-hidden="true"><u style={{ width: on(t, 4500 + i * 260) ? '100%' : '0%' }} /></i>
+              <Check size={14} className={cx('sv-tick', on(t, 4600 + i * 260 + 700) && 'on')} aria-hidden="true" />
             </li>
           ))}
         </ol>
 
         <ul className="sv-audit">
-          {AUDIT.map(([k, v], i) => (
-            <li key={k} className={cx('sv-in', on(t, 5350 + i * 450) && 'on')}>
+          {CHECKS.map((k, i) => (
+            <li key={k} className={cx('sv-in', on(t, 6550 + i * 450) && 'on')}>
               <Check size={14} aria-hidden="true" />
               <span>{k}</span>
-              <em>{v}</em>
+              <em>問題ありません</em>
             </li>
           ))}
         </ul>
 
         <div className={cx('sv-article', done && 'on')} aria-hidden={!done}>
           <Article compact />
+          <p className="sv-allok"><Check size={14} aria-hidden="true" />すべて確認しました</p>
           <div className="sv-export">
-            {['テキスト', 'Markdown', 'HTML', 'JSON'].map((x) => (
+            {EXPORTS.map((x) => (
               <span key={x}>{x}</span>
             ))}
           </div>
@@ -131,9 +132,9 @@ function HeroMini() {
   const done = t >= 4400
   return (
     <div ref={ref} className={cx('hm', boot && 'boot')} role="img" aria-label="記事の条件を入れると、構成が作られ、点検が済むまでの画面のサンプル">
-      <div className="hm-bar"><i /><i /><i /><span>ドヤ記事作成</span></div>
+      <div className="hm-bar"><i /><i /><i /><span>SEO記事を作成する</span></div>
       <div className="hm-body">
-        <div className="hm-input"><span>キーワード</span><b>{KEYWORD.slice(0, typed)}<i className={cx('sv-caret', t < 1300 && 'blink')} /></b></div>
+        <div className="hm-input"><span>主キーワード</span><b>{KEYWORD.slice(0, typed)}<i className={cx('sv-caret', t < 1300 && 'blink')} /></b></div>
         <ol className="hm-rows">
           {OUTLINE.slice(0, 4).map((r, i) => (
             <li key={r} className={cx('sv-in', t >= 1400 + i * 330 && 'on')}>
@@ -142,7 +143,7 @@ function HeroMini() {
             </li>
           ))}
         </ol>
-        <p className={cx('hm-done', done && 'on')}><Check size={14} aria-hidden="true" />公開前の点検が済みました</p>
+        <p className={cx('hm-done', done && 'on')}><Check size={14} aria-hidden="true" />完成</p>
       </div>
     </div>
   )
@@ -166,7 +167,7 @@ function Article({ compact = false }: { compact?: boolean }) {
 function OutlineCard() {
   return (
     <div className="sv-card-pad">
-      <div className="sv-rhead"><p className="sv-cap">構成</p><span className="sv-badge done">6 / 6</span></div>
+      <div className="sv-rhead"><p className="sv-cap">見出し構成</p><span className="sv-badge done">6 / 6</span></div>
       <ol className="sv-outline static">
         {OUTLINE.slice(0, 5).map((r, i) => (
           <li key={r} className="sv-in on"><b>{i + 1}</b><span>{r}</span></li>
@@ -262,53 +263,49 @@ function FreeRangeCard() {
 function F1() {
   return (
     <div className="sv-f">
-      <p className="sv-cap">記事の条件</p>
-      <div className="sv-field"><span className="sv-flabel">キーワード</span><span className="sv-input">{KEYWORD}</span></div>
-      <div className="sv-chips">
-        <span className="sv-a" style={{ ['--d' as string]: '300ms' }}>読者: マーケ責任者</span>
-        <span className="sv-a" style={{ ['--d' as string]: '500ms' }}>目的: 比較検討</span>
+      <p className="sv-cap">SEO記事を作成する</p>
+      <div className="sv-field"><span className="sv-flabel">主キーワード</span><span className="sv-input">{KEYWORD}</span></div>
+      <div className="sv-two">
+        <div className="sv-a" style={{ ['--d' as string]: '300ms' }}><span className="sv-flabel">記事タイプ</span><b>比較記事</b></div>
+        <div className="sv-a" style={{ ['--d' as string]: '500ms' }}><span className="sv-flabel">想定読者</span><b>マーケ担当者</b></div>
       </div>
+      <span className="sv-flabel">参考URL</span>
       <ul className="sv-urls">
         {URLS.map((u, i) => (
           <li key={u} className="sv-a" style={{ ['--d' as string]: `${700 + i * 200}ms` }}>
-            <Link2 size={13} aria-hidden="true" /><span>{u}</span><em className="ok">要点化</em>
+            <Link2 size={13} aria-hidden="true" /><span>{u}</span>
           </li>
         ))}
       </ul>
-      <div className="sv-question sv-a" style={{ ['--d' as string]: '1500ms' }}>
-        <Search size={15} aria-hidden="true" />
-        <span>記事が答えるべき問い: 何から始めればよいか</span>
-      </div>
     </div>
   )
 }
 function F2() {
   return (
     <div className="sv-f">
-      <p className="sv-cap">アウトライン</p>
+      <p className="sv-cap">見出し構成</p>
       <ol className="sv-tree">
-        {OUTLINE.slice(0, 4).map((r, i) => (
+        {OUTLINE.slice(0, 5).map((r, i) => (
           <li key={r} className="sv-a" style={{ ['--d' as string]: `${i * 260}ms` }}>
             <b>{i + 1}</b><span>{r}</span>
-            <small>役割: {['現状', '準備', '選定', '実行'][i]}</small>
           </li>
         ))}
       </ol>
-      <div className="sv-link sv-a" style={{ ['--d' as string]: '1200ms' }}>前後のつながりを確かめています</div>
     </div>
   )
 }
 function F3() {
   return (
     <div className="sv-f">
-      <p className="sv-cap">公開前チェック</p>
+      <p className="sv-cap">品質チェック</p>
       <ul className="sv-audit show">
-        {AUDIT.map(([k, v], i) => (
+        {CHECKS.map((k, i) => (
           <li key={k} className="sv-a" style={{ ['--d' as string]: `${i * 320}ms` }}>
-            <Check size={14} aria-hidden="true" /><span>{k}</span><em>{v}</em>
+            <Check size={14} aria-hidden="true" /><span>{k}</span><em>問題ありません</em>
           </li>
         ))}
       </ul>
+      <p className="sv-allok sv-a" style={{ ['--d' as string]: '1300ms' }}><Check size={14} aria-hidden="true" />すべて確認しました</p>
     </div>
   )
 }
@@ -319,8 +316,8 @@ function Flow() {
     ['キーワードと参考URL', '条件を入れる'],
     ['構成', '検索意図からアウトラインを作る'],
     ['執筆', '章ごとに書き、つながりを確かめる'],
-    ['点検', '事実の食い違いや薄い箇所を直す'],
-    ['書き出し', 'テキスト・Markdown・HTML・JSON'],
+    ['チェック', '事実の食い違いや薄い箇所を確かめる'],
+    ['書き出し', 'HTML・Markdown・note・テキスト'],
   ]
   return (
     <ol className="sv-flow" aria-label="記事ができるまでの流れ">
