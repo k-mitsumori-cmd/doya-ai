@@ -207,6 +207,7 @@ async function loadSales(userId: string, monthStart: Date, months: ReturnType<ty
   if (!membership) return null
   const orgId = membership.organizationId
   const slug = membership.organization.slug
+  const eventWindow = { gte: new Date(now.getTime() - 7 * 86400_000), lte: new Date(now.getTime() + 45 * 86400_000) }
 
   const [open, monthlyWon, upcomingDeals, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
     userId,
@@ -236,7 +237,7 @@ async function loadSales(userId: string, monthStart: Date, months: ReturnType<ty
       tx.sfaDeal.findMany({
         where: sfaRecordWhere(scope, 'deal', false, {
           status: 'open',
-          expectedCloseDate: { gte: new Date(now.getTime() - 7 * 86400_000), lte: new Date(now.getTime() + 45 * 86400_000) },
+          expectedCloseDate: eventWindow,
         }),
         orderBy: [{ expectedCloseDate: 'asc' }, { id: 'asc' }],
         select: { id: true, name: true, expectedCloseDate: true },
@@ -251,8 +252,8 @@ async function loadSales(userId: string, monthStart: Date, months: ReturnType<ty
       tx.sfaTask.count({ where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: { lt: now } }) }),
       tx.sfaLead.count({ where: sfaRecordWhere(scope, 'lead', false, { isActive: true, createdAt: { gte: monthStart } }) }),
       tx.sfaTask.findMany({
-        where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: { not: null } }),
-        orderBy: { dueDate: 'asc' },
+        where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: eventWindow }),
+        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
         select: { id: true, title: true, dueDate: true },
         take: 20,
       }),
