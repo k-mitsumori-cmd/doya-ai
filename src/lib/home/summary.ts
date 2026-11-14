@@ -15,7 +15,6 @@
 import { prisma } from '@/lib/prisma'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
-import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
 import { withSfaRecordRead } from '@/lib/sfa/record-authority'
 import { sfaRecordWhere } from '@/lib/sfa/record-policy'
 import { ROLE_HIERARCHY as SFA_ROLES, type SfaRole } from '@/lib/sfa/types'
@@ -345,54 +344,70 @@ async function loadQuotes(userId: string, months: ReturnType<typeof lastMonths>,
 }
 
 async function loadProjects(userId: string) {
-  const membership = await prisma.promaneMember.findFirst({
-    where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
-    include: { workspace: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (!membership) return null
-  const ws = membership.workspace
-  const [projects, members] = await Promise.all([
-    prisma.promaneProject.findMany({
-      where: { workspaceId: ws.id },
-      select: {
-        id: true, name: true, status: true, contractAmount: true, endDate: true,
-        expenses: { select: { amount: true } },
-        tasks: { select: { id: true, status: true } },
-      },
-      take: 500,
-    }),
-    prisma.promaneMember.findMany({
+  return prisma.$transaction(async (tx) => {
+    const membership = await tx.promaneMember.findFirst({
+      where: { userId, isActive: true, role: { in: PROMANE_ROLES } },
+      include: { workspace: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (!membership) return null
+    const ws = membership.workspace
+    const members = await tx.promaneMember.findMany({
       where: { workspaceId: ws.id },
       select: { hourlyRate: true, timeEntries: { select: { duration: true, hourlyRateSnapshot: true, projectId: true, taskId: true } } },
-    }),
-  ])
-  const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
-  const rows = projects.map((p) => {
-    const taskIds = p.tasks.map((t) => t.id)
-    let labor = 0
-    for (const m of members) {
-      for (const te of m.timeEntries) {
-        if (timeEntryBelongsToProject(te, p.id, taskIds)) labor += laborCostForEntry(te, m.hourlyRate)
+    })
+    const laborByProject = new Map<string, number>()
+    const legacyLaborByTask = new Map<string, number>()
+    for (const member of members) {
+      for (const entry of member.timeEntries) {
+        const costs = entry.projectId == null ? legacyLaborByTask : laborByProject
+        const id = entry.projectId ?? entry.taskId
+        if (id != null) costs.set(id, (costs.get(id) ?? 0) + laborCostForEntry(entry, member.hourlyRate))
       }
     }
-    const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
-    const revenue = safe(p.contractAmount)
-    return { ...p, revenue, cost: Math.round(labor + expense), profit: Math.round(revenue - labor - expense) }
-  })
-  const active = rows.filter((p) => p.status === 'ordered' || p.status === 'in_progress')
-  return {
-    href: `/promane/${ws.slug}/reports`,
-    activeProjects: active.length,
-    revenue: rows.reduce((a, p) => a + p.revenue, 0),
-    cost: rows.reduce((a, p) => a + p.cost, 0),
-    profit: rows.reduce((a, p) => a + p.profit, 0),
-    openTasks: rows.reduce((a, p) => a + p.tasks.filter((t) => t.status !== 'done').length, 0),
-    top: [...rows].sort((a, b) => b.revenue - a.revenue).slice(0, 5).map((p) => ({ name: p.name, revenue: p.revenue, profit: p.profit })),
-    events: rows
-      .filter((p) => p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status))
-      .map((p) => ({ id: `project-${p.id}`, date: p.endDate!.toISOString(), title: `納期: ${p.name}`, kind: 'project' as const, href: `/promane/${ws.slug}/projects/${p.id}` })),
-  }
+    const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? 0 : Math.max(0, n))
+    const pageSize = 500
+    let afterId: string | undefined
+    let activeProjects = 0
+    let revenue = 0
+    let cost = 0
+    let profit = 0
+    let openTasks = 0
+    const top: { name: string; revenue: number; profit: number }[] = []
+    const events: HomeEvent[] = []
+    while (true) {
+      const projects = await tx.promaneProject.findMany({
+        where: { workspaceId: ws.id, ...(afterId ? { id: { gt: afterId } } : {}) },
+        orderBy: { id: 'asc' },
+        take: pageSize,
+        select: {
+          id: true, name: true, status: true, contractAmount: true, endDate: true,
+          expenses: { select: { amount: true } },
+          tasks: { select: { id: true, status: true } },
+        },
+      })
+      for (const p of projects) {
+        const labor = p.tasks.reduce((total, task) => total + (legacyLaborByTask.get(task.id) ?? 0), laborByProject.get(p.id) ?? 0)
+        const expense = p.expenses.reduce((a, e) => a + safe(e.amount), 0)
+        const projectRevenue = safe(p.contractAmount)
+        const projectProfit = Math.round(projectRevenue - labor - expense)
+        if (p.status === 'ordered' || p.status === 'in_progress') activeProjects++
+        revenue += projectRevenue
+        cost += Math.round(labor + expense)
+        profit += projectProfit
+        openTasks += p.tasks.filter((task) => task.status !== 'done').length
+        top.push({ name: p.name, revenue: projectRevenue, profit: projectProfit })
+        top.sort((a, b) => b.revenue - a.revenue)
+        if (top.length > 5) top.pop()
+        if (p.endDate && !CLOSED_PROJECT_STATUSES.includes(p.status)) {
+          events.push({ id: `project-${p.id}`, date: p.endDate.toISOString(), title: `納期: ${p.name}`, kind: 'project', href: `/promane/${ws.slug}/projects/${p.id}` })
+        }
+      }
+      if (projects.length < pageSize) break
+      afterId = projects[projects.length - 1].id
+    }
+    return { href: `/promane/${ws.slug}/reports`, activeProjects, revenue, cost, profit, openTasks, top, events }
+  }, { isolationLevel: 'RepeatableRead', maxWait: 5_000, timeout: 20_000 })
 }
 
 async function loadAttendance(userId: string, monthStart: Date) {

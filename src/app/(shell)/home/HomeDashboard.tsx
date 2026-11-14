@@ -593,7 +593,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
         <Kpi icon={TrendingUp} label="今月の受注" value={s.sales.state === 'ready' ? s.sales.wonThisMonth : null} sub={s.sales.state === 'ready' ? `${s.sales.wonCountThisMonth}件` : s.sales.state === 'error' ? '読み込めませんでした' : '営業管理が未使用'} href={s.sales.href} muted={s.sales.state !== 'ready'} />
         <Kpi icon={FileText} label="今月確定した見積" value={s.quotes.state === 'ready' ? s.quotes.confirmedThisMonth : null} sub={s.quotes.state === 'ready' ? `下書き ${s.quotes.draftCount}件` : '見積が未使用'} href={s.quotes.href} muted={s.quotes.state !== 'ready'} />
         <Kpi icon={Wallet} label="受注見込み（確度で加重）" value={s.sales.state === 'ready' ? s.sales.weightedPipeline : null} sub={s.sales.state === 'ready' ? `進行中 ${s.sales.openDeals}件 / ${man(s.sales.openPipeline)}` : undefined} href={s.sales.state === 'ready' ? `${s.sales.href}/deals` : '/sfa'} muted={s.sales.state !== 'ready'} />
-        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
+        <Kpi icon={FolderKanban} label="プロジェクト利益" value={s.projects.state === 'ready' ? s.projects.profit : null} sub={s.projects.state === 'ready' ? `売上 ${man(s.projects.revenue)} ・ 原価 ${man(s.projects.cost)}` : s.projects.state === 'error' ? '読み込めませんでした' : 'プロマネが未使用'} href={s.projects.href} muted={s.projects.state !== 'ready'} />
       </section>
 
       {s.money ? <MoneyCard money={s.money} /> : null}
@@ -622,7 +622,9 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
         </section>
         <section className={styles.card}>
           <div className={styles.cardHead}><h2>プロジェクト収支</h2>{s.projects.state === 'ready' ? <Link href={s.projects.href} className={styles.cardLink}>レポート</Link> : null}</div>
-          {s.projects.state === 'ready' && s.projects.top.length ? (
+          {s.projects.state === 'error' ? (
+            <p className={styles.error} role="status">プロジェクト収支を読み込めませんでした。</p>
+          ) : s.projects.state === 'ready' && s.projects.top.length ? (
             <ul className={styles.projectList}>
               {s.projects.top.map((p) => (
                 <li key={p.name}>
@@ -633,7 +635,7 @@ export default function HomeDashboard({ initial, setupHidden = false, powerCard 
               ))}
             </ul>
           ) : (
-            <EmptyCard text="プロマネで案件を登録すると、売上・原価・利益が案件ごとに並びます。" href="/promane" cta="プロマネをはじめる" />
+            s.projects.state === 'ready' ? <p className={styles.chartEmpty}>案件がありません。</p> : <EmptyCard text="プロマネで案件を登録すると、売上・原価・利益が案件ごとに並びます。" href="/promane" cta="プロマネをはじめる" />
           )}
         </section>
       </div>
