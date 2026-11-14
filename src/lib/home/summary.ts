@@ -17,7 +17,9 @@ import { jstStartOfMonthUtc } from '@/lib/usage-summary'
 import { tierFrom, planLabel, isPaidTier, type PlanTier } from '@/lib/plan-utils'
 import { laborCostForEntry } from '@/lib/promane/labor-cost'
 import { timeEntryBelongsToProject } from '@/lib/promane/time-entry-project'
-import { ROLE_HIERARCHY as SFA_ROLES } from '@/lib/sfa/types'
+import { withSfaRecordRead } from '@/lib/sfa/record-authority'
+import { sfaRecordWhere } from '@/lib/sfa/record-policy'
+import { ROLE_HIERARCHY as SFA_ROLES, type SfaRole } from '@/lib/sfa/types'
 import { ROLE_HIERARCHY as HR_ROLES } from '@/lib/hr/constants'
 import { ROLE_HIERARCHY as INCOME_ROLES } from '@/lib/income/roles'
 import { EXPENSE_ROLES } from '@/lib/expense/constants'
@@ -209,32 +211,38 @@ async function loadSales(userId: string, monthStart: Date, trendStart: Date) {
   const slug = membership.organization.slug
   const now = new Date()
 
-  const [deals, wonForTrend, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await Promise.all([
-    prisma.sfaDeal.findMany({
-      where: { organizationId: orgId, isActive: true, OR: [{ status: 'open' }, { status: 'won', wonAt: { gte: monthStart } }] },
-      select: { id: true, name: true, amount: true, probability: true, status: true, stageId: true, expectedCloseDate: true },
-      take: 2000,
-    }),
-    prisma.sfaDeal.findMany({
-      where: { organizationId: orgId, isActive: true, status: 'won', wonAt: { gte: trendStart } },
-      select: { amount: true, wonAt: true },
-      take: 5000,
-    }),
-    prisma.sfaPipeline.findFirst({
-      where: { organizationId: orgId },
-      orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-      include: { stages: { orderBy: { order: 'asc' } } },
-    }),
-    prisma.sfaTask.count({ where: { organizationId: orgId, status: 'open' } }),
-    prisma.sfaTask.count({ where: { organizationId: orgId, status: 'open', dueDate: { lt: now } } }),
-    prisma.sfaLead.count({ where: { organizationId: orgId, isActive: true, createdAt: { gte: monthStart } } }),
-    prisma.sfaTask.findMany({
-      where: { organizationId: orgId, status: 'open', dueDate: { not: null } },
-      orderBy: { dueDate: 'asc' },
-      select: { id: true, title: true, dueDate: true },
-      take: 20,
-    }),
-  ])
+  const [deals, wonForTrend, pipeline, openTasks, overdueTasks, newLeads, upcomingTasks] = await withSfaRecordRead({
+    userId,
+    organizationId: orgId,
+    organizationSlug: slug,
+    role: membership.role as SfaRole,
+    memberId: membership.id,
+  }, (tx, scope) => Promise.all([
+      tx.sfaDeal.findMany({
+        where: sfaRecordWhere(scope, 'deal', false, { isActive: true, OR: [{ status: 'open' }, { status: 'won', wonAt: { gte: monthStart } }] }),
+        select: { id: true, name: true, amount: true, probability: true, status: true, stageId: true, expectedCloseDate: true },
+        take: 2000,
+      }),
+      tx.sfaDeal.findMany({
+        where: sfaRecordWhere(scope, 'deal', false, { isActive: true, status: 'won', wonAt: { gte: trendStart } }),
+        select: { amount: true, wonAt: true },
+        take: 5000,
+      }),
+      tx.sfaPipeline.findFirst({
+        where: { organizationId: orgId },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        include: { stages: { orderBy: { order: 'asc' } } },
+      }),
+      tx.sfaTask.count({ where: sfaRecordWhere(scope, 'task', false, { status: 'open' }) }),
+      tx.sfaTask.count({ where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: { lt: now } }) }),
+      tx.sfaLead.count({ where: sfaRecordWhere(scope, 'lead', false, { isActive: true, createdAt: { gte: monthStart } }) }),
+      tx.sfaTask.findMany({
+        where: sfaRecordWhere(scope, 'task', false, { status: 'open', dueDate: { not: null } }),
+        orderBy: { dueDate: 'asc' },
+        select: { id: true, title: true, dueDate: true },
+        take: 20,
+      }),
+    ]))
 
   const open = deals.filter((d) => d.status === 'open')
   const won = deals.filter((d) => d.status === 'won')
