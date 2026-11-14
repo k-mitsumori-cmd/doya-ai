@@ -11,6 +11,7 @@ import {
 import { LpShell, CtaBand, HowItWorks } from "@/components/lp";
 import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
+import { CountUp } from "@/components/lp/renewal/TopExtras";
 import { getListedServiceCount } from "@/lib/services";
 
 export default function HomePage() {
@@ -52,7 +53,10 @@ export default function HomePage() {
               </a>
             </div>
             <div className="doya-home-signature">
-              <span>{getListedServiceCount()}</span>の得意を、あなたのチームに。
+              <span>
+                <CountUp to={getListedServiceCount()} />
+              </span>
+              の得意を、あなたのチームに。
             </div>
           </div>
           <HomeMotionScene />
