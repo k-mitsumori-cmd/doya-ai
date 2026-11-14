@@ -50,7 +50,8 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
   const save = () => run('save', async () => { await persist() })
 
   // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の EXPENSE_ONEOFF_ADD ----
-  if (bridge) {
+  useEffect(() => {
+    if (!bridge) return
     bridge.current = {
       setValue: (key, value) => {
         switch (key) {
@@ -78,8 +79,8 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
         return r
       },
     }
-  }
-  useEffect(() => () => { if (bridge) bridge.current = null }, [bridge])
+    return () => { bridge.current = null }
+  })
 
   return (
     <Modal title="単発の支出を追加" onClose={onClose}>
