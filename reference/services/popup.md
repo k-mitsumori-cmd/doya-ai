@@ -382,7 +382,7 @@ export const manifest: ServiceManifest = {
   id: 'popup',
   name: 'ドヤポップアップ',
   stage: 'collect',
-  status: 'hidden',                      // 開発中（UNLISTED_SERVICE_IDS）。公開時に 'active'
+  status: 'active',                      // 2026-10-18 に公開。現行の services.ts に準拠
   landing: '/popup',
 
   dataModels: [

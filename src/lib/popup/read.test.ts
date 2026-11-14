@@ -87,7 +87,8 @@ function fakeDb() {
   return { db: db as unknown as PopupDb, wheres }
 }
 
-test('listSites: 自分の、削除していないサイトだけ。30日の集計つき', async () => {
+test('listSites: 自分の、削除していないサイトだけ。30日の集計つき', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW })
   const { db, wheres } = fakeDb()
   const list = await listSites(db, 'u1')
   assert.deepEqual(list.map((s) => s.id), ['s1'])
@@ -97,7 +98,8 @@ test('listSites: 自分の、削除していないサイトだけ。30日の集�
   assert.ok(wheres.every((w) => w.where.userId === 'u1'))
 })
 
-test('getSiteDetail: 他人のサイト・削除したサイトは null', async () => {
+test('getSiteDetail: 他人のサイト・削除したサイトは null', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: NOW })
   const { db } = fakeDb()
   assert.equal(await getSiteDetail(db, 'u1', 's2', 30), null)
   assert.equal(await getSiteDetail(db, 'u1', 's3', 30), null)
