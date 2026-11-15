@@ -125,6 +125,10 @@
       "schedule": "15 0 * * *"
     },
     {
+      "path": "/api/cron/heisha-activity-daily",
+      "schedule": "0 0 * * *"
+    },
+    {
       "path": "/api/cron/service-operations-daily",
       "schedule": "50 21 * * *"
     },
