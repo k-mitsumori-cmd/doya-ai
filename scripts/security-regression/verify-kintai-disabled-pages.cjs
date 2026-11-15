@@ -40,6 +40,10 @@ const mocks = {
 
 // Render the real extracted clock hook during SSR; effects remain unexecuted here.
 const loadTs = require('./load-typescript.cjs').load
+mocks['@/lib/use-once-form-scope'] = loadTs('src/lib/use-once-form-scope.ts', {
+  react: React,
+  './fetch-timeout': loadTs('src/lib/fetch-timeout.ts', {}, { setTimeout, clearTimeout }),
+})
 mocks['@/lib/kintai/use-clock'] = loadTs('src/lib/kintai/use-clock.ts', {
   react: React,
   './types': mocks['@/lib/kintai/types'],

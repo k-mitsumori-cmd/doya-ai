@@ -212,3 +212,13 @@ test('公開用の言い方: 旗が off なら今のまま、on なら1人いく
   assert.equal(on.meta, on.sentence)
   assert.equal(on.isPerSeat, true)
 })
+
+test('特商法の料金の行: 旗が off は基本料あり、1人いくらは基本料なしで段ごとの単価（/pricing と同じ値）', async () => {
+  const { tokushohoPriceLines } = await import('./legal-copy')
+  const off = tokushohoPriceLines(false)
+  assert.match(off[1]!, /基本料 月額 ¥9,800（税抜。税込 ¥10,780）/)
+  const on = tokushohoPriceLines(true)
+  assert.equal(on[1], 'チーム（月払い）: 使う人数1人につき月額 ¥3,980（税抜。税込 ¥4,378）。11人目からは1人につき月額 ¥2,980（税抜。税込 ¥3,278）。31人目からは1人につき月額 ¥2,480（税抜。税込 ¥2,728）')
+  assert.doesNotMatch(on.join('\n'), /基本料/)
+  assert.deepEqual(on.slice(2), off.slice(2))
+})

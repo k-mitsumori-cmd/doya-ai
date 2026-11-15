@@ -76,7 +76,7 @@ export default function ShodanEntryPage() {
       const d = await res.json()
       if (!isCurrent()) return
       if (!res.ok) throw new NavigationSubmissionError(d.error || '作成に失敗しました')
-      router.replace(`/shodan/${encodeURIComponent(d.organization.slug)}`)
+      router.replace(orgPath(d.organization.slug))
     })
   }
 

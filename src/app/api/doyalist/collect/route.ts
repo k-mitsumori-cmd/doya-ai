@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     const collected = collectedResult.companies
     if (collected.length === 0) {
       await failDoyalistExtraction(identity, undefined, undefined,
-        collectedResult.budgetExhausted ? 'collection_timeout' : !collectedResult.apiOk ? 'api_error' : 'no_hits')
+        collectedResult.budgetExhausted ? 'collection_timeout' : (!collectedResult.apiOk || collectedResult.providerFailed) ? 'api_error' : 'no_hits')
       return await doyalistOperationResponse(identity, quotaAction)
     }
 
@@ -160,6 +160,7 @@ export async function POST(req: NextRequest) {
       const warnings = [
         wasClamped ? `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。` : null,
         collectedResult.budgetExhausted ? `取得に時間がかかったため、取得できた${created.length}社を保存しました。再収集の前に保存済みの一覧をご確認ください。` : null,
+        collectedResult.providerFailed ? '一部の取得元を検索できなかったため、利用できた取得元の結果を保存しました。' : null,
       ].filter(Boolean).join(' ')
       return { ids: created.map(row => row.id), warning: warnings || undefined }
     })

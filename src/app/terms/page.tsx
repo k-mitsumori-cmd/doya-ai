@@ -1,11 +1,12 @@
-import type { Metadata } from 'next'
+import { buildPortalPageMetadata } from '@/lib/seo'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
-export const metadata: Metadata = {
+export const metadata = buildPortalPageMetadata({
+  path: '/terms',
   title: '利用規約',
   description: '株式会社スリスタが運営するドヤAI（ドヤバナーAI・ドヤ記事作成 等の各サービス）共通の利用規約',
-}
+})
 
 export default function TermsPage() {
   return (

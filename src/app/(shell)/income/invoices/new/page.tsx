@@ -9,6 +9,7 @@ import { useAgentForm } from '@/components/agent-chat/useAgentForm'
 import { failKindOf, isAgentSubmit } from '@/components/agent-chat/form-bus'
 import { createSaveLock } from '@/lib/agent-chat/review'
 import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
+import { useOnceFormScope } from '@/lib/use-once-form-scope'
 import {
   Button, Card, emptyLine, ErrorText, Field, LineItemsEditor, PageHeader, PageShell, errMsg, fetchJson, inputCls, linesToPayload, s, safeTotals, toast, useResource,
   useUnsavedGuard, type LineRow,
@@ -30,6 +31,7 @@ export default function NewInvoicePage() {
   const [notes, setNotes] = useState('')
   const [rows, setRows] = useState<LineRow[]>([emptyLine()])
   const [busy, setBusy] = useState(false)
+  const readScope = useOnceFormScope(() => fetchJson<{ scope: string }>('/api/income/invoices', { method: 'POST', body: { onceAction: 'scope' } }).then((r) => r.scope))
   const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -88,8 +90,9 @@ export default function NewInvoicePage() {
       const d = await submitOnce({
         scope: 'income-invoice',
         input: body,
-        send: (operationId) => fetchJson<{ invoice: { id: string } }>('/api/income/invoices', { method: 'POST', body: { ...body, operationId } }),
-        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/invoices', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
+        readScope,
+        send: (operationId, operationScope) => fetchJson<{ invoice: { id: string } }>('/api/income/invoices', { method: 'POST', body: { ...body, operationId, operationScope } }),
+        resolve: (operationId, operationScope) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/invoices', { method: 'POST', body: { operationId, operationScope, onceAction: 'resolve' } }).then((r) => r.once.state),
       })
       saveLock.close()
       markClean()

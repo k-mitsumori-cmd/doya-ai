@@ -40,7 +40,7 @@ async function scenario(name,options,work){
    if(n==='react')return React;if(n==='react/jsx-runtime')return dep('react/jsx-runtime');
    if(n==='next-auth/react')return{useSession:()=>React.useContext(Session)};
    if(n==='lucide-react')return{Minus:()=>null,Plus:()=>null,Copy:()=>null,Check:()=>null};
-   if(n==='@/components/ds')return{confirmDialog:async data=>{dialogs.push(data);return confirm?confirm.promise:true}};
+   if(n==='@/components/ds')return{confirmDialog:async data=>{dialogs.push(data);return confirm?confirm.promise:!options.declineConfirmation}};
    if(n.endsWith('.module.css'))return{__esModule:true,default:classes};
    if(n==='./PaymentThanks')return{__esModule:true,default:()=>null};
    if(n.startsWith('@/'))return load('src/'+n.slice(2)+'.ts');
@@ -83,6 +83,37 @@ async function scenario(name,options,work){
  results.push(await scenario('fresh-change-binds-confirmed-quantity-and-principal',{},async x=>{
   await x.click('1人増やす');await x.click('人数を変える');const posts=x.calls.filter(c=>c.method==='POST');assert.equal(posts.length,1);assert.equal(posts[0].body.expectedSeats,5);assert.equal(posts[0].body.seats,6);assert.equal(posts[0].owner,'owner-a');assert.equal(x.uuid(),1);
  }));
+ for (const interval of ['month', 'year']) {
+  for (const strict of [false, true]) {
+   for (const up of [true, false]) {
+    const intervalLabel = interval === 'year' ? '年額' : '月額';
+    const delta = interval === 'year' ? '¥29,800' : '¥2,980';
+    const inclusive = interval === 'year' ? '¥32,780' : '¥3,278';
+    const expected = `${intervalLabel}（税抜）が ${up ? '+' : '−'}${delta} 変わります（税込 ${inclusive}）`;
+    results.push(await scenario(`recurring-delta-${interval}-${up ? 'up' : 'down'}-${strict ? 'strict' : 'normal'}`, {
+     strict,
+     declineConfirmation: true,
+     onFetch: ({url, method, response}) => url === '/api/pricing/seats' && method === 'GET'
+      ? response({...ready(5), interval})
+      : undefined,
+    }, async x => {
+     await x.click(up ? '1人増やす' : '1人減らす');
+     assert(x.text().includes(expected));
+     await x.click('人数を変える');
+     assert.equal(x.dialogs.length, 1);
+     assert(x.dialogs[0].message.includes(expected));
+     if (up) {
+      assert(x.dialogs[0].message.includes('次の請求日までの日割り'));
+      assert(x.dialogs[0].message.includes('日割りの金額はこの画面には表示されません'));
+     } else {
+      assert(x.dialogs[0].message.includes('減らした分の返金はありません'));
+     }
+     assert(x.calls.every(c => c.method === 'GET'));
+     assert.equal(x.uuid(), 0);
+    }));
+   }
+  }
+ }
  results.push(await scenario('double-click-before-render-does-not-duplicate-confirmation',{confirmDeferred:true},async x=>{
   await x.click('1人増やす');const target=x.button('人数を変える');await React.act(async()=>{target.dispatchEvent(new x.dom.window.MouseEvent('click',{bubbles:true}));target.dispatchEvent(new x.dom.window.MouseEvent('click',{bubbles:true}));await flush()});assert.equal(x.dialogs.length,1);await React.act(async()=>{x.confirm.resolve(true);await flush()});assert.equal(x.calls.filter(c=>c.method==='POST').length,1);
  }));

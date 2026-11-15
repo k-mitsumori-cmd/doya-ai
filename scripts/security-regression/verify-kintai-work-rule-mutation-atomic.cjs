@@ -68,4 +68,21 @@ function fixture({ actorRole = 'hr_admin', employeeCount = 0 } = {}) {
     assert.equal((await f.item.DELETE(await f.deleteRequest('new'), f.context('new'))).status, 200)
     assert.equal(f.writes, 3)
   })
+
+  await check('work rule rejects stale and missing revisions without overwriting the first save', async () => {
+    const f = fixture()
+    const context = f.context('rule')
+    const initialRevision = (await f.request({}).json()).expectedRevision
+
+    const first = await f.item.PATCH(f.request({ expectedRevision: initialRevision, name: 'First change' }), context)
+    assert.equal(first.status, 200)
+    assert.notEqual((await first.json()).rule.revision, initialRevision)
+
+    const stale = await f.item.PATCH(f.request({ expectedRevision: initialRevision, name: 'Stale change' }), context)
+    const missing = await f.item.PATCH(f.request({ expectedRevision: undefined, name: 'Missing revision' }), context)
+    assert.equal(stale.status, 409)
+    assert.equal(missing.status, 428)
+    assert.equal(f.rows.get('rule').name, 'First change')
+    assert.equal(f.writes, 1)
+  })
 })().catch(error => { console.error(error); process.exitCode = 1 })

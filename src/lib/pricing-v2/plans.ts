@@ -28,7 +28,7 @@ export const TEAM_SEAT_TIERS: readonly { upTo: number; unitMonthly: number }[] =
 /**
  * 料金の形（2026-11-10 追加）。
  *   base_plus_seat … 今の本番。基本料 ＋ 人数の分（11人目から安くなる）。ドヤパワーは 1,500 ＋ 1人 300
- *   per_seat       … 1人いくら。基本料なし。人数による値引きなし。ドヤパワーは 1人 400（基本の分なし）
+ *   per_seat       … 1人いくら。基本料なし。11人目・31人目から安くなる。ドヤパワーは段ごとに 1人 500・400・350（基本の分なし）
  * 旗 PER_SEAT_PRICING_ROLLOUT が off のあいだは、いつも base_plus_seat（rollout.ts の isPerSeatPricingFor）。
  * ⚠️ 関数の引数 model を省くと base_plus_seat。今の本番の動きを変えないための既定値。
  */

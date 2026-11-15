@@ -75,11 +75,24 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
   let api; let reactRoot = null; let unregister = () => {};
   const posts = [];
   let gets = 0;
+  let changedScope = false;
   global.fetch = async (url, init) => {
     if (url === '/api/income/issuer') { gets++; return Response.json({ issuer: null }); }
     if (url === '/api/income/clients') { gets++; return Response.json({ clients: [{ id: 'c1', name: 'Sample A' }] }); }
-    if (url === '/api/income/contracts' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ id: 'made' }); }
-    if (url === '/api/income/invoices' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return Response.json({ invoice: { id: 'made-invoice' } }); }
+    if (url === '/api/income/contracts' && init.method === 'POST') {
+      const body = JSON.parse(init.body);
+      if (body.onceAction === 'scope') return Response.json({ scope: (changedScope ? 'c' : 'a').repeat(64) });
+      assert.equal(body.operationScope, 'a'.repeat(64));
+      posts.push(body);
+      return Response.json({ id: 'made' });
+    }
+    if (url === '/api/income/invoices' && init.method === 'POST') {
+      const body = JSON.parse(init.body);
+      if (body.onceAction === 'scope') return Response.json({ scope: (changedScope ? 'c' : 'b').repeat(64) });
+      assert.equal(body.operationScope, 'b'.repeat(64));
+      posts.push(body);
+      return Response.json({ invoice: { id: 'made-invoice' } });
+    }
     throw Error('予定外の通信: ' + url);
   };
   const Probe = () => { api = fx.useAgentChat(); return null; };
@@ -418,6 +431,24 @@ const sample = (f) => (f.type === 'yen' ? '100000' : f.type === 'date' ? '2026-1
   });
 
   unregister();
+  for (const [label, formKey, start] of [
+    ['契約', 'income.contract.new', startReal],
+    ['請求書', INVOICE, startInvoice],
+  ]) {
+    await check(`本物の${label}フォーム: 開いた後に利用者が変わったら保存しない`, async () => {
+      await start();
+      changedScope = true;
+      try {
+        let result;
+        await act(async () => { result = await fx.getAgentForm(formKey).submit(); });
+        assert.equal(result.ok, false);
+        assert.match(result.error, /ログイン情報または組織が変わりました/);
+        assert.equal(posts.length, 0);
+      } finally {
+        changedScope = false;
+      }
+    });
+  }
   await act(async () => reactRoot.unmount());
   dom.window.close();
   const result = { checkedAt: new Date().toISOString(), passed: checks.length, failed: 0, checks, syntheticContractPosts: 'in-memory only', syntheticGets: gets, scope: 'React/jsdom。実際のブラウザ、ログインと権限の切り替え、実際の保存、通信の結果が分からないあとの再送は含まない。' };

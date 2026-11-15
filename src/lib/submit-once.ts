@@ -45,10 +45,27 @@ export function isOnceResolve(body: unknown): boolean {
   return Boolean(body && typeof body === 'object' && (body as Record<string, unknown>).onceAction === 'resolve')
 }
 
-/** 中身の比較には、番号と確認の指示を除いた送信の中身を使う */
+/** 画面の操作IDを、APIが実際に解決した組織と操作者に結び付ける。 */
+export function onceScopeKey(scope: Pick<OnceScope, 'family' | 'organizationId' | 'actorId'>): string {
+  return hash(['submit-once-scope:v1', scope.family, scope.organizationId, scope.actorId])
+}
+
+export function isOnceScopeRequest(body: Record<string, unknown>): boolean {
+  return body.onceAction === 'scope'
+}
+
+export function assertOnceScope(body: Record<string, unknown>, scope: OnceScope): void {
+  // 公開済みの画面や既存APIクライアントの送信を引き続き受け付ける。
+  if (body.operationScope === undefined) return
+  if (body.operationScope !== onceScopeKey(scope) || !scope.operationId) {
+    throw scope.fail(412, 'ログイン情報または組織が変わりました。画面を確認してから、もう一度お試しください。')
+  }
+}
+
+/** 中身の比較には、番号・操作の区分・確認の指示を除いた送信の中身を使う */
 function inputHashOf(input: unknown): string {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return hash(input)
-  const { operationId: _op, onceAction: _action, ...rest } = input as Record<string, unknown>
+  const { operationId: _op, onceAction: _action, operationScope: _scope, ...rest } = input as Record<string, unknown>
   return hash(rest)
 }
 

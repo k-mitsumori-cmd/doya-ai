@@ -10,6 +10,7 @@
 // 計算の決まりは team.ts（テストあり）。
 import { prisma } from '@/lib/prisma'
 import type { Prisma, PrismaClient } from '@prisma/client'
+import type Stripe from 'stripe'
 import { stripe, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
@@ -40,8 +41,10 @@ export interface TeamSubscription {
   status: string
 }
 
+type LiveTeamSubscription = TeamSubscription & { collectionMethod: Stripe.Subscription.CollectionMethod }
+
 /** Stripe から、持ち主のチームの契約と人数を読む（無ければ null）。読めなければ例外（「契約なし」と取り違えない） */
-async function readTeamSubscriptionFromStripe(owner: { id: string; email: string | null; stripeCustomerId: string | null }, companyId: string): Promise<TeamSubscription | null> {
+async function readTeamSubscriptionFromStripe(owner: { id: string; email: string | null; stripeCustomerId: string | null }, companyId: string): Promise<LiveTeamSubscription | null> {
   const live = await findActiveLikeSubscriptions({ userId: owner.id, email: owner.email, stripeCustomerId: owner.stripeCustomerId })
   const team = live.find((s) => s.planId === TEAM_PLAN_ID)
   if (!team) return null
@@ -52,7 +55,7 @@ async function readTeamSubscriptionFromStripe(owner: { id: string; email: string
   const seatItem = findSeatItem(sub.items.data as any[], seatIds)
   if (!seatItem || !seatItem.quantity) return null
   const interval = seatItemInterval(seatItem.price.id) ?? 'month'
-  return { companyId, subscriptionId: sub.id, seatItemId: seatItem.id, seats: seatItem.quantity, interval, status: String(sub.status) }
+  return { companyId, subscriptionId: sub.id, seatItemId: seatItem.id, seats: seatItem.quantity, interval, status: String(sub.status), collectionMethod: sub.collection_method }
 }
 
 /** 控えを書き直す（無ければ作る）。チームの契約が無くなっていれば消す */
@@ -221,7 +224,7 @@ export async function ownerTeamContext(userId: string): Promise<{
 }
 
 /** 人数の変更のため、Stripe の契約を読み直す（控えではなく正を見る） */
-export async function readOwnerTeamSubscription(ctx: NonNullable<Awaited<ReturnType<typeof ownerTeamContext>>>): Promise<TeamSubscription | null> {
+export async function readOwnerTeamSubscription(ctx: NonNullable<Awaited<ReturnType<typeof ownerTeamContext>>>): Promise<LiveTeamSubscription | null> {
   return readTeamSubscriptionFromStripe(ctx.owner, ctx.companyId)
 }
 

@@ -1,14 +1,22 @@
 process.env.NODE_ENV='test';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),React=require('react'),{JSDOM}=require('jsdom'),{load}=require('./load-typescript.cjs'),{createOrgClient}=require('./org-client-test-loader.cjs'),research=require('./shodan-research-fixture.cjs');
 const dom=new JSDOM('<body></body>',{url:'https://example.invalid/shodan/alpha/new'});global.window=dom.window;global.document=dom.window.document;global.IS_REACT_ACT_ENVIRONMENT=true;const {createRoot}=require('react-dom/client'),checks=[];
+const prefill=load('src/lib/agent-router/prefill.ts');
+const prefillHook=load('src/components/agent-router/useDoyaPrefill.ts',{react:React,'@/lib/agent-router/prefill':prefill},{window});
+const prefillKey='shodan-audit-fixture-20261111', prefillValue='https://example.invalid/fixture';
+
 async function fixture(options={}){
+ window.sessionStorage.clear();
+ window.history.replaceState(null,'','/shodan/alpha/new'+(options.prefill?'?keep=1&doya_k='+prefillKey:''));
+ if(options.prefill)prefill.stashPrefill({url:prefillValue},window.sessionStorage,Date.now(),()=>prefillKey);
+
  const Session=React.createContext(null);let status=options.status||'authenticated',session=options.session===undefined?{user:{id:'actor-a',plan:'FREE'}}:options.session,org='alpha',closed=false,seq=0,reply=options.reply||(()=>Response.json({id:'prep-a',status:'researched',research:research()})),profileReply=()=>Response.json({profile:null}),routeThrows=false;
  const calls=[],routes=[],errors=[],events=[],timers=new Map(),timeout=(fn,ms)=>{const id=++seq;timers.set(id,{fn:()=>{timers.delete(id);fn()},ms});return id},clear=id=>timers.delete(id);
  const fetch=async(url,init)=>{calls.push({url,init});return init.method==='POST'?reply(init):profileReply(init)};
  const {client}=createOrgClient('shodan',{fetch,setTimeout:timeout,clearTimeout:clear});const guard=load('src/lib/use-org-settings-guard.ts',{react:React,'next-auth/react':{useSession:()=>React.useContext(Session)}},{AbortController});const version=load('src/lib/org-profile-version.ts'),view=load('src/lib/org-profile-view.ts',{'./org-profile-version':version});
  const router={replace:p=>{routes.push(p);if(routeThrows)throw Error('SYNTHETIC_PRIVATE')}};
  const motion=new Proxy({},{get:(_t,tag)=>({children,initial,animate,exit,whileHover,whileTap,transition,...props})=>React.createElement(tag,props,children)});
- const mocks={'@/components/one-button/context':{useOneButton:()=>false},'@/components/one-button/OneButtonBar':{OneButtonBar:()=>null},'@/components/agent-router/useDoyaPrefill':{useDoyaPrefill:()=>{}},react:React,'react/jsx-runtime':require('react/jsx-runtime'),'next/navigation':{useParams:()=>({orgSlug:org}),useRouter:()=>router},'next/link':{__esModule:true,default:({children,...p})=>React.createElement('a',p,children)},'framer-motion':{motion,AnimatePresence:({children})=>children},'@/lib/shodan/client':client,'@/lib/use-org-settings-guard':guard,'@/lib/org-profile-view':view,'@/components/shodan/ui':{DoyaKun:()=>null,SiteShot:()=>null,PageHeader:()=>null,sym:()=>null},'react-hot-toast':{__esModule:true,default:{error:s=>errors.push(s),success:s=>errors.push('success:'+s)}}};
+ const mocks={'@/components/one-button/context':{useOneButton:()=>false},'@/components/one-button/OneButtonBar':{OneButtonBar:()=>null},'@/components/agent-router/useDoyaPrefill':prefillHook,react:React,'react/jsx-runtime':require('react/jsx-runtime'),'next/navigation':{useParams:()=>({orgSlug:org}),useRouter:()=>router},'next/link':{__esModule:true,default:({children,...p})=>React.createElement('a',p,children)},'framer-motion':{motion,AnimatePresence:({children})=>children},'@/lib/shodan/client':client,'@/lib/use-org-settings-guard':guard,'@/lib/org-profile-view':view,'@/components/shodan/ui':{DoyaKun:()=>null,SiteShot:()=>null,PageHeader:()=>null,sym:()=>null},'react-hot-toast':{__esModule:true,default:{error:s=>errors.push(s),success:s=>errors.push('success:'+s)}}};
  const target={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/app/(shell)/shodan/[orgSlug]/new/page.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:target,require:n=>{assert.ok(n in mocks,n);return mocks[n]},URL,Error,window,CustomEvent:dom.window.CustomEvent,setTimeout:timeout,clearTimeout:clear,setInterval:(fn,ms)=>{const id=++seq;timers.set(id,{fn,ms,interval:true});return id},clearInterval:clear});
  const c=document.createElement('div');document.body.append(c);const root=createRoot(c),props=e=>{assert.ok(e,'Missing DOM element');return e[Object.keys(e).find(k=>k.startsWith('__reactProps$'))]},act=fn=>React.act(async()=>{await fn();for(let i=0;i<8;i++)await new Promise(setImmediate)}),render=()=>act(()=>root.render(React.createElement(Session.Provider,{value:{status,data:session}},React.createElement(React.StrictMode,null,React.createElement(target.default)))));
  const listener=e=>events.push(e.detail);window.addEventListener('shodan:usage-changed',listener);await render();const button=()=>c.querySelector('button[data-testid=shodan-create]'),input=()=>c.querySelector('#shodan-new-url');
@@ -16,6 +24,24 @@ async function fixture(options={}){
 }
 async function check(name,fn,options){const f=await fixture(options);try{await fn(f);assert.ok(!f.c.textContent.includes('SYNTHETIC_PRIVATE'));if(process.env.DOYA_SHODAN_VISUAL_DIR){const states={'Same-frame repeated create sends one immutable normalized URL and one scoped usage event':'reveal','Network or server failure does not erase draft or claim confirmed failure':'unknown','Quota rejection keeps draft and owner-specific action Free limit':'free-limit','Quota rejection keeps draft and owner-specific action Paid limit':'paid-limit','Quota rejection keeps draft and owner-specific action Owner consultation':'member-limit','Server 401 shows login and rejects retained creation callback':'login'};if(states[name]){fs.mkdirSync(process.env.DOYA_SHODAN_VISUAL_DIR,{recursive:true});fs.writeFileSync(require('node:path').join(process.env.DOYA_SHODAN_VISUAL_DIR,states[name]+'.html'),'<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="style.css"><body><main class="min-h-screen bg-slate-50">'+f.c.innerHTML+'</main></body></html>')}}checks.push(name)}finally{await f.close();assert.equal(f.timers.size,0)}}
 (async()=>{
+await check('Authenticated page prefills without an automatic POST',async f=>{
+ assert.equal(f.input().value,prefillValue);
+ assert.equal(f.posts().length,0);
+ assert.equal(window.location.search,'?keep=1');
+ assert.equal(window.sessionStorage.getItem('doya-prefill:'+prefillKey),null);
+ await f.edit('https://example.invalid/edited');
+ await f.render();
+ assert.equal(f.input().value,'https://example.invalid/edited');
+ f.org('beta');await f.render();assert.equal(f.input().value,'');
+},{prefill:true});
+await check('Loading session defers key consumption until actor is ready',async f=>{
+ assert.equal(f.input(),null);
+ assert.ok(window.sessionStorage.getItem('doya-prefill:'+prefillKey));
+ f.auth('authenticated',{user:{id:'actor-a',plan:'FREE'}});await f.render();
+ assert.equal(f.input().value,prefillValue);
+ assert.equal(f.posts().length,0);
+ assert.equal(window.sessionStorage.getItem('doya-prefill:'+prefillKey),null);
+},{prefill:true,status:'loading',session:null});
 await check('Same-frame repeated create sends one immutable normalized URL and one scoped usage event',async f=>{await f.edit('example.invalid');const run=f.props(f.button()).onClick;await f.act(()=>{run();run()});assert.equal(f.posts().length,1);assert.equal(JSON.parse(f.posts()[0].init.body).url,'https://example.invalid/');assert.ok(f.c.textContent.includes('企業調査が完了'));assert.deepEqual(JSON.parse(JSON.stringify(f.events)),[{actor:'actor-a',organizationSlug:'alpha'}]);assert.ok(f.c.querySelector('a[href="/shodan/alpha/p/prep-a"]'));await f.expire(3400);assert.deepEqual(f.routes,['/shodan/alpha/p/prep-a'])});
 for(const bad of [{companyName:'Only'}, {...research(),marketing:null}, {...research(),ownedMedia:{}}, {...research(),marketing:{...research().marketing,snsChannels:{}}}, {...research(),companyName:{}}, {...research(),pressReleases:[{}]}])await check('Incomplete research stays recoverable without rendering or automatic retry #'+checks.length,async f=>{await f.edit('example.invalid');await f.click();assert.ok(f.c.textContent.includes('作成結果を確認できません'));assert.ok(f.button().disabled);assert.ok(f.c.textContent.includes('作成結果の確認が必要です'));assert.ok(!f.c.textContent.includes('タブを開いたままお待ちください'));await f.click();assert.equal(f.posts().length,1);assert.equal(f.routes.length,0);assert.ok(f.c.querySelector('a[href="/shodan/alpha"]'))},{reply:()=>Response.json({id:'prep-a',status:'researched',research:bad})});
 await check('Timeout remains unknown and preserves URL without auto resend',async f=>{f.reply(()=>new Promise(()=>{}));await f.edit('example.invalid');await f.click();const request=f.posts()[0];await f.expire(310000);assert.ok(request.init.signal.aborted);assert.equal(f.input().value,'example.invalid');await f.click();assert.equal(f.posts().length,1);assert.ok(f.button().disabled)});

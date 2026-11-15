@@ -155,7 +155,7 @@ type ServiceId = 'seo' | 'banner' | 'bundle'
 | GET | `/api/banner/thumb` | サムネイル |
 | GET | `/api/banner/models` | 利用可能モデル一覧 |
 | GET | `/api/banner/stats` | 統計 |
-| * | `/api/banner/test/*` | テスト用 (debug, generate, health, image, templates, bootstrap 等 12+) |
+| * | `/api/banner/test/*` | テンプレート一覧・生成・画像・bootstrap 等（debug / health / templates-minimal は撤去済み） |
 
 ## SEO API (60+)
 

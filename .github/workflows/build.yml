@@ -106,3 +106,6 @@ jobs:
 
       - name: Annual report native deployment modules
         run: node scripts/regression/check-annual-report-traces.cjs
+
+      - name: Interview PDF deployment assets
+        run: node scripts/regression/check-mensetsu-pdf-trace.cjs

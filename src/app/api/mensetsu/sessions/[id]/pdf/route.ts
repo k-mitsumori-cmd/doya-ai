@@ -5,6 +5,7 @@ export const maxDuration = 300
 // GET /api/mensetsu/sessions/[id]/pdf — 評価レポートPDF（F2-5）
 // ?transcript=1 で逐語ログも綴じる（既定は載せない。応募者の発言そのものであるため）
 import { NextRequest, NextResponse } from 'next/server'
+import { privateApiJson, privateApiResponse } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { weightedAverage } from '@/lib/mensetsu/evaluate'
@@ -16,7 +17,7 @@ type Ctx = { params: Promise<{ id: string }> }
 export async function GET(req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
-  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!c) return privateApiJson({ error: '組織が見つかりません' }, { status: 401 })
 
   const includeTranscript = new URL(req.url).searchParams.get('transcript') === '1'
 
@@ -31,9 +32,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       turns: { orderBy: [{ startMs: { sort: 'asc', nulls: 'last' } }, { ord: 'asc' }, { id: 'asc' }] },
     },
   })
-  if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+  if (!s) return privateApiJson({ error: '見つかりません' }, { status: 404 })
   if (!s.evaluatedAt) {
-    return NextResponse.json({ error: 'まだ評価が実行されていません' }, { status: 400 })
+    return privateApiJson({ error: 'まだ評価が実行されていません' }, { status: 400 })
   }
 
   const scoreByCriterionId = new Map(s.scores.map((x) => [x.criterionId, x]))
@@ -78,15 +79,14 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     // ファイル名にASCII以外を入れるとヘッダで壊れるため filename* (RFC 5987) を使う
     const base = `mensetsu-report-${s.id.slice(0, 8)}.pdf`
     const label = `${s.candidateName || '応募者'}_面接評価レポート.pdf`
-    return new NextResponse(Buffer.from(pdf), {
+    return privateApiResponse(new NextResponse(Buffer.from(pdf), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${base}"; filename*=UTF-8''${encodeURIComponent(label)}`,
-        'Cache-Control': 'no-store',
       },
-    })
+    }))
   } catch (e: any) {
     console.error('[mensetsu] pdf error')
-    return NextResponse.json({ error: 'PDFの生成に失敗しました' }, { status: 502 })
+    return privateApiJson({ error: 'PDFの生成に失敗しました' }, { status: 502 })
   }
 }

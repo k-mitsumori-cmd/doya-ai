@@ -5,7 +5,7 @@ const ts = require('typescript')
 const { load, check, results } = require('./load-typescript.cjs')
 const callbackHelpers=load('src/lib/safe-signin-callback.ts')
 
-function fixture(service, response, sdk = () => Promise.resolve(), authed = true) {
+function fixture(service, response, sdk = () => Promise.resolve(), authed = true, query = '') {
   const slots = [], effects = [], cleanups = [], errors = [], toastIds = [], requests = [], auth = [], navigation = []
   const listeners = new Map()
   let cursor = 0, mounted = false
@@ -42,7 +42,19 @@ function fixture(service, response, sdk = () => Promise.resolve(), authed = true
     fetch: async (url, options) => { requests.push({ url, options }); return response(requests.length) },
     router: { replace: url => navigation.push(url) }, JSON, Error, encodeURIComponent,
   }
-  vm.runInNewContext(ts.transpileModule(source.slice(start, end) + `\nexports.run=${handler};`, {
+  let helper = ''
+  if (service === 'shodan') {
+    const from = source.indexOf('function orgPath(')
+    const to = source.indexOf('\n}', from) + 2
+    assert.ok(from >= 0 && to > from)
+    helper = source.slice(from, to)
+    const prefill = load('src/lib/agent-router/prefill.ts')
+    Object.assign(context, load('src/lib/agent-router/entry.ts', { './prefill': prefill }, {
+      URLSearchParams,
+      window: { location: { search: query } },
+    }))
+  }
+  vm.runInNewContext(ts.transpileModule(helper + '\n' + source.slice(start, end) + `\nexports.run=${handler};`, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, context)
   render()
@@ -56,6 +68,15 @@ const success = () => ({ status: 200, ok: true, json: async () => ({ slug: 'çµ„ç
 
 ;(async () => {
   // AIO's durable recovery is exercised by mandatory actual React hook/view and native tests.
+  await check('shodan: first organization keeps the agent destination and prefill key', async () => {
+    const key = 'synthetic-prefill-key-20261111'
+    const f = fixture('shodan', success, undefined, true, `?to=new&doya_k=${key}`)
+    await f.run()
+    assert.equal(f.busy(), true)
+    assert.deepEqual(f.navigation, [`/shodan/%E7%B5%84%E7%B9%94%20%E5%90%8D/new?doya_k=${key}`])
+    f.unmount()
+  })
+
   for (const service of ['sfa', 'shodan']) {
     await check(`${service}: unauthorized SDK failure recovers, hides raw details and retries unchanged input`, async () => {
       const f = fixture(service, unauthorized, () => Promise.reject(Error('PRIVATE_SDK_DETAILS')))
