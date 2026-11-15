@@ -61,7 +61,7 @@ export default function DesignKitStudio({ kit, confirmed, onChange, onConfirm, o
         </div>
         <div className="flex items-center gap-1.5" aria-label="決まりの色">
           {(['primary', 'dark', 'accent'] as const).map((k) => (
-            <span key={k} className="h-7 w-7 rounded-full ring-2 ring-white" style={{ background: kit.palette[k], boxShadow: '0 0 0 1px rgba(16,22,51,.15)' }} title={`${k} ${kit.palette[k]}`} />
+            <span key={k} className="h-7 w-7 rounded-full outline outline-1 outline-offset-2 outline-[var(--line-strong)]" style={{ background: kit.palette[k] }} title={`${k} ${kit.palette[k]}`} />
           ))}
         </div>
         <button type="button" onClick={onReopen} className="inline-flex min-h-[44px] items-center gap-2 rounded-[var(--r-sm)] border-2 border-doya-500 px-4 text-sm font-black text-doya-600">
@@ -76,7 +76,7 @@ export default function DesignKitStudio({ kit, confirmed, onChange, onConfirm, o
       <div>
         <h2 id="kit-title" className="text-[18px] font-bold leading-snug text-ink">ブースのデザインの決まりを、先に決めます</h2>
         <p className="mt-1 text-[14px] leading-relaxed text-[var(--sub)]">ここで決めた色・形・文字の置き方で、面も制作物も、すべて同じに作ります。確定するまで、画像は作れません。この画面は、費用がかかりません。</p>
-        {madeCount > 0 && <p className="mt-2 rounded-[var(--r-sm)] bg-amber-50 px-3 py-2 text-[13px] font-bold text-amber-900">すでに作った {madeCount} 面の画像は、前の決まりで作られています。決まりを直したあとで作り直すと、新しい決まりでそろいます。</p>}
+        {madeCount > 0 && <p className="mt-2 rounded-[var(--r-sm)] bg-[var(--note-bg,var(--blue-soft))] px-3 py-2 text-[13px] font-bold text-[color:var(--note-ink,var(--ink))]">すでに作った {madeCount} 面の画像は、前の決まりで作られています。決まりを直したあとで作り直すと、新しい決まりでそろいます。</p>}
       </div>
 
       <div role="radiogroup" aria-label="決まりの案" className="grid grid-cols-3 gap-3">
@@ -126,7 +126,7 @@ export default function DesignKitStudio({ kit, confirmed, onChange, onConfirm, o
 
       <ul className="grid gap-1.5" aria-label="決まりの点検">
         {checks.map((c) => (
-          <li key={c.key} className={`flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-sm)] px-3 py-2 text-[13px] font-bold ${c.ok ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'}`}>
+          <li key={c.key} className={`flex flex-wrap items-center justify-between gap-2 rounded-[var(--r-sm)] px-3 py-2 text-[13px] font-bold ${c.ok ? 'bg-[var(--ok-bg,var(--blue-soft))] text-[color:var(--ink)]' : 'bg-[var(--bad-bg,var(--blue-soft))] text-[color:var(--bad-ink,var(--ink))]'}`}>
             <span>{c.label}</span>
             <span>{c.ok ? `対比 ${c.value}（${c.min} 以上。問題ありません）` : `対比 ${c.value}。${c.min} 以上にしてください`}</span>
           </li>
@@ -134,7 +134,7 @@ export default function DesignKitStudio({ kit, confirmed, onChange, onConfirm, o
       </ul>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
-        {!allOk && <p className="text-[13px] font-bold text-rose-800">足りない点を直すと、確定できます。</p>}
+        {!allOk && <p className="text-[13px] font-bold text-[color:var(--bad-ink,var(--ink))]">足りない点を直すと、確定できます。</p>}
         <button type="button" disabled={!allOk} onClick={onConfirm} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-doya-500 px-5 text-sm font-black text-white shadow-lg shadow-doya-500/30 disabled:cursor-not-allowed disabled:opacity-40">
           <Check className="h-4 w-4" aria-hidden /> この決まりで確定する
         </button>
