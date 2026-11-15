@@ -191,3 +191,27 @@ test('エラーの通知では秘密と個人情報を伏せる（1.2.0）', () 
   const report = styleSlackPayload({ text: '*日報*\n<https://doya-ai.surisuta.jp/admin?tab=users|開く>' }, { app: 'ドヤAI', kind: 'report', severity: 'info' }) as P
   assert.match(report.text, /\?tab=users/)
 })
+
+import { maskPersonalText, excerptMasked, SLACK_NOTIFY_VERSION } from './notify'
+
+test('抜粋の伏せ字: メール・電話・URL・ハンドル・会社名・敬称つきの名前（1.3.0）', () => {
+  assert.equal(SLACK_NOTIFY_VERSION, '1.3.0')
+  const raw = '田中部長にtaro@example.com へ送れと言われた。03-1234-5678 か 090-1234-5678。https://example.com/a?x=1 と @taro_y と 株式会社サンプル商事 と 山田さん と ゆうこさん と Acme Inc.'
+  const out = maskPersonalText(raw)
+  assert.doesNotMatch(out, /taro@|1234-5678|example\.com|taro_y|サンプル|山田|田中|ゆうこ|Acme/)
+  for (const tag of ['[メール]', '[電話]', '[URL]', '[ハンドル]', '[会社名]', '[氏名]']) assert.ok(out.includes(tag), tag)
+})
+
+test('抜粋の伏せ字: 普通の数字や文は残す', () => {
+  assert.equal(maskPersonalText('今月の残業は45時間、給料は300000円'), '今月の残業は45時間、給料は300000円')
+})
+
+test('抜粋は伏せてから80文字で切る。切った印に全体の文字数を付け、Slack の記号は無効にする', () => {
+  const long = 'あ'.repeat(70) + 'taro@example.com' + 'い'.repeat(30)
+  const out = excerptMasked(long)
+  assert.doesNotMatch(out, /taro|example/)
+  assert.match(out, /…（全116文字）$/)
+  assert.equal(excerptMasked('  \n '), '（未記入）')
+  assert.doesNotMatch(excerptMasked('<!channel> *x*'), /<!channel>/)
+  assert.equal(Array.from(excerptMasked('あ'.repeat(80))).length, 80)
+})
