@@ -10,6 +10,7 @@ import {
 import { validateProfile, UNKNOWN, type ServiceProfile } from './service-profile'
 import { analyzeSite } from './site-analysis'
 import { buildSuggestPrompt } from './suggest'
+import { allowAioPreview } from './preview-limit'
 
 const fx = (name: string) => readFileSync(join(__dirname, 'fixtures', name))
 const studio = fx('studio-switch-corporation.html').toString('utf8')
@@ -125,4 +126,12 @@ test('質問を作るプロンプト：サービス名からの推測を禁じ�
   assert.match(prompt, /推測してはいけない/)
   assert.match(prompt, /何のサービスか: 人材紹介会社の面談設定を代行するサービス/)
   assert.match(prompt, /誰向けか: 不明/)
+})
+
+test('確認画面の読み取りは、1人あたり10分に8回まで', () => {
+  const t = 1_000_000
+  for (let i = 0; i < 8; i++) assert.equal(allowAioPreview('u1', t + i), true)
+  assert.equal(allowAioPreview('u1', t + 9), false)
+  assert.equal(allowAioPreview('u2', t + 9), true)
+  assert.equal(allowAioPreview('u1', t + 11 * 60 * 1000), true)
 })

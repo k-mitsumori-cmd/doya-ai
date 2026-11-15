@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { allowAioPreview } from '@/lib/aio/preview-limit'
 import { normalizeUrl } from '@/lib/aio/suggest'
 import { analyzeSite } from '@/lib/aio/site-analysis'
 import { UNREADABLE_MESSAGE, unreadableDetail } from '@/lib/aio/site-reader'
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id && !session?.user?.email) return NextResponse.json({ error: '認証が必要です' }, { status: 401, headers })
+    if (!allowAioPreview(session.user.id || session.user.email || '')) return NextResponse.json({ error: '読み取りの回数が多すぎます。しばらくしてからもう一度お試しください。' }, { status: 429, headers })
     const body = await readOperationalJson(req, 4096)
     if (typeof body?.url !== 'string' || body.url.length > 2048) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400, headers })
     const url = normalizeUrl(body.url)
