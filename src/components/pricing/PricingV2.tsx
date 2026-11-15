@@ -277,7 +277,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           </details>
           <details>
             <summary>解約はいつでもできますか</summary>
-            <p>はい。契約の管理画面から手続きできます。月払いはその月の終わりまで、年払いはその年の終わりまで使えます。</p>
+            <p>はい。契約の管理画面から手続きできます。月払い・年払いとも、解約後は現在の請求期間の終了日まで使えます。</p>
           </details>
         </div>
       </section>
