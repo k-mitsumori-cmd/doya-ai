@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { audit, IncomeError } from '@/lib/income/access'
-import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
+import { assertOnceScope, createOnce, isOnceResolve, isOnceScopeRequest, onceOperationId, onceScopeKey, resolveOnce, type OnceScope } from '@/lib/submit-once'
 import { findOrCreateClientByName } from '@/lib/income/client-quick'
 import { createDraft, INVOICE_STATUSES, paymentState } from '@/lib/income/invoices'
-import { invoiceDraft } from '@/lib/income/parse'
+import { asBody, invoiceDraft } from '@/lib/income/parse'
 import { runWithTxRetry } from '@/lib/income/retry'
 import { readJson, withIncome } from '@/lib/income/route'
 
@@ -33,9 +33,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
-    const body = await readJson(req)
+    const body = asBody(await readJson(req))
     const fail = (status: number, message: string) => new IncomeError(message, status)
     const once: OnceScope = { family: 'income-invoice', organizationId: ctx.organizationId, actorId: ctx.userId, operationId: onceOperationId(body, fail), fail }
+    if (isOnceScopeRequest(body)) return NextResponse.json({ scope: onceScopeKey(once) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    assertOnceScope(body, once)
     const find = (db: Prisma.TransactionClient) => (id: string) => db.incomeInvoice.findFirst({ where: { id, organizationId: ctx.organizationId } })
     // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
     if (isOnceResolve(body)) return NextResponse.json({ once: await prisma.$transaction((tx) => resolveOnce(tx, once, find(tx))) })

@@ -14,6 +14,7 @@ import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-b
 import { parseDuration } from '@/lib/agent-chat/duration'
 import { createSaveLock } from '@/lib/agent-chat/review'
 import { submitOnce, SubmitOnceSavedError, SubmitOnceStorageError, type OnceResolutionState } from '@/lib/submit-once-client'
+import { useOnceFormScope, SubmitOnceFormScopeError } from '@/lib/use-once-form-scope'
 
 /** サーバーが答えを返した失敗（status は submitOnce が控えを消すかの判断にも使う） */
 class KintaiPostError extends Error {
@@ -26,6 +27,17 @@ const REQUEST_TYPES = [
   { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: false, bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png' },
   { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: false, bear: '/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png' },
 ]
+
+const post = async (payload: Record<string, unknown>) => {
+  const res = await fetch('/api/kintai/requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new KintaiPostError(res.status, data?.error)
+  return data
+}
 
 export default function NewRequestPage() {
   const { isActive } = useKintaiAccess()
@@ -43,18 +55,19 @@ export default function NewRequestPage() {
         <Skeleton lines={5} height={18} />
       </div>
     }>
-      <NewRequestContent />
+      <NewRequestContent isActive={isActive} />
     </Suspense>
   )
 }
 
-function NewRequestContent() {
+function NewRequestContent({ isActive }: { isActive: boolean | null }) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
   const [type, setType] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const readScope = useOnceFormScope(() => post({ onceAction: 'scope' }).then((d) => d.scope as string), isActive === true)
   const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState('')
 
@@ -193,25 +206,15 @@ function NewRequestContent() {
     if (!reason.trim()) { return fail('理由を入力してください') }
     setSubmitting(true)
 
-    const post = async (payload: Record<string, unknown>) => {
-      const res = await fetch('/api/kintai/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new KintaiPostError(res.status, data?.error)
-      return data
-    }
-
     try {
       // 通信に失敗したあと送り直しても、申請が2件にならないように番号を付けて送る
       const body = { type, details, reason }
       await submitOnce({
         scope: 'kintai-request',
         input: body,
-        send: (operationId) => post({ ...body, operationId }),
-        resolve: (operationId) => post({ operationId, onceAction: 'resolve' }).then((d) => d.once.state as OnceResolutionState),
+        readScope,
+        send: (operationId, operationScope) => post({ ...body, operationId, operationScope }),
+        resolve: (operationId, operationScope) => post({ operationId, operationScope, onceAction: 'resolve' }).then((d) => d.once.state as OnceResolutionState),
       })
 
       saveLock.close()
@@ -221,7 +224,7 @@ function NewRequestContent() {
       return { ok: true, href: '/kintai/requests' }
     } catch (e) {
       if (e instanceof KintaiPostError) return fail(userErrorMessage(e.apiError, '申請できませんでした。入力を確かめて、もう一度お試しください。'), e.status === 403 ? 'blocked' : undefined)
-      if (e instanceof SubmitOnceSavedError || e instanceof SubmitOnceStorageError) return fail(e.message)
+      if (e instanceof SubmitOnceSavedError || e instanceof SubmitOnceStorageError || e instanceof SubmitOnceFormScopeError) return fail(e.message)
       return fail(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)

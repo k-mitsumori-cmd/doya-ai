@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { failKindOf, isAgentSubmit, type AgentFormHandler, type SubmitResult } from '@/components/agent-chat/form-bus'
 import { CATEGORIES, CATEGORY_LABEL } from '@/lib/expense/constants'
 import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
+import { useOnceFormScope } from '@/lib/use-once-form-scope'
 import { expenseApi, jsonInit, useBusyAction } from './api'
 import { Btn, Check, Field, Modal, inputCls, todayYmd } from './ui'
 
@@ -22,6 +23,7 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
    * 追加する。画面のボタンも、会話（AgentDock）の確認ボタンも、この処理を通る（保存の処理はここ1つだけ）。
    * 会話からの保存では、通知（toast）を出さない。会話が完了を出してから、会話が移る。
    */
+  const readScope = useOnceFormScope(() => expenseApi<{ scope: string }>('/api/expense/schedules', orgSlug, jsonInit('POST', { onceAction: 'scope' })).then((r) => r.scope))
   const persist = async (): Promise<SubmitResult> => {
     // 画面のボタンが押せない状態（必要な項目が足りない）では、会話からも保存しない
     if (!f.title.trim() || !f.amount || !f.payDate) return { ok: false, error: '必要な項目（内容・金額・支払日）が足りないため、追加できません。' }
@@ -32,8 +34,9 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
       await submitOnce({
         scope: `expense-schedule:${orgSlug}`,
         input: body,
-        send: (operationId) => expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...body, operationId })),
-        resolve: (operationId) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/schedules', orgSlug, jsonInit('POST', { operationId, onceAction: 'resolve' })).then((d) => d.once.state),
+        readScope,
+        send: (operationId, operationScope) => expenseApi('/api/expense/schedules', orgSlug, jsonInit('POST', { ...body, operationId, operationScope })),
+        resolve: (operationId, operationScope) => expenseApi<{ once: { state: OnceResolutionState } }>('/api/expense/schedules', orgSlug, jsonInit('POST', { operationId, operationScope, onceAction: 'resolve' })).then((d) => d.once.state),
       })
       if (!byAgent) toast.success('単発の支出を追加しました')
       onSaved()
@@ -47,7 +50,8 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
   const save = () => run('save', async () => { await persist() })
 
   // ---- 会話（AgentDock）から操作される口。欄の名前は src/lib/agent-chat/ops.ts の EXPENSE_ONEOFF_ADD ----
-  if (bridge) {
+  useEffect(() => {
+    if (!bridge) return
     bridge.current = {
       setValue: (key, value) => {
         switch (key) {
@@ -75,8 +79,8 @@ export default function OneOffModal({ orgSlug, defaultDate, onClose, onSaved, br
         return r
       },
     }
-  }
-  useEffect(() => () => { if (bridge) bridge.current = null }, [bridge])
+    return () => { bridge.current = null }
+  })
 
   return (
     <Modal title="単発の支出を追加" onClose={onClose}>

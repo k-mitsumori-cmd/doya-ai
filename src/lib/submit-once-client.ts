@@ -67,10 +67,10 @@ async function withBrowserLock<T>(key: string, work: () => Promise<T>): Promise<
   return work()
 }
 
-/** サーバーが答えを返した失敗（4xx）は、登録されていない。通信の失敗と 5xx は、結果が分からない */
+/** 認証・権限・保存先の変更は、以前の送信結果を示さないので控えを残す。 */
 function isDefiniteFailure(error: unknown): boolean {
   const status = (error as { status?: unknown } | null)?.status
-  return typeof status === 'number' && status >= 400 && status < 500
+  return typeof status === 'number' && status >= 400 && status < 500 && ![401, 403, 412].includes(status)
 }
 
 export async function submitOnce<T>(options: {
@@ -78,13 +78,30 @@ export async function submitOnce<T>(options: {
   scope: string
   /** 送る中身（番号を除く） */
   input: unknown
-  send: (operationId: string) => Promise<T>
-  resolve: (operationId: string) => Promise<OnceResolutionState>
+  readScope: () => Promise<string>
+  send: (operationId: string, operationScope: string) => Promise<T>
+  resolve: (operationId: string, operationScope: string) => Promise<OnceResolutionState>
 }): Promise<T> {
-  const { scope, input, send, resolve } = options
+  const { scope, input, readScope, send, resolve } = options
   if (typeof window === 'undefined' || !storageWorks()) throw new SubmitOnceStorageError(ONCE_STORAGE_UNAVAILABLE_MESSAGE)
-  const key = `submit-once:pending:v1:${scope}`
-  return withBrowserLock(key, async () => {
+  const legacyKey = `submit-once:pending:v1:${scope}`
+  return withBrowserLock(legacyKey, async () => {
+    const operationScope = await readScope()
+    if (typeof operationScope !== 'string' || !/^[a-f0-9]{64}$/.test(operationScope)) {
+      throw new Error('送信情報を確認できませんでした。画面を確認してから、もう一度お試しください。')
+    }
+    const key = `submit-once:pending:v2:${operationScope}`
+    const legacy = readPending(legacyKey)
+    const legacyCheckedKey = `${key}:legacy-checked`
+    if (legacy && window.localStorage.getItem(legacyCheckedKey) !== legacy.operationId) {
+      // 古い控えは別の利用者のものかもしれない。現在の区分で確認し、元の控えを残す。
+      const state = await resolve(legacy.operationId, operationScope)
+      if (state !== 'found' && state !== 'gone' && state !== 'cancelled') {
+        throw new Error('前回の保存状態を確認できませんでした。一覧をご確認ください。')
+      }
+      window.localStorage.setItem(legacyCheckedKey, legacy.operationId)
+      if (state !== 'cancelled') throw new SubmitOnceSavedError(ONCE_SAVED_MESSAGE)
+    }
     const fingerprint = onceFingerprint(input)
     const pending = readPending(key)
     let operationId: string
@@ -92,7 +109,7 @@ export async function submitOnce<T>(options: {
       operationId = pending.operationId
     } else {
       if (pending) {
-        const state = await resolve(pending.operationId)
+        const state = await resolve(pending.operationId, operationScope)
         window.localStorage.removeItem(key)
         if (state !== 'cancelled') throw new SubmitOnceSavedError(ONCE_SAVED_MESSAGE)
       }
@@ -104,11 +121,14 @@ export async function submitOnce<T>(options: {
       }
     }
     try {
-      const result = await send(operationId)
+      const result = await send(operationId, operationScope)
       window.localStorage.removeItem(key)
       return result
     } catch (error) {
-      if (isDefiniteFailure(error)) window.localStorage.removeItem(key)
+      // 再送のエラーは、前回の送信が保存されていないことの証明にはならない。
+      if (pending?.operationId !== operationId && isDefiniteFailure(error)) {
+        window.localStorage.removeItem(key)
+      }
       throw error
     }
   })
