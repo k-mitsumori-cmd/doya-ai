@@ -182,7 +182,8 @@ function SignInContent() {
         </div>
 
         {/* RIGHT: form */}
-        <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12 flex flex-col min-h-[70vh] lg:min-h-0">
+        {/* 2026-11-10: スマホでボタンの上下が大きく空いていたので、高さの下限と中央寄せをやめ、見出し・説明・ボタンを近づけた（メインの指摘 C） */}
+        <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12 flex flex-col">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-black text-slate-400 tracking-widest uppercase">Sign in</p>
@@ -200,8 +201,8 @@ function SignInContent() {
             </div>
           )}
 
-          <div className="mt-6 flex-1 flex flex-col">
-            <div className="flex-1 flex items-center">
+          <div className="mt-6 flex flex-col lg:flex-1">
+            <div className="flex items-center lg:flex-1">
               <button
                 onClick={handleGoogleLogin}
                 disabled={isLoading}

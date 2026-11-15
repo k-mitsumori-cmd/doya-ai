@@ -1,0 +1,423 @@
+/* ============================================
+   LP の動きと見せ方の直し（2026-11-10 メインのフィードバックによる）
+   renewal.css・hero-motion.css より後に読む（Renewal.tsx の import の順）。
+   動きの速さと弾み方は、ここの変数にまとめる。動きを減らす設定の人には止める（最後の節）。
+   ============================================ */
+.doya-renewal {
+  --doya-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --doya-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --doya-dur-press: 0.09s;
+  --doya-dur-release: 0.42s;
+  --doya-dur-reveal: 0.55s;
+  --doya-press-scale: 0.95;
+}
+
+/* 1. 表示の動き：中身は初めから見える。小さなずれと透明度だけ */
+.doya-renewal .doya-reveal.doya-visible {
+  animation: doya-reveal-in var(--doya-dur-reveal) var(--doya-ease-out) both;
+}
+@keyframes doya-reveal-in {
+  from {
+    opacity: 0.4;
+    translate: 0 14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* 9. 画面の外の section の動きは止める（RenewalFrame が data-offscreen を付け外しする） */
+.doya-renewal [data-offscreen],
+.doya-renewal [data-offscreen] *,
+.doya-renewal [data-offscreen] *::before,
+.doya-renewal [data-offscreen] *::after {
+  animation-play-state: paused !important;
+}
+
+/* 9. 触ったときの動き：押すと縮み、離すと弾んで戻る */
+.doya-renewal
+  :is(
+    .doya-button,
+    .doya-service-card,
+    .doya-featured-card,
+    .doya-filter button,
+    .doya-resource,
+    .doya-journey a,
+    .doya-scene-selector button,
+    .doya-motion-toggle,
+    .doya-consult-toggle
+  ) {
+  transition:
+    transform var(--doya-dur-release) var(--doya-ease-spring),
+    box-shadow 0.25s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease;
+}
+.doya-renewal
+  :is(
+    .doya-button,
+    .doya-service-card,
+    .doya-featured-card,
+    .doya-filter button,
+    .doya-resource,
+    .doya-journey a,
+    .doya-scene-selector button,
+    .doya-motion-toggle,
+    .doya-consult-toggle
+  ):active {
+  transform: scale(var(--doya-press-scale));
+  transition-duration: var(--doya-dur-press);
+}
+.doya-renewal .doya-filter button[aria-pressed="true"] {
+  animation: doya-chip-pop 0.4s var(--doya-ease-spring);
+}
+@keyframes doya-chip-pop {
+  0% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 2・B. 下に固定する札は「無料相談のご案内」の1つだけ（2026-11-10 メインの指摘。スマホで本文とボタンに重なっていた）。
+   「動きを止める」と「オープニング」は固定をやめ、ページの一番下（フッターの右下）に置く。
+   「無料相談」は、スマホで下へ送っているあいだは引っ込め、上へ戻すか一番下で出す */
+.doya-renewal {
+  position: relative;
+}
+.doya-renewal .doya-motion-toggle,
+.doya-renewal .doya-opening-replay {
+  position: absolute;
+  top: auto;
+  left: auto;
+  bottom: 18px;
+  z-index: 3;
+}
+.doya-renewal .doya-motion-toggle {
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+}
+.doya-renewal .doya-opening-replay {
+  right: 70px;
+}
+@media (max-width: 760px) {
+  .doya-renewal.doya-chrome-hidden .doya-consult-toggle {
+    transform: translateY(calc(100% + 24px));
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* 3. ツールの一覧：代表の4つを大きく、残りは絞り込みの下 */
+.doya-featured-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 34px;
+}
+.doya-featured-card {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 24px 22px;
+  border-radius: 22px;
+  border: 1px solid #cfe0fb;
+  background:
+    radial-gradient(circle at 100% 0%, #dcebff 0, transparent 55%),
+    linear-gradient(160deg, #fff, #f3f8ff);
+  box-shadow: 0 10px 28px #1f4e9a12;
+}
+.doya-featured-card:hover {
+  transform: translateY(-6px);
+  border-color: #7eb3ff;
+  box-shadow: 0 18px 36px #1f4e9a1f;
+}
+.doya-featured-card img {
+  border-radius: 15px;
+  object-fit: contain;
+  margin-bottom: 16px;
+}
+.doya-featured-card h3 {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+.doya-featured-card small {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b7a4b;
+}
+.doya-featured-card small svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.doya-featured-card > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #0066ff;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 18px;
+}
+.doya-card-io {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #3e4f6a;
+}
+.doya-service-card .doya-card-io {
+  margin: 12px 0 20px;
+}
+.doya-card-io > span {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.doya-card-io b {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  background: #eef4ff;
+  color: #3d5c90;
+}
+.doya-card-io > span + span b {
+  background: #0066ff;
+  color: #fff;
+}
+.doya-directory-sub {
+  margin-top: 56px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #172957;
+}
+.doya-directory-sub + .doya-filter {
+  margin-top: 16px;
+}
+.doya-service-grid-compact .doya-service-card {
+  animation: none;
+  height: 100%;
+  padding: 22px;
+}
+.doya-service-grid-compact .doya-service-card h3 {
+  font-size: 17px;
+}
+.doya-service-cell {
+  min-width: 0;
+}
+.doya-count {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1100px) {
+  .doya-featured-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .doya-featured-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .doya-featured-card {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    column-gap: 14px;
+    padding: 18px;
+  }
+  .doya-featured-card img {
+    width: 52px;
+    height: 52px;
+    grid-row: span 2;
+    margin: 0;
+  }
+  .doya-featured-card h3 {
+    font-size: 18px;
+  }
+  .doya-featured-card > .doya-card-io,
+  .doya-featured-card > small,
+  .doya-featured-card > span {
+    grid-column: 2;
+  }
+  .doya-featured-card .doya-card-io {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+  .doya-featured-card > span {
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  .doya-directory-sub {
+    margin-top: 40px;
+    font-size: 16px;
+  }
+  .doya-service-grid-compact .doya-service-card {
+    padding: 16px;
+  }
+  .doya-service-grid-compact .doya-card-io {
+    font-size: 13px;
+    margin: 6px 0 10px;
+  }
+}
+
+/* 4. できあがりの例 */
+.doya-output-gallery {
+  padding: 90px 0;
+  background: linear-gradient(180deg, #fff, #f2f7ff);
+}
+.doya-output-gallery p {
+  margin-top: 14px;
+  color: #5e6c84;
+}
+.doya-output-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 30px 0 22px;
+}
+.doya-output-item {
+  margin: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8e4f6;
+  background: #fff;
+  box-shadow: 0 10px 26px #1f4e9a14;
+  transition: transform var(--doya-dur-release) var(--doya-ease-spring);
+}
+.doya-output-item:hover {
+  transform: translateY(-6px) rotate(-0.6deg);
+}
+.doya-output-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+@media (max-width: 900px) {
+  .doya-output-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+@media (max-width: 760px) {
+  .doya-output-gallery {
+    padding: 60px 0;
+  }
+}
+
+/* 4. ヒーロー：最初のボタンの近くに、無料で使える回数と料金 */
+.doya-home-free {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #3e4f6a;
+}
+.doya-home-free > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.doya-home-free svg {
+  color: #0b7a4b;
+  flex-shrink: 0;
+}
+.doya-home-free a {
+  color: #0066ff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 8. 375px で最初の行が折れたとき、アイコンが文の先頭に付いたままにする */
+@media (max-width: 760px) {
+  .doya-home-copy h1.doya-eyebrow {
+    display: block;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    text-wrap: pretty;
+  }
+  .doya-home-copy h1.doya-eyebrow > svg {
+    display: inline-block;
+    vertical-align: -3px;
+    margin-right: 6px;
+  }
+}
+
+/* 動きを減らす設定では止める */
+@media (prefers-reduced-motion: reduce) {
+  .doya-renewal .doya-reveal.doya-visible,
+  .doya-renewal .doya-filter button[aria-pressed="true"] {
+    animation: none !important;
+  }
+  .doya-renewal :is(.doya-button, .doya-service-card, .doya-featured-card, .doya-filter button, .doya-resource):active,
+  .doya-output-item:hover {
+    transform: none !important;
+  }
+}
+.doya-motion-paused .doya-reveal.doya-visible {
+  animation: none !important;
+}
+
+/* 6. ヒーローの右側：見せる物を「操作の見本」1つにして、字が読める大きさにする（クマは脇役として小さく） */
+@media (min-width: 1001px) {
+  .doya-home-cinematic .doya-scene-output {
+    width: 410px;
+    right: 6px;
+    top: 48px;
+    padding: 14px;
+  }
+  .doya-home-cinematic .doya-team-arrival {
+    top: 300px;
+    left: -6%;
+    width: 66%;
+  }
+}
+@media (max-width: 1000px) and (min-width: 601px) {
+  .doya-home-cinematic .doya-scene-output {
+    width: 360px;
+  }
+  .doya-home-cinematic .doya-team-arrival {
+    top: 280px;
+    left: -4%;
+    width: 62%;
+  }
+}
+@media (max-width: 600px) {
+  .doya-home-cinematic .doya-scene-output {
+    width: 72%;
+    right: 0;
+    top: 36px;
+  }
+  .doya-home-cinematic .doya-team-arrival {
+    top: 205px;
+    left: -6%;
+    width: 72%;
+  }
+}
+
+/* F. ツールの紹介ページが長い：機能の紹介の段の画面見本は、スマホでは出さない（「使い方」の節と同じ画面のくり返しのため） */
+@media (max-width: 767px) {
+  .doya-feature-row > .doya-feature-visual {
+    display: none;
+  }
+}

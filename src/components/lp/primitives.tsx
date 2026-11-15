@@ -1,13 +1,31 @@
 // ============================================
 // ドヤAI 共通LPデザインキット — プリミティブ
 // ブランド青 #0066ff を主役、サービス別アクセントは CSS変数 --lp-accent で注入。
-// 絵文字は使わずアイコンは Material Symbols Outlined のみ（ブランド規約）。
+// 絵文字は使わない。アイコンは Sym 経由で lucide の SVG（対応の無い名前だけ Material Symbols）。
 // サーバーコンポーネントとして動作（アニメはCSSクラスのみ）。
 // ============================================
 import React from 'react'
+import { SYM_ICONS } from './sym-icons'
 
-/** Material Symbols アイコン（LP内のアイコンは必ずこれ経由。絵文字禁止） */
+/**
+ * LP のアイコン（LP内のアイコンは必ずこれ経由。絵文字禁止）。
+ * 名前は旧 Material Symbols のまま受け取り、sym-icons.ts に対応があれば SVG で出す（2026-11-10〜）。
+ * フォントで出すと、読み込みが遅れたときに英単語がそのまま見えるため。対応が無い名前だけフォントで出す。
+ */
 export function Sym({ name, size = 20, className = '', fill = false, style }: { name: string; size?: number; className?: string; fill?: boolean; style?: React.CSSProperties }) {
+  const Icon = SYM_ICONS[name]
+  if (Icon) {
+    return (
+      <Icon
+        width={size}
+        height={size}
+        strokeWidth={1.75}
+        className={`doya-sym inline-block shrink-0 ${className}`}
+        style={{ verticalAlign: '-0.125em', ...(fill ? { fill: 'currentColor', fillOpacity: 0.18 } : null), ...style }}
+        aria-hidden="true"
+      />
+    )
+  }
   return (
     <span
       className={`material-symbols-outlined leading-none ${className}`}
