@@ -39,9 +39,11 @@ export const LOGO_POSITION_LABELS: Record<LogoPosition, string> = {
 /** 背景が明るいか（ロゴの下敷きを敷くかの判断に使う） */
 async function isRegionLight(base: Buffer, left: number, top: number, w: number, h: number): Promise<boolean> {
   try {
-    const stats = await sharp(base)
+    const region = await sharp(base)
       .extract({ left, top, width: Math.max(1, w), height: Math.max(1, h) })
-      .stats()
+      .png()
+      .toBuffer()
+    const stats = await sharp(region).stats()
     // 各チャンネルの平均から輝度を出す（sRGBの近似係数）
     const [r, g, b] = stats.channels
     const lum = 0.299 * r.mean + 0.587 * g.mean + 0.114 * b.mean
@@ -67,7 +69,11 @@ export async function overlayLogo(
     const maxW = Math.max(40, Math.round((w * cfg.maxWidthPct) / 100))
     const pad = Math.round((Math.min(w, h) * cfg.paddingPct) / 100)
 
-    const resized = await sharp(logo).resize({ width: maxW, withoutEnlargement: true }).png().toBuffer()
+    const maxH = Math.max(1, h - 2 * pad)
+    const resized = await sharp(logo)
+      .resize({ width: maxW, height: maxH, fit: 'inside', withoutEnlargement: true })
+      .png()
+      .toBuffer()
     const meta = await sharp(resized).metadata()
     const lw = meta.width || maxW
     const lh = meta.height || maxW
