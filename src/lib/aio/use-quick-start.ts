@@ -10,7 +10,7 @@ type Phase = 'unknown' | 'missing' | 'ready' | 'pending' | 'cancelling' | 'compl
 type View = { actor: string; intent: AioStartIntent | null; phase: Phase; slug: string | null; error: string | null; busy: boolean; ready: boolean }
 const unknown = '開始処理の保存状況を確認できませんでした。新しく開始せず、保存状況を確認してください。'
 const validSlug = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 180 && !/[\s/\\?#\u0000-\u001f\u007f]/.test(v)
-export function useAioQuickStart(options: { url: string; onComplete: (slug: string, autoScan: boolean) => void; onSignIn: () => Promise<void> }) {
+export function useAioQuickStart(options: { url: string; profile?: () => Record<string, unknown> | null; onComplete: (slug: string, autoScan: boolean) => void; onSignIn: () => Promise<void> }) {
   const { data: session, status } = useSession()
   const actor = status === 'authenticated' ? session?.user?.id || '' : ''
   const epoch = useRef({ actor, version: 0 }), pending = useRef<AbortController | null>(null), alive = useRef(true), cancelling = useRef(false)
@@ -67,7 +67,7 @@ export function useAioQuickStart(options: { url: string; onComplete: (slug: stri
         post = true
       }
       const response = await readAioStartResponse('/api/aio/quick-start' + (!post && mode !== 'cancel' ? '?operationId=' + intent.operationId : ''),
-        post ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: intent.operationId, url: options.url }) }
+        post ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: intent.operationId, url: options.url, ...(options.profile?.() ? { profile: options.profile() } : {}) }) }
           : mode === 'cancel' ? { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operationId: intent.operationId }) } : { method: 'GET' }, controller.signal)
       if (!current() || readAioStartIntent(scope)?.operationId !== intent.operationId) return
       if (response.status === 401) {

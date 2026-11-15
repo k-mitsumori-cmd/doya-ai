@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { useAioQuickStart } from '@/lib/aio/use-quick-start'
 import { AioQuickStartStatus } from '@/components/aio/quick-start-status'
+import { AioSiteConfirm, type ConfirmedProfile } from '@/components/aio/site-confirm'
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
@@ -45,12 +46,15 @@ export default function AioEntryPage() {
   const [phase, setPhase] = useState<'loading' | 'ready'>('loading')
   const [authed, setAuthed] = useState(false)
   const [serviceUrl, setServiceUrl] = useState('')
+  const [confirming, setConfirming] = useState(false)
+  const confirmed = useRef<ConfirmedProfile | null>(null)
   const { data: session, status } = useSession()
   const actor = status === 'authenticated' ? session?.user?.id || '' : ''
   const identity = useRef({ actor, status, version: 0 })
   if (identity.current.actor !== actor || identity.current.status !== status) identity.current = { actor, status, version: identity.current.version + 1 }
   const flow = useAioQuickStart({
     url: serviceUrl,
+    profile: () => confirmed.current ? { ...confirmed.current } : null,
     onComplete: (slug, autoScan) => router.replace(`/aio/${encodeURIComponent(slug)}${autoScan ? '?scan=1' : ''}`),
     onSignIn: () => startGoogleSignIn('/aio'),
   })
@@ -83,6 +87,13 @@ export default function AioEntryPage() {
   const start = async () => {
     if (flow.disabled) return
     if (!serviceUrl.trim()) { toast.error('URLを入力してください'); return }
+    // ログイン済みなら、組織を作る前に、読み取ったサービスの内容を見せて確認してもらう
+    if (authed) { confirmed.current = null; setConfirming(true); return }
+    await flow.start()
+  }
+  const confirmAndStart = async (profile: ConfirmedProfile) => {
+    confirmed.current = profile
+    setConfirming(false)
     await flow.start()
   }
 
@@ -108,6 +119,9 @@ export default function AioEntryPage() {
             <h2 className="mt-2 text-xl font-bold text-slate-900">AI検索対策をはじめましょう</h2>
             <p className="mt-1 text-sm font-bold text-slate-500">調べたいサービスの URL を入れると、組織を作って、最初の調査を始めます。</p>
           </div>
+          {confirming ? (
+            <AioSiteConfirm url={serviceUrl} onConfirm={confirmAndStart} onCancel={() => setConfirming(false)} />
+          ) : (<>
           <label htmlFor="aio-entry-service-url" className="mb-1 block text-sm font-bold text-slate-700">分析したいサービスのURL</label>
           <input id="aio-entry-service-url"
             value={serviceUrl}
@@ -125,6 +139,7 @@ export default function AioEntryPage() {
           >
             {creating ? '調べています…' : '調べる'}
           </button>
+          </>)}
           <AioQuickStartStatus flow={flow} />
         </div>
       </div>
