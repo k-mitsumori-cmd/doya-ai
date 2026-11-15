@@ -8,7 +8,7 @@ import { audit, IncomeError } from '@/lib/income/access'
 import { assertOnceScope, createOnce, isOnceResolve, isOnceScopeRequest, onceOperationId, onceScopeKey, resolveOnce, type OnceScope } from '@/lib/submit-once'
 import { findOrCreateClientByName } from '@/lib/income/client-quick'
 import { createDraft, INVOICE_STATUSES, paymentState } from '@/lib/income/invoices'
-import { invoiceDraft } from '@/lib/income/parse'
+import { asBody, invoiceDraft } from '@/lib/income/parse'
 import { runWithTxRetry } from '@/lib/income/retry'
 import { readJson, withIncome } from '@/lib/income/route'
 
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   return withIncome(req, 'member', async (ctx) => {
-    const body = await readJson(req)
+    const body = asBody(await readJson(req))
     const fail = (status: number, message: string) => new IncomeError(message, status)
     const once: OnceScope = { family: 'income-invoice', organizationId: ctx.organizationId, actorId: ctx.userId, operationId: onceOperationId(body, fail), fail }
     if (isOnceScopeRequest(body)) return NextResponse.json({ scope: onceScopeKey(once) }, { headers: { 'Cache-Control': 'private, no-store' } })
