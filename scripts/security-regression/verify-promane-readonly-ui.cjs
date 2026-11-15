@@ -19,6 +19,15 @@ function load(file) {
     if (n === '@/lib/promane/auth') return { requirePromaneAuth: async () => ({ user: { id: 'synthetic' } }), getWorkspaceBySlug: async () => ({ id: 'ws-synthetic', members: [{ role: pageRole }] }) };
     if (n === '@/lib/prisma') return { prisma: { promaneClient: { findMany: async () => { reads.push('clients'); return []; } }, promaneProject: { findFirst: async () => { reads.push('project'); return { id: 'p-synthetic', name: 'Synthetic project' }; } } } };
     if (n === '@/components/promane/project-form') return { ProjectForm: () => React.createElement('form', { 'aria-label': 'project-editor' }) };
+    if (n === '@/components/ds') return {
+      Button: ({ icon, ...props }) => React.createElement('button', props),
+      EmptyState: ({ title, description, action }) => React.createElement('div', null, title, description, action),
+    };
+    if (n === '@/components/agent-chat/useAgentForm') return {
+      useAgentForm: () => {},
+    };
+    if (n === '@/components/agent-chat/AgentBlocked') return { __esModule: true, default: Null };
+    if (n === '@/components/agent-chat/form-bus') return { isAgentSubmit: () => false };
     if (n === '@/components/promane/PromanePageHeading') return { __esModule: true, default: ui('h2') };
     if (n === 'next/image') return { __esModule: true, default: ({ unoptimized, ...p }) => React.createElement('img', p) };
     if (n === 'sonner') return { toast: { success() {}, error() {} } };

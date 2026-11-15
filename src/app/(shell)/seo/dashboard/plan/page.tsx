@@ -111,14 +111,14 @@ export default function SeoPlanPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（有料プラン相当）</p>
-                  <p className="mt-0.5 text-[11px] font-bold text-blue-800/80 truncate">
+                  <p className="mt-0.5 text-xs font-bold text-blue-800/80 truncate">
                     画像生成・AI自動修正などが解放されています
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest">残り</p>
+                  <p className="text-xs font-black text-blue-700 uppercase tracking-widest">残り</p>
                   <p className="text-base font-black text-blue-900 tabular-nums">{formatRemainingTime(freeHourRemainingMs)}</p>
                 </div>
                 <div className="w-40 h-2 rounded-full bg-blue-100 overflow-hidden">
@@ -158,12 +158,12 @@ export default function SeoPlanPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-black text-blue-900">初回ログイン後1時間：有料プラン相当で使い放題（トライアル）</p>
-                    <p className="mt-1 text-[11px] font-bold text-blue-800/80">
+                    <p className="mt-1 text-xs font-bold text-blue-800/80">
                       画像生成・自動修正も含めて解放中です。
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-3">
                       <p className="text-xs font-black text-blue-900">残り {formatRemainingTime(freeHourRemainingMs)}</p>
-                      <p className="text-[10px] font-bold text-blue-800/70">（1時間）</p>
+                      <p className="text-xs font-bold text-blue-800/70">（1時間）</p>
                     </div>
                     <div className="mt-2 h-2 w-full rounded-full bg-blue-200/60 overflow-hidden">
                       <div
@@ -181,7 +181,7 @@ export default function SeoPlanPage() {
               <div className="rounded-3xl border border-gray-100 bg-white p-6 sm:p-8">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">現在のプラン</p>
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">現在のプラン</p>
                     <p className="mt-1 text-2xl font-black text-gray-900">
                       {tier === 'PRO' || tier === 'ENTERPRISE' ? 'プロ' : '無料'}
                     </p>
@@ -234,7 +234,7 @@ export default function SeoPlanPage() {
                           <Timer className="w-5 h-5 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-sm font-black">解約予約済み - 停止まで残り {cancelAtDays || 0} 日</p>
-                            <p className="text-[11px] font-bold text-amber-800/80 mt-1">
+                            <p className="text-xs font-bold text-amber-800/80 mt-1">
                               停止日までは有料プランの機能をご利用いただけます。キャンセルして継続することも可能です。
                             </p>
                           </div>

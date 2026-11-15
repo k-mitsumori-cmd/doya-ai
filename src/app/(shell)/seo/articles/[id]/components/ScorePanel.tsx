@@ -275,7 +275,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                 <ScanSearch className="w-5 h-5 text-blue-600" />
                 <p className="text-sm font-black text-gray-900">SEOスコアを分析中…</p>
               </div>
-              <div className="flex items-center gap-2 text-[11px] font-black text-gray-500">
+              <div className="flex items-center gap-2 text-xs font-black text-gray-500">
                 <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
                 動いています
               </div>
@@ -290,7 +290,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                   className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500"
                 />
               </div>
-              <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-gray-500">
+              <div className="mt-2 flex items-center justify-between text-xs font-bold text-gray-500">
                 <span>構造/網羅性/読みやすさ</span>
                 <span>{Math.round(Math.min(100, (phase / 4) * 100))}%</span>
               </div>
@@ -332,7 +332,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
               </div>
             </div>
 
-            <p className="mt-3 text-[11px] font-bold text-gray-500 leading-relaxed">
+            <p className="mt-3 text-xs font-bold text-gray-500 leading-relaxed">
               いま“伸びしろ”を抽出しています。結果が出たら <span className="text-gray-900">改善の打ち手</span> がすぐ分かります。
             </p>
           </motion.div>
@@ -364,23 +364,23 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
         <div className="grid grid-cols-5 gap-2 text-center">
           <div className="p-2 rounded-xl bg-white/60">
             <p className="text-lg font-black text-gray-900 tabular-nums">{charCount.toLocaleString()}</p>
-            <p className="text-[10px] text-gray-500 font-bold">文字数</p>
+            <p className="text-xs text-gray-500 font-bold">文字数</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
             <p className="text-lg font-black text-gray-900 tabular-nums">{h2Count}</p>
-            <p className="text-[10px] text-gray-500 font-bold">H2見出し</p>
+            <p className="text-xs text-gray-500 font-bold">H2見出し</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
             <p className="text-lg font-black text-gray-900 tabular-nums">{h3Count}</p>
-            <p className="text-[10px] text-gray-500 font-bold">H3見出し</p>
+            <p className="text-xs text-gray-500 font-bold">H3見出し</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
             <p className="text-lg font-black text-emerald-700 tabular-nums">{goodCountUp}</p>
-            <p className="text-[10px] text-gray-500 font-bold">Good</p>
+            <p className="text-xs text-gray-500 font-bold">Good</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
             <p className="text-lg font-black text-amber-700 tabular-nums">{improveCountUp}</p>
-            <p className="text-[10px] text-gray-500 font-bold">改善</p>
+            <p className="text-xs text-gray-500 font-bold">改善</p>
           </div>
         </div>
       </motion.div>
@@ -391,7 +391,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           <div className="flex items-center gap-2 mb-3">
             <ThumbsUp className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">Good（うまくいってる）</span>
-            <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full bg-white/80 border border-emerald-200 text-emerald-800 tabular-nums">
+            <span className="ml-auto text-xs font-black px-2 py-0.5 rounded-full bg-white/80 border border-emerald-200 text-emerald-800 tabular-nums">
               {goodCountUp}件
             </span>
           </div>
@@ -399,7 +399,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
             {(analysis.good.length ? analysis.good : [{ title: 'ベースはOK', detail: '大枠は整っています。あとは改善点を潰すだけです。' }]).map((g, i) => (
               <div key={i} className="p-3 rounded-xl bg-white/70 border border-emerald-100">
                 <p className="text-sm font-black text-emerald-900">{g.title}</p>
-                <p className="text-[11px] font-bold text-emerald-800/80 mt-1 leading-relaxed">{g.detail}</p>
+                <p className="text-xs font-bold text-emerald-800/80 mt-1 leading-relaxed">{g.detail}</p>
               </div>
             ))}
           </div>
@@ -409,7 +409,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4 text-amber-700" />
             <span className="text-xs font-black text-amber-800 uppercase tracking-widest">改善できる（伸びしろ）</span>
-            <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full bg-white/80 border border-amber-200 text-amber-900 tabular-nums">
+            <span className="ml-auto text-xs font-black px-2 py-0.5 rounded-full bg-white/80 border border-amber-200 text-amber-900 tabular-nums">
               {improveCountUp}件
             </span>
           </div>
@@ -434,20 +434,20 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-black text-amber-900">{it.title}</p>
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
                       'bg-white text-gray-700 border border-gray-200'
                     }`}>
                       手動/自動どちらも可
                     </span>
                   </div>
-                  <p className="text-[11px] font-bold text-amber-900/70 mt-1 leading-relaxed">{it.detail}</p>
+                  <p className="text-xs font-bold text-amber-900/70 mt-1 leading-relaxed">{it.detail}</p>
                 </button>
               )
             })}
             {analysis.improvements.length === 0 && (
               <div className="p-3 rounded-xl bg-white/70 border border-amber-100">
                 <p className="text-sm font-black text-amber-900">改善点は見当たりません</p>
-                <p className="text-[11px] font-bold text-amber-900/70 mt-1">このままでも十分強い記事です。</p>
+                <p className="text-xs font-bold text-amber-900/70 mt-1">このままでも十分強い記事です。</p>
               </div>
             )}
           </div>
@@ -480,7 +480,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           {needTarget?.headings?.length ? (
             <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
               <p className="text-xs font-black text-amber-900">長文のため、修正対象の見出しを選んでください</p>
-              <p className="text-[10px] font-bold text-amber-800/80 mt-1">安全に反映するため、部分修正で適用します。</p>
+              <p className="text-xs font-bold text-amber-800/80 mt-1">安全に反映するため、部分修正で適用します。</p>
               <select
                 value={targetHeading}
                 onChange={(e) => setTargetHeading(e.target.value)}
@@ -499,7 +499,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
               <button
                 type="button"
                 onClick={() => setMode('manual')}
-                className={`px-3 py-2 rounded-lg text-[11px] font-black transition-all ${
+                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${
                   mode === 'manual' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-white'
                 }`}
               >
@@ -508,7 +508,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
               <button
                 type="button"
                 onClick={() => setMode('auto')}
-                className={`px-3 py-2 rounded-lg text-[11px] font-black transition-all ${
+                className={`px-3 py-2 rounded-lg text-xs font-black transition-all ${
                   mode === 'auto' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white'
                 }`}
                 title="有料プランの場合はAIで自動修正できます"
@@ -516,7 +516,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                 AIで自動修正
               </button>
             </div>
-            <div className="text-[10px] font-bold text-gray-400">
+            <div className="text-xs font-bold text-gray-400">
               ※自動修正は有料機能のため、プランによっては利用できません
             </div>
           </div>

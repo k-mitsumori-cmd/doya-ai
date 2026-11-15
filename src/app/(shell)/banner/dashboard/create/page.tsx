@@ -1686,7 +1686,7 @@ function BannerDashboardWorkspace() {
         <BannerModeChooser current="scratch" />
         <div className={nextStyles.createHero}>
             <ToolHero
-              title={`入力するだけで、プロ品質のバナーを${generateCount}枚。`}
+              title={<>入力するだけで、<wbr />プロ品質のバナーを<wbr />{generateCount}枚。</>}
               lead="用途・業種・伝えたい言葉を入れると、AIがクリックされやすい構成でバナーをつくります。迷ったら「サンプル入力」から試せます。"
               tool="banner"
             />

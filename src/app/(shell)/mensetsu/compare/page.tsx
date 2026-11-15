@@ -215,7 +215,6 @@ export default function ComparePage() {
           <div className="mt-6"><LoadIssueNotice issue={templatesIssue} subject="比較に使う質問セット" onRetry={() => void loadTemplates()} /></div>
         ) : templates.length === 0 ? (
           <EmptyState
-            art="/mensetsu/empty-interviews.webp"
             title="まだ質問セットはありません"
             description="質問セットを作って面接を行うと、評価済みの候補者をここで並べて比べられます。"
             action={<Button href="/mensetsu" icon="PenTool">質問セットを作る</Button>}
@@ -259,7 +258,6 @@ export default function ComparePage() {
             ) : error && sorted.length === 0 ? null : sorted.length === 0 ? (
               templateId === 'all' ? (
                 <EmptyState
-                  art="/mensetsu/empty-interviews.webp"
                   title="評価済みの面接はまだありません"
                   description="面接が終わって評価すると、候補者がここに並びます。"
                   action={<Button href="/mensetsu" icon="UserCheck">面接一覧を見る</Button>}

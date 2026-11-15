@@ -548,7 +548,7 @@ export default function AdImageTool() {
       <div className="mx-auto max-w-6xl px-4 pt-6">
           {/* 枠の見出し（h1）と重ならないよう、ここは「何ができるか」を書く（H-3・S-57） */}
           <ToolHero
-            title="URLひとつで、媒体ごとの広告画像をまとめて。"
+            title={<>URLひとつで、<wbr />媒体ごとの広告画像を<wbr />まとめて。</>}
             lead="サービスのページを読み取って、コピーを考え、Meta・Google・X・LINE などのサイズで文字入りの広告画像をつくります。"
             action={<Button href="/adimage/history" variant="secondary" icon="History">これまでの画像</Button>}
             tool="adimage"

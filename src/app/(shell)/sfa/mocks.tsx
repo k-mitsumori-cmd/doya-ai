@@ -40,7 +40,7 @@ export function SfaPipelineMock() {
           <Sym name="view_kanban" size={18} className="text-[color:#16a34a]" />
           <span className="font-black text-slate-800 text-sm">商談パイプライン</span>
         </div>
-        <span className="text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded px-1.5 py-0.5">7件・¥1,120万</span>
+        <span className="shrink-0 whitespace-nowrap text-[10px] font-bold text-slate-400 bg-white border border-slate-200 rounded px-1.5 py-0.5">7件・¥1,120万</span>
       </div>
       <div className="grid grid-cols-4 gap-2">
         {COLUMNS.map((col, ci) => (
@@ -55,7 +55,7 @@ export function SfaPipelineMock() {
                 <div key={di} className="bg-white border border-slate-100 rounded-lg p-1.5 shadow-sm">
                   <p className="text-[10px] font-black text-slate-800 truncate leading-tight">{d.c}</p>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-[10px] font-black" style={{ color: col.tint }}>{d.amount}</span>
+                    <span className="whitespace-nowrap text-[10px] font-black" style={{ color: col.tint }}>{d.amount}</span>
                     <Avatar i={ci + di} initial={d.owner} size={16} />
                   </div>
                 </div>

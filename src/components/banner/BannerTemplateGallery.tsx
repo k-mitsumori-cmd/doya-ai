@@ -66,14 +66,14 @@ export function GalleryPlanTabs({ value, onChange }: {
   ]
   return (
     <div className={`flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-1.5 ${t.planRow} overflow-x-auto`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-      <span className={`flex-shrink-0 text-[10px] sm:text-xs ${t.planLabel} mr-1`}>プラン:</span>
+      <span className={`flex-shrink-0 text-xs sm:text-xs ${t.planLabel} mr-1`}>プラン:</span>
       {tabs.map((tab) => (
         <button
           key={tab.key}
           type="button"
           onClick={() => onChange(tab.key)}
           aria-pressed={value === tab.key}
-          className={`flex-shrink-0 px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-medium transition-all whitespace-nowrap ${
+          className={`flex-shrink-0 min-h-[40px] px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-xs font-medium transition-all whitespace-nowrap ${
             value === tab.key ? tab.color + (' shadow-sm') : tab.inactive
           }`}
         >
@@ -99,7 +99,7 @@ export function GalleryGenreTabs({ tabs, value, onChange }: {
           type="button"
           onClick={() => onChange(tab)}
           aria-pressed={value === tab}
-          className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+          className={`flex-shrink-0 min-h-[40px] px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
             value === tab ? t.tabActive : t.tabInactive
           }`}
         >
@@ -116,7 +116,7 @@ export function GalleryCategoryHeading({ name, count, loading }: { name: string;
   return (
     <h3 className={`text-xs sm:text-sm font-bold ${t.heading} px-1 sm:px-2 py-1.5 flex items-center gap-1.5`}>
       <ChevronRight className={`h-4 w-4 ${t.headingIcon}`} /> {name}
-      <span className={`${t.headingCount} text-[10px]`}>({count})</span>
+      <span className={`${t.headingCount} text-xs`}>({count})</span>
       {loading && <Loader2 className={`w-3 h-3 animate-spin ${t.headingSpinner} ml-1`} />}
     </h3>
   )
@@ -135,8 +135,7 @@ export function GallerySkeleton() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className={`aspect-[1200/628] rounded ${t.placeholder} overflow-hidden relative flex flex-col items-center justify-center gap-1.5`}>
-                <Loader2 className={`w-5 h-5 animate-spin ${t.placeholderIcon}`} />
+              <div key={i} className={`aspect-[1200/628] rounded ${t.placeholder} animate-pulse overflow-hidden relative flex flex-col items-center justify-center gap-1.5`}>
                 <div className={`w-12 h-0.5 ${t.placeholderTrack} rounded-full overflow-hidden`}>
                   <div className={`h-full ${t.placeholderBar} rounded-full animate-[progressGrow_4s_ease-out_forwards]`} />
                 </div>
@@ -200,25 +199,22 @@ export function GalleryTemplateCard({
       }`}
     >
       {template.isPending ? (
-        <div className={`w-full h-full ${t.placeholderPending} flex items-center justify-center`}>
+        <div className={`w-full h-full ${t.placeholderPending} animate-pulse flex items-center justify-center`}>
           <div className="text-center">
-            <Loader2 className={`w-5 h-5 animate-spin ${t.pendingSpinner} mx-auto mb-1.5`} />
-            <p className={`text-[9px] ${t.placeholderText} font-medium`}>画像読み込み中</p>
+            <p className={`text-xs ${t.placeholderText} font-medium`}>画像読み込み中</p>
           </div>
         </div>
       ) : showImage ? (
         <>
           {!isLoaded && (
             loadingBar ? (
-              <div className={`absolute inset-0 ${t.placeholder} flex flex-col items-center justify-center gap-1.5`}>
-                <Loader2 className={`w-4 h-4 animate-spin ${t.placeholderIcon}`} />
+              <div className={`absolute inset-0 ${t.placeholder} animate-pulse flex flex-col items-center justify-center gap-1.5`}>
                 <div className={`w-10 h-0.5 ${t.placeholderTrack} rounded-full overflow-hidden`}>
                   <div className={`h-full ${t.placeholderBar} rounded-full animate-[progressGrow_4s_ease-out_forwards]`} />
                 </div>
               </div>
             ) : (
-              <div className={`absolute inset-0 ${t.placeholder} flex items-center justify-center`}>
-                <Loader2 className={`w-4 h-4 animate-spin ${t.placeholderIcon}`} />
+              <div className={`absolute inset-0 ${t.placeholder} animate-pulse flex items-center justify-center`}>
               </div>
             )
           )}
@@ -239,28 +235,26 @@ export function GalleryTemplateCard({
         <div className={`w-full h-full ${t.placeholder} flex items-center justify-center`}>
           <div className="text-center">
             <ImageIcon className={`w-4 h-4 ${t.placeholderIcon} mx-auto mb-1`} />
-            <p className={`text-[8px] ${t.placeholderText}`}>読み込み失敗</p>
+            <p className={`text-xs ${t.placeholderText}`}>読み込み失敗</p>
           </div>
         </div>
       ) : (
-        <div className={`w-full h-full ${t.placeholder} flex items-center justify-center`}>
-          <Loader2 className={`w-4 h-4 animate-spin ${t.placeholderIcon}`} />
-        </div>
+        <div className={`w-full h-full ${t.placeholder} animate-pulse`} aria-hidden />
       )}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        <p className="text-[7px] sm:text-[9px] font-bold text-white line-clamp-1 drop-shadow">
+        <p className="text-xs sm:text-xs font-bold text-white line-clamp-1 drop-shadow">
           {template.displayTitle || template.name || template.industry}
         </p>
       </div>
       {selected && !isLocked && (
-        <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold text-white shadow z-20">
+        <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-xs sm:text-xs font-bold text-white shadow z-20">
           選択中
         </div>
       )}
       {isLocked && (
         <>
           <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-          <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
+          <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-xs font-bold text-white z-20 ${
             lockType === 'enterprise' ? 'bg-brand-400/90' : lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
           }`}>
             <Lock className="w-2 h-2" />
@@ -296,14 +290,14 @@ export function GalleryMoreTile({ fetching, progress, hiddenCount, onClick }: {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-[9px] sm:text-[10px] text-[#4a5375] font-medium">{progress}% 読み込み中</p>
+          <p className="text-xs sm:text-xs text-[#4a5375] font-medium">{progress}% 読み込み中</p>
         </div>
       ) : (
         <div className="text-center">
           <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed ${t.moreCircle} flex items-center justify-center mx-auto mb-2 transition-colors`}>
             <ChevronDown className={`w-5 h-5 sm:w-6 sm:h-6 ${t.moreText} transition-colors`} />
           </div>
-          <p className={`text-[10px] sm:text-xs ${t.moreText} font-medium transition-colors`}>もっと見る{hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</p>
+          <p className={`text-xs sm:text-xs ${t.moreText} font-medium transition-colors`}>もっと見る{hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</p>
         </div>
       )}
     </button>

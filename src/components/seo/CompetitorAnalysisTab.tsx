@@ -129,7 +129,7 @@ export function CompetitorAnalysisTab({ articleId, article, onUpdated }: Competi
       {/* 参照URL一覧 */}
       {totalRefs > 0 && (
         <div className="mt-6">
-          <p className="text-[10px] font-black text-cyan-700 uppercase tracking-widest mb-3">
+          <p className="text-xs font-black text-cyan-700 uppercase tracking-widest mb-3">
             参考に保存済みのURL（{totalRefs}件）
           </p>
           <div className="flex flex-wrap gap-2">
@@ -139,7 +139,7 @@ export function CompetitorAnalysisTab({ articleId, article, onUpdated }: Competi
                 href={r.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-cyan-200 text-[11px] font-black text-cyan-800 hover:bg-cyan-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-cyan-200 text-xs font-black text-cyan-800 hover:bg-cyan-50"
                 title={r.title || r.url}
               >
                 <Link2 className="w-3.5 h-3.5" />
@@ -152,7 +152,7 @@ export function CompetitorAnalysisTab({ articleId, article, onUpdated }: Competi
                 href={url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-cyan-200 text-[11px] font-black text-cyan-800 hover:bg-cyan-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-cyan-200 text-xs font-black text-cyan-800 hover:bg-cyan-50"
                 title={url}
               >
                 <Link2 className="w-3.5 h-3.5" />

@@ -43,7 +43,7 @@ export default function ShodanListPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-5 p-4 sm:p-6">
       <ToolHero
-        title="今、ドヤれる商談を、URL1本で。"
+        title={<>今、ドヤれる商談を、<wbr />URL1本で。</>}
         lead="商談先のURLを入れるだけで、企業の調査・課題の仮説・提案資料までAIがまとめます。"
         action={<Button href={`${base}/new`} icon="Plus">商談準備をつくる</Button>}
         tool="shodan"
