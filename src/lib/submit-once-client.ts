@@ -12,11 +12,13 @@ export type OnceResolutionState = 'found' | 'gone' | 'cancelled'
 /** 前回の送信が保存ずみだったため、今回は送らなかったときの例外（理由の文をそのまま画面に出す） */
 export class SubmitOnceSavedError extends Error {}
 export class SubmitOnceStorageError extends Error {}
+export class SubmitOnceLockTimeoutError extends Error {}
 
 export const ONCE_SAVED_MESSAGE = '前回の送信が保存されていました。二重に登録しないよう、今回の内容は保存していません。一覧で確かめてから、必要なら、もう一度お試しください。'
 
 export const ONCE_STORAGE_UNAVAILABLE_MESSAGE = '二重登録を防ぐための送信情報をブラウザに保存できませんでした。ブラウザのサイトデータの保存を許可してから、もう一度お試しください。'
 
+const LOCK_WAIT_TIMEOUT_MS = 15_000
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -63,8 +65,21 @@ function storageWorks(): boolean {
 
 async function withBrowserLock<T>(key: string, work: () => Promise<T>): Promise<T> {
   // 別のタブの同じ画面と、控えの読み書きが重ならないようにする
-  if (typeof navigator !== 'undefined' && navigator.locks?.request) return navigator.locks.request(key, work) as Promise<T>
-  return work()
+  if (typeof navigator === 'undefined' || !navigator.locks?.request) return work()
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => {
+    controller.abort(new SubmitOnceLockTimeoutError('別のタブでの保存処理が終わるのを待てませんでした。この画面の内容は送信していません。別のタブを確認してから、もう一度お試しください。'))
+  }, LOCK_WAIT_TIMEOUT_MS)
+  try {
+    return await navigator.locks.request(key, { signal: controller.signal }, () => {
+      clearTimeout(timeout)
+      controller.signal.throwIfAborted()
+      return work()
+    }) as T
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 /** 認証・権限・保存先の変更は、以前の送信結果を示さないので控えを残す。 */

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
 import { assertOnceScope, onceScopeKey, createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from './submit-once'
-import { ONCE_SAVED_MESSAGE, ONCE_STORAGE_UNAVAILABLE_MESSAGE, onceFingerprint, submitOnce, SubmitOnceSavedError } from './submit-once-client'
+import { ONCE_SAVED_MESSAGE, ONCE_STORAGE_UNAVAILABLE_MESSAGE, onceFingerprint, submitOnce, SubmitOnceLockTimeoutError, SubmitOnceSavedError } from './submit-once-client'
 
 const OP = '11111111-1111-4111-8111-111111111111'
 class Fail extends Error { constructor(readonly status: number, message: string) { super(message) } }
@@ -284,4 +284,40 @@ test('旧送信の操作IDは区分付きに変わっても同じ登録を返す
   const replay = await createOnce(tx, scope(), { a: 1, operationId: OP, operationScope: onceScopeKey(scope()) }, m.find, m.create)
   assert.deepEqual(replay, { entry: first.entry, replayed: true })
   assert.equal(m.made.length, 1)
+})
+
+
+test('別タブのロック待ちを打ち切ると、後からロックを取れても送信しない', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  let delayedCallback: (() => Promise<unknown>) | undefined
+  const previous = Object.getOwnPropertyDescriptor(navigator, 'locks')
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true,
+    value: {
+      request: (_key: string, options: { signal?: AbortSignal }, callback?: () => Promise<unknown>) => {
+        delayedCallback = callback
+        const signal = options?.signal
+        assert.ok(signal)
+        return new Promise((_, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), { once: true })
+        })
+      },
+    },
+  })
+  t.after(() => {
+    if (previous) Object.defineProperty(navigator, 'locks', previous)
+    else Reflect.deleteProperty(navigator, 'locks')
+  })
+
+  const read = t.mock.fn(readScope)
+  const send = t.mock.fn(async () => 'ok')
+  const completion = assert.rejects(submitOnce({
+    readScope: read, scope: 's', input: { a: 1 }, send, resolve: never,
+  }), SubmitOnceLockTimeoutError)
+  t.mock.timers.tick(15_000)
+  await completion
+  assert.ok(delayedCallback)
+  assert.throws(delayedCallback, SubmitOnceLockTimeoutError)
+  assert.equal(read.mock.callCount(), 0)
+  assert.equal(send.mock.callCount(), 0)
 })

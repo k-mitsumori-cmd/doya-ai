@@ -13,7 +13,7 @@ import AgentBlocked from '@/components/agent-chat/AgentBlocked'
 import { isAgentSubmit, type SubmitResult } from '@/components/agent-chat/form-bus'
 import { parseDuration } from '@/lib/agent-chat/duration'
 import { createSaveLock } from '@/lib/agent-chat/review'
-import { submitOnce, SubmitOnceSavedError, SubmitOnceStorageError, type OnceResolutionState } from '@/lib/submit-once-client'
+import { submitOnce, SubmitOnceLockTimeoutError, SubmitOnceSavedError, SubmitOnceStorageError, type OnceResolutionState } from '@/lib/submit-once-client'
 import { useOnceFormScope, SubmitOnceFormScopeError } from '@/lib/use-once-form-scope'
 
 /** サーバーが答えを返した失敗（status は submitOnce が控えを消すかの判断にも使う） */
@@ -224,7 +224,7 @@ function NewRequestContent({ isActive }: { isActive: boolean | null }) {
       return { ok: true, href: '/kintai/requests' }
     } catch (e) {
       if (e instanceof KintaiPostError) return fail(userErrorMessage(e.apiError, '申請できませんでした。入力を確かめて、もう一度お試しください。'), e.status === 403 ? 'blocked' : undefined)
-      if (e instanceof SubmitOnceSavedError || e instanceof SubmitOnceStorageError || e instanceof SubmitOnceFormScopeError) return fail(e.message)
+      if (e instanceof SubmitOnceSavedError || e instanceof SubmitOnceStorageError || e instanceof SubmitOnceLockTimeoutError || e instanceof SubmitOnceFormScopeError) return fail(e.message)
       return fail(KINTAI_NETWORK_ERROR)
     } finally {
       setSubmitting(false)
