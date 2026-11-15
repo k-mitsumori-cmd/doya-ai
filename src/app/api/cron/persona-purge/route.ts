@@ -12,11 +12,13 @@ export async function GET(request: Request) {
   }
   try {
     const result = await purgeDeletedPersonaImages(prisma)
-    console.warn('[persona-purge] result', {
+    const counts = {
       processed: result.processed,
       completed: result.completed,
       failed: result.failed,
-    })
+    }
+    if (result.failed) console.warn('[persona-purge] result', counts)
+    else console.info('[persona-purge] result', counts)
     return Response.json({ ok: result.failed === 0, ...result }, { status: result.failed ? 503 : 200 })
   } catch {
     return Response.json({ error: 'Persona cleanup unavailable' }, { status: 503 })
