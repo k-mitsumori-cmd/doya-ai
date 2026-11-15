@@ -23,12 +23,12 @@
 .head strong { font-size: 14px; font-weight: 800; }
 .grow { flex: 1; }
 .count { flex: 1; text-align: right; font-style: normal; font-size: 12.5px; font-weight: 700; color: #0047d6; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.close { border: 0; background: none; color: #4a5375; font: 700 13px/1 inherit; min-height: 36px; padding: 0 6px; cursor: pointer; white-space: nowrap; }
+.close { border: 0; background: none; color: #4a5375; font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; min-height: 36px; padding: 0 6px; cursor: pointer; white-space: nowrap; }
 .prog { height: 3px; background: #e3e8f4; flex: none; overflow: hidden; }
 .prog i { display: block; height: 100%; background: #0066ff; transform-origin: left; transform: scaleX(0); transition: transform .32s cubic-bezier(.22, 1, .36, 1); }
 .viewsw { display: none; gap: 2px; flex: 1; min-width: 0; padding: 2px; border-radius: 999px; background: #f4f7fd; }
-.viewsw button { position: relative; flex: 1; min-height: 32px; border: 0; border-radius: 999px; background: transparent; font: 700 13px/1 inherit; color: #4a5375; cursor: pointer; white-space: nowrap; }
-.viewsw button[data-on='true'] { background: #fff; color: #0047d6; box-shadow: 0 1px 3px rgba(16, 22, 51, .12); }
+.viewsw button { position: relative; flex: 1; min-height: 32px; border: 0; border-radius: 999px; background: transparent; font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; color: #4a5375; cursor: pointer; white-space: nowrap; }
+.viewsw button[data-on='true'] { background: #fff; color: #0047d6; font-weight: 800; box-shadow: 0 1px 3px rgba(16, 22, 51, .12); }
 /* 答えを待っている印（「会話」を見ていないときだけ。見本の .viewsw button.wait::after と同じ点） */
 .waitMark { position: absolute; top: 5px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: #ff1e72; }
 
