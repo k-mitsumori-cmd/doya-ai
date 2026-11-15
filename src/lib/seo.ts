@@ -423,6 +423,39 @@ export function generatePageTitle(title: string, suffix = true): string {
   return title
 }
 
+export function buildPortalPageMetadata({
+  path, title, description, type = 'website',
+}: {
+  path: string
+  title: string
+  description: string
+  type?: 'website' | 'article'
+}): Metadata {
+  const image = SERVICE_SEO.portal.ogImage
+  return {
+    title,
+    description,
+    alternates: { canonical: path },
+    openGraph: {
+      type,
+      locale: SITE_CONFIG.locale,
+      url: `${SITE_CONFIG.url}${path}`,
+      siteName: SITE_CONFIG.name,
+      title,
+      description,
+      images: [{ url: image, width: 1200, height: 630, alt: SITE_CONFIG.name }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      site: SITE_CONFIG.twitter,
+      creator: SITE_CONFIG.twitter,
+      title,
+      description,
+      images: [image],
+    },
+  }
+}
+
 // ============================================
 // サービスLP用メタデータ・ファクトリ（正本 = services.ts）
 // 各サービス layout.tsx の手書き metadata をこれ1本に置換する。

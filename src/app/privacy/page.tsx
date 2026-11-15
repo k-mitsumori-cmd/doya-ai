@@ -1,10 +1,10 @@
-import type { Metadata } from 'next'
+import { buildPortalPageMetadata } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  alternates: { canonical: '/privacy' },
+export const metadata = buildPortalPageMetadata({
+  path: '/privacy',
   title: 'プライバシーポリシー',
   description: '株式会社スリスタが運営するドヤAI（ドヤバナーAI・ドヤ記事作成 等の各サービス）共通のプライバシーポリシー',
-}
+})
 
 export default function PrivacyPolicyPage() {
   return (
