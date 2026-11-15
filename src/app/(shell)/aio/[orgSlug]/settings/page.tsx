@@ -7,7 +7,6 @@ import { useOrgSettingsGuard } from '@/lib/use-org-settings-guard'
 import { readOrgProfile } from '@/lib/org-profile-view'
 import { PageHeader, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
-import { AioSiteReadCard } from '@/components/aio/site-read-card'
 import { AIO_BRAND_TEXT_LIMITS, parseAioBrandProfileInput } from '@/lib/aio/brand-profile-input'
 
 export default function AioSettingsPage() {
@@ -198,7 +197,6 @@ export default function AioSettingsPage() {
           {saving ? '保存中…' : '保存する'}
         </button>
       </div>
-      <AioSiteReadCard orgSlug={orgSlug} />
     </div>
   )
 }
