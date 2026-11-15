@@ -12,7 +12,20 @@ const fs=require('node:fs'),crypto=require('node:crypto'),assert=require('node:a
 
 
 const helperFile='src/lib/aio/quick-start-operation.ts',routeFile='src/app/api/aio/quick-start/route.ts',helper=load(helperFile,{'node:crypto':crypto,'@/lib/prisma':{prisma:db}}),aioTypes=load('src/lib/aio/types.ts'),billing=load('src/lib/aio/billing.ts'),unified=load('src/lib/unified-plan.ts');let actor='owner',derivations=0,suggestions=0,derive,setup;
-const route=load(routeFile,{'node:crypto':crypto,'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>actor?{user:{id:actor,name:'Synthetic'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'@/lib/aio/quick-start-operation':helper,'@/lib/aio/types':aioTypes,'@/lib/aio/billing':billing,'@/lib/unified-plan':unified,'@/lib/operational-json':load('src/lib/operational-json.ts',{}, {TextDecoder,Uint8Array}),'@/lib/aio/suggest':{normalizeUrl:raw=>{try{const u=new URL(raw);return ['https:','http:'].includes(u.protocol)&&u.hostname.includes('.')?u.toString():null}catch{return null}},deriveBrandFromUrl:async url=>{derivations++;return derive(url)},suggestBrandSetup:async args=>{suggestions++;return setup(args)}}});
+const route=load(routeFile,{'node:crypto':crypto,'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>actor?{user:{id:actor,name:'Synthetic'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:db},'@/lib/aio/quick-start-operation':helper,'@/lib/aio/types':aioTypes,'@/lib/aio/billing':billing,'@/lib/unified-plan':unified,'@/lib/operational-json':load('src/lib/operational-json.ts',{}, {TextDecoder,Uint8Array}),'@/lib/aio/site-analysis': {
+  analyzeSite: async () => ({
+    read: { ok: true, context: 'Synthetic site text', pages: [] },
+    profile: { summary: 'Synthetic service profile' },
+    usable: true,
+  }),
+  buildSiteReadRecord: () => ({}),
+  siteReadKey: id => 'aio-site-read:v1:' + id,
+}, '@/lib/aio/site-reader': {
+  readSiteForAio: async () => ({ ok: true, context: 'Synthetic site text', pages: [] }),
+  UNREADABLE_MESSAGE: 'Synthetic unreadable site',
+  unreadableDetail: () => 'Synthetic unreadable site',
+}, '@/lib/aio/service-profile': { profileFromUser: () => null },
+'@/lib/aio/suggest':{normalizeUrl:raw=>{try{const u=new URL(raw);return ['https:','http:'].includes(u.protocol)&&u.hostname.includes('.')?u.toString():null}catch{return null}},deriveBrandFromUrl:async url=>{derivations++;return derive(url)},suggestBrandSetup:async args=>{suggestions++;return setup(args)}}});
 const id=n=>'50000000-0000-4000-8000-'+String(n).padStart(12,'0'),url=n=>'https://site-'+n+'.invalid';const request=(method,n=1,site=1,extra={})=>{const href='https://example.invalid/api/aio/quick-start'+(method==='GET'?'?operationId='+id(n):'');const r=new Request(href,{method,...(method==='GET'?{}:{headers:{'content-type':'application/json'},body:JSON.stringify({operationId:id(n),url:url(site),...extra})})});r.nextUrl=new URL(href);return r},post=(n=1,site=1,extra)=>route.POST(request('POST',n,site,extra)),get=(n=1)=>route.GET(request('GET',n)),cancel=(n=1)=>route.DELETE(request('DELETE',n));
 async function seed(n){const o=await db.aioOrganization.create({data:{name:'Existing '+n,slug:'existing-'+n}});await db.aioMember.create({data:{userId:'owner',organizationId:o.id,role:'owner',status:'ACTIVE'}});await db.aioBrandProfile.create({data:{organizationId:o.id,brandName:'Existing '+n,brandUrl:url(n)}})}
 async function reset(count=0){await db.systemSetting.deleteMany();await db.aioPrompt.deleteMany();await db.aioBrandProfile.deleteMany();await db.aioMember.deleteMany();await db.aioOrganization.deleteMany();await db.user.deleteMany();for(const userId of ['owner','other'])await db.user.create({data:{id:userId,email:userId+'@example.invalid',plan:'FREE'}});for(let n=0;n<count;n++)await seed(100+n);actor='owner';derivations=0;suggestions=0;derive=async()=>({brandName:'Synthetic'});setup=async()=>({category:'Synthetic',aliases:[],competitors:[],prompts:Array.from({length:8},(_,n)=>'Question '+n)})}
