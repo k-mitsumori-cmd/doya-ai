@@ -62,7 +62,7 @@ export function decodeBody(body: Buffer, contentType: string): string {
   try { return new TextDecoder(charset === 'windows-31j' || charset === 'sjis' ? 'shift_jis' : charset).decode(body) } catch { return body.toString('utf8') }
 }
 
-export function agentFreeChecks(base = siteBase()): CheckDef[] {
+export function agentFreeChecks(base = siteBase(), { dry = false }: { dry?: boolean } = {}): CheckDef[] {
   return [
     {
       id: 'api:agent-guard', area: 'API', label: 'エージェントの API が旗の外の人に見えないか（/api/agent/tasks）', severity: 'urgent', threshold: 2,
@@ -100,7 +100,9 @@ export function agentFreeChecks(base = siteBase()): CheckDef[] {
           }
         }
         const outcome: CheckOutcome = bad.length ? { ok: false, error: bad.join(' / '), detail: lines.join(' / ') } : { ok: true, detail: lines.join(' / ') }
-        await prisma.systemSetting.upsert({ where: { key: memoKey }, create: { key: memoKey, value: JSON.stringify({ day: today, outcome }) }, update: { value: JSON.stringify({ day: today, outcome }) } }).catch(() => {})
+        if (!dry) {
+          await prisma.systemSetting.upsert({ where: { key: memoKey }, create: { key: memoKey, value: JSON.stringify({ day: today, outcome }) }, update: { value: JSON.stringify({ day: today, outcome }) } }).catch(() => {})
+        }
         return outcome
       },
     },

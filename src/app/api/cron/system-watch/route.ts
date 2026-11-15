@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
   const dry = new URL(request.url).searchParams.get('dry') === '1'
-  const report = await runWatch('free', freeChecks(), { dry })
+  const report = await runWatch('free', freeChecks({ dry }), { dry })
   // ⚠️ console.error にしない。runtime-alert.ts が console.error を拾って「アプリまたはサーバーの処理でエラー」を Slack に送るため、
   //    詳しい通知（runWatch が送る）と二重になる（2026-10-26 本番で、分かっている設定の不足が汎用のエラー通知として出た）
   if (report.failed.length) console.warn('[system-watch] failed', JSON.stringify(report.failed.map(f => ({ id: f.id, status: f.status }))))
