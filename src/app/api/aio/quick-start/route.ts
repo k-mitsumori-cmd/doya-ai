@@ -13,9 +13,6 @@ import { AIO_FREE_PROMPT_LIMIT } from '@/lib/aio/types'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { beginAioQuickStart, recoverAioQuickStart, finishAioQuickStart, failAioQuickStart, AioStartError } from '@/lib/aio/quick-start-operation'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
-import { analyzeSite, buildSiteReadRecord, siteReadKey } from '@/lib/aio/site-analysis'
-import { readSiteForAio, UNREADABLE_MESSAGE, unreadableDetail } from '@/lib/aio/site-reader'
-import { profileFromUser, type ServiceProfile } from '@/lib/aio/service-profile'
 
 const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
 type Identity = { userId: string; operationId: string }
@@ -48,31 +45,14 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
     if (admission.state !== 'started') return response(admission)
     if (!('leaseToken' in admission) || !admission.leaseToken) throw new AioStartError('INVALID_RECEIPT')
     worker = { ...identity, leaseToken: admission.leaseToken }
-    // サイトを読み、サービスの内容を決める。利用者が確認・入力した内容があればそれを使う。
-    // 読み取れず入力も無いときは、質問を作らずに止める（名前からの推測で質問を作らない）。
-    const rawProfile = body?.profile && typeof body.profile === 'object' ? body.profile as Record<string, unknown> : null
-    const userProfile = rawProfile ? profileFromUser(rawProfile, rawProfile.edited === true) : null
-    let siteRead: Awaited<ReturnType<typeof readSiteForAio>> | null = null
-    let profile: ServiceProfile | null = userProfile
-    if (userProfile) {
-      siteRead = await readSiteForAio(url)
-    } else {
-      const analysis = await analyzeSite(url)
-      siteRead = analysis.read
-      profile = analysis.usable ? analysis.profile : null
-      if (!profile) {
-        const operation = await failAioQuickStart(worker)
-        return NextResponse.json({ ...operation, success: false, siteUnreadable: true, error: UNREADABLE_MESSAGE, detail: unreadableDetail(siteRead) }, { status: 422, headers })
-      }
-    }
-    const derived = await deriveBrandFromUrl(url, siteRead.pages[0] ?? null)
+    const derived = await deriveBrandFromUrl(url)
     const brandName = derived.brandName.trim().slice(0, 120)
     if (!brandName) throw new AioStartError('INVALID_BRAND', 400)
     // A cancellation while site/title derivation ran must not start the next AI stage.
     const current = await recoverAioQuickStart(identity)
     if (current.state === 'cancelling') return response(await failAioQuickStart(worker))
     if (current.state !== 'pending') return response(current)
-    const setup = await suggestBrandSetup({ brandName, url, profile, siteContext: siteRead.context })
+    const setup = await suggestBrandSetup({ brandName, url })
     const memberName = (session?.user?.name?.trim() || 'オーナー').slice(0, 80)
     const operation = await finishAioQuickStart(worker, async tx => {
       const slug = 'aio-' + createHash('sha256').update(JSON.stringify([userId, operationId])).digest('hex').slice(0, 32)
@@ -85,8 +65,6 @@ async function handle(req: NextRequest, method: 'GET' | 'POST' | 'DELETE') {
       const questions = Array.from(new Set(setup.prompts.map(text => text.trim().slice(0, 500)).filter(Boolean)))
       const prompts = isPaidPlan(billing.plan) ? questions : questions.slice(0, AIO_FREE_PROMPT_LIMIT)
       if (prompts.length) await tx.aioPrompt.createMany({ data: prompts.map(text => ({ organizationId: organization.id, text, isActive: true })) })
-      const record = JSON.stringify(buildSiteReadRecord(url, siteRead, profile))
-      await tx.systemSetting.upsert({ where: { key: siteReadKey(organization.id) }, create: { key: siteReadKey(organization.id), value: record }, update: { value: record } })
       return organization
     })
     return response(operation)
