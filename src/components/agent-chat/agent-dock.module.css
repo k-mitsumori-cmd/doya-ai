@@ -5,7 +5,7 @@
 .fab {
   position: fixed; z-index: 86; right: calc(96px + env(safe-area-inset-right, 0px)); bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   min-height: 48px; padding: 0 18px; border: 0; border-radius: 24px; cursor: pointer;
-  background: var(--n-blue, #0066ff); color: #fff; font: 800 14px/1 inherit; box-shadow: 0 8px 28px -10px rgba(10, 15, 60, .4);
+  background: var(--n-blue, #0066ff); color: #fff; font-family: inherit; font-size: 14px; font-weight: 800; line-height: 1; box-shadow: 0 8px 28px -10px rgba(10, 15, 60, .4);
   display: inline-flex; align-items: center; gap: 8px; transition: opacity .2s ease, transform .3s cubic-bezier(.22, 1, .36, 1);
 }
 .fab[data-open='true'] { opacity: 0; pointer-events: none; transform: translateY(8px); }
@@ -51,7 +51,7 @@
 .newBelow {
   position: absolute; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 2;
   min-height: 36px; padding: 0 16px; border: 0; border-radius: 999px; background: #101633; color: #fff;
-  font: 700 13px/1 inherit; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(10, 15, 60, .45); animation: rise .2s cubic-bezier(.22, 1, .36, 1) both;
+  font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 6px 18px -6px rgba(10, 15, 60, .45); animation: rise .2s cubic-bezier(.22, 1, .36, 1) both;
 }
 .hint, .say, .note { margin: 0; animation: rise .3s cubic-bezier(.22, 1, .36, 1) both; }
 .hint, .note { color: #4a5375; font-size: 13px; }
@@ -79,7 +79,7 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .rows > div[data-big='true'] dd { font-size: 18px; font-weight: 800; }
 .note { background: #fff7d6; color: #7a5b00; padding: 8px 10px; border-radius: 10px; font-size: 12.5px; line-height: 1.55; font-weight: 500; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px 8px; }
-.primary, .ghost { min-height: 44px; padding: 0 12px; white-space: nowrap; border-radius: 999px; font: 800 13.5px/1 inherit; cursor: pointer; border: 1.5px solid transparent; }
+.primary, .ghost { min-height: 44px; padding: 0 12px; white-space: nowrap; border-radius: 999px; font-family: inherit; font-size: 13.5px; font-weight: 800; line-height: 1; cursor: pointer; border: 1.5px solid transparent; }
 .primary { background: #0066ff; color: #fff; }
 .primary:hover:not(:disabled) { background: #0047d6; }
 .ghost { background: #fff; color: #101633; border-color: #c6cde0; }
@@ -89,11 +89,11 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .err { margin: 0; color: #b42318; font-size: 13px; }
 .ask { display: grid; gap: 8px; }
 .row { display: flex; gap: 8px; }
-.input { flex: 1; min-width: 0; min-height: 46px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid #c6cde0; background: #fff; color: inherit; font: 600 16px/1.4 inherit; }
+.input { flex: 1; min-width: 0; min-height: 46px; padding: 8px 14px; border-radius: 999px; border: 1.5px solid #c6cde0; background: #fff; color: inherit; font-family: inherit; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .foot { flex: none; display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #e3e8f4; background: #fff; }
 .done { display: grid; gap: 10px; }
 /* スマホ: 畳んだ作業の一覧の見出し、会話の下に固定する確認カードのボタン */
-.stepsToggle { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #f4f7fd; color: #101633; font: 700 13px/1 inherit; cursor: pointer; }
+.stepsToggle { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: #f4f7fd; color: #101633; font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer; }
 .stepsToggle small { color: #0047d6; font-size: 12px; font-weight: 700; }
 .pin { flex: none; display: flex; gap: 8px; padding: 8px 12px; border-top: 1px solid #e3e8f4; background: #fff; }
 .pin .primary, .pin .ghost { padding: 0 12px; white-space: nowrap; font-size: 13.5px; }
@@ -101,7 +101,7 @@ li[data-status='done'] .dot::after { content: ''; position: absolute; left: 5px;
 .donecard { padding: 12px 14px; border-radius: 14px; background: #e6f8ef; color: #0b8a4d; font-size: 13.5px; font-weight: 700; animation: pop .4s cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
 .next { display: grid; gap: 6px; }
-.nextBtn { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid #e3e8f4; border-radius: 12px; background: #fff; color: inherit; font: 700 13.5px/1.4 inherit; text-align: left; cursor: pointer; }
+.nextBtn { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid #e3e8f4; border-radius: 12px; background: #fff; color: inherit; font-family: inherit; font-size: 13.5px; font-weight: 700; line-height: 1.4; text-align: left; cursor: pointer; }
 .nextBtn:hover { border-color: #d7e5ff; background: #e8f0ff; }
 .nextBtn small { color: #0047d6; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
