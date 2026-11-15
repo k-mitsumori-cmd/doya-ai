@@ -5,6 +5,7 @@ import { brandNameWithFormer } from '@/lib/brand'
 import { tokushohoPriceLines, TOKUSHOHO_PAYMENT_TIMING, TOKUSHOHO_REFUND } from '@/lib/pricing-v2/legal-copy'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/tokushoho' },
   title: '特定商取引法に基づく表記',
   description: '株式会社スリスタが運営するドヤAIの特定商取引法に基づく表記',
 }
