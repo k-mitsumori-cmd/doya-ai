@@ -45,14 +45,14 @@ function fixture(initialCount, failure, denied) {
     completeDoyalistExtraction: async (identity, save) => {
       const r = receipts.get(identity.operationId)
       const result = await save({ doyalistCompany: companyStore }, r.projectId, r.count)
-      r.ids = result.ids; r.state = 'completed'; r.code = null; return r
+      r.ids = result.ids; r.warning = result.warning; r.state = 'completed'; r.code = null; return r
     },
   }
   const operationResponse = async identity => {
     const r = receipts.get(identity.operationId)
     if (r.state === 'completed') {
       const rows = companies.filter(c => r.ids.includes(c.id))
-      return streamJson.streamDoyalistJsonArray({ success: true, generated: rows.length, state: r.state }, 'companies', rows)
+      return streamJson.streamDoyalistJsonArray({ success: true, generated: rows.length, state: r.state, ...(r.warning ? { warning: r.warning } : {}) }, 'companies', rows)
     }
     return Response.json({ success: false, state: r.state, code: r.code }, { status: r.code === 'MONTHLY_LIMIT_REACHED' ? 403 :
       r.code === 'no_hits' ? 422 : r.code === 'collection_timeout' ? 503 : r.code === 'api_error' ? 502 : 200 })
@@ -75,7 +75,7 @@ function fixture(initialCount, failure, denied) {
     '@/lib/doyalist/collect':{collectCompaniesDetailed:async()=>{
       calls++;
       if(mode==='throw')throw Error('Synthetic upstream failure');
-      return {apiOk:mode!=='unavailable',budgetExhausted:mode==='timeout',companies:['empty','unavailable','timeout'].includes(mode)?[]:[{companyName:'New company',source:'gbizinfo'}]};
+      return {apiOk:mode!=='unavailable',budgetExhausted:mode==='timeout',providerFailed:['partial-empty','partial-found'].includes(mode),companies:['empty','unavailable','timeout','partial-empty'].includes(mode)?[]:[{companyName:'New company',source:'gbizinfo'}]};
     }},
   });
   return {
@@ -85,6 +85,17 @@ function fixture(initialCount, failure, denied) {
   };
 }
 (async()=>{
+  await check('partial results are saved once and warn about the unavailable source',async()=>{
+    const f=fixture(2,'partial-found');
+    const first=await f.post(), body=await first.json();
+    assert.equal(first.status,200);
+    assert.equal(body.generated,1);
+    assert.match(body.warning,/一部の取得元を検索できなかった/);
+    const retry=await f.post();
+    assert.equal(retry.status,200);
+    assert.equal((await retry.json()).warning,body.warning);
+    assert.equal(f.state().writes,1);
+  });
   await check('invalid count, project ID and oversized requests stop before collection',async()=>{
     const f=fixture(0,null);
     for(const body of [
@@ -117,7 +128,7 @@ function fixture(initialCount, failure, denied) {
     const body=await response.json();assert.deepEqual(body.projects.map(p=>p.id),['empty','saved']);
     assert.equal(body.projects[0].companyCount,0);
   });
-  for(const size of [0,2])for(const mode of ['throw','empty','unavailable','timeout','save']) {
+  for(const size of [0,2])for(const mode of ['throw','empty','unavailable','timeout','save','partial-empty']) {
     await check(`preserve ${size} existing companies on ${mode}, then retry`,async()=>{
       const f=fixture(size,mode), before=structuredClone(f.state());
       const response=await f.post();
