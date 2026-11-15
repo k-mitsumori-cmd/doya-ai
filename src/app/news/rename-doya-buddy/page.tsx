@@ -6,18 +6,18 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { brandAlternateNames, isBrandRenamed } from '@/lib/brand'
 import { RENAME_NEWS, RENAME_NEWS_PATH, renameDate, renameDateLabel } from '@/lib/brand/rename-news'
-import { SITE_CONFIG } from '@/lib/seo'
+import { buildPortalPageMetadata, SITE_CONFIG } from '@/lib/seo'
 
 export const dynamic = 'force-static'
 
 // ⚠️ 旗が off のときは、メタデータも空にする（404 の画面の中に、新しい名前が出ないように）
 export const metadata: Metadata = isBrandRenamed()
-  ? {
+  ? buildPortalPageMetadata({
+      path: RENAME_NEWS_PATH,
       title: RENAME_NEWS.title,
       description: RENAME_NEWS.description,
-      alternates: { canonical: RENAME_NEWS_PATH },
-      openGraph: { title: RENAME_NEWS.title, description: RENAME_NEWS.description, type: 'article' },
-    }
+      type: 'article',
+    })
   : {}
 
 export default function RenameNewsPage() {

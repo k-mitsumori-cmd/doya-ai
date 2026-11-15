@@ -1,13 +1,14 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { Metadata } from 'next'
+import { buildPortalPageMetadata } from '@/lib/seo'
 import { brandNameWithFormer } from '@/lib/brand'
 import { tokushohoPriceLines, TOKUSHOHO_PAYMENT_TIMING, TOKUSHOHO_REFUND } from '@/lib/pricing-v2/legal-copy'
 
-export const metadata: Metadata = {
+export const metadata = buildPortalPageMetadata({
+  path: '/tokushoho',
   title: '特定商取引法に基づく表記',
   description: '株式会社スリスタが運営するドヤAIの特定商取引法に基づく表記',
-}
+})
 
 export default function TokushohoPage() {
   return (
