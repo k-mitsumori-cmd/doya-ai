@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { privateApiJson } from '@/lib/private-api-response'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { lockCurrentKintaiActor } from '@/lib/kintai/manager-admission'
@@ -16,7 +17,7 @@ class RequestOnceError extends Error {
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
-    if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    if (!ctx) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') || ''
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
     const hasCursor = searchParams.has('cursor')
     const cursor = searchParams.get('cursor')
     if (hasCursor && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
-      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
 
     const where: any = { employee: { organizationId: ctx.organizationId } }
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     if (cursor) {
       const scopedCursor = await prisma.kintaiRequest.findFirst({ where: { ...where, id: cursor }, select: { id: true } })
-      if (!scopedCursor) return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      if (!scopedCursor) return privateApiJson({ error: 'ページ指定が正しくありません' }, { status: 400 })
     }
 
     const [rows, total, grouped] = await Promise.all([
@@ -67,71 +68,71 @@ export async function GET(req: NextRequest) {
     const nextCursor = rows.length > 100 ? requests[requests.length - 1].id : null
     const counts = Object.fromEntries(grouped.map((row) => [row.status, row._count._all]))
 
-    return NextResponse.json({ requests, nextCursor, total, counts }, { headers: { 'Cache-Control': 'private, no-store' } })
+    return privateApiJson({ requests, nextCursor, total, counts })
   } catch (e) {
     console.error('[kintai/requests GET]')
-    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
-    if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
-    if (ctx.isActive === false) return NextResponse.json({ error: '無効化された従業員は申請を作成できません' }, { status: 403 })
+    if (!ctx) return privateApiJson({ error: '認証が必要です' }, { status: 401 })
+    if (ctx.isActive === false) return privateApiJson({ error: '無効化された従業員は申請を作成できません' }, { status: 403 })
 
     const body = await req.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '入力内容が正しくありません' }, { status: 400 })
     }
     const fail = (status: number, message: string) => new RequestOnceError(status, message)
     const once: OnceScope = { family: 'kintai-request', organizationId: ctx.organizationId, actorId: ctx.employeeId, operationId: onceOperationId(body, fail), fail }
-    if (isOnceScopeRequest(body)) return NextResponse.json({ scope: onceScopeKey(once) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    if (isOnceScopeRequest(body)) return privateApiJson({ scope: onceScopeKey(once) })
     assertOnceScope(body, once)
     // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
     if (isOnceResolve(body)) {
       const resolved = await prisma.$transaction(tx => resolveOnce(tx, once, id => tx.kintaiRequest.findFirst({ where: { id, employeeId: ctx.employeeId }, select: { id: true } })))
-      return NextResponse.json({ once: resolved })
+      return privateApiJson({ once: resolved })
     }
     const { type, details, reason } = body
     // SEC: タイプ値のホワイトリスト検証
     const ALLOWED_TYPES = ['clock_fix', 'leave', 'overtime', 'holiday_work']
     if (!type || !ALLOWED_TYPES.includes(type)) {
-      return NextResponse.json({ error: '無効な申請種別です' }, { status: 400 })
+      return privateApiJson({ error: '無効な申請種別です' }, { status: 400 })
     }
     if (!details || typeof details !== 'object' || Array.isArray(details)) {
-      return NextResponse.json({ error: '申請内容が正しくありません' }, { status: 400 })
+      return privateApiJson({ error: '申請内容が正しくありません' }, { status: 400 })
     }
 
     // バリデーション: 各申請種別ごとの必須フィールドチェック
     if (type === 'clock_fix') {
-      if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
-      if (!details?.clockType) return NextResponse.json({ error: '打刻種別を選択してください' }, { status: 400 })
-      if (!details?.correctedTime) return NextResponse.json({ error: '修正後の時刻を入力してください' }, { status: 400 })
+      if (!details?.date) return privateApiJson({ error: '対象日は必須です' }, { status: 400 })
+      if (!details?.clockType) return privateApiJson({ error: '打刻種別を選択してください' }, { status: 400 })
+      if (!details?.correctedTime) return privateApiJson({ error: '修正後の時刻を入力してください' }, { status: 400 })
       const validDate = typeof details.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(details.date)
       const dateOnly = validDate ? new Date(`${details.date}T00:00:00Z`) : null
       const validTime = typeof details.correctedTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(details.correctedTime)
       if (!dateOnly || !Number.isFinite(dateOnly.getTime()) || dateOnly.toISOString().slice(0, 10) !== details.date ||
           !validTime || !['clock_in', 'clock_out', 'break_start', 'break_end'].includes(details.clockType)) {
-        return NextResponse.json({ error: '打刻訂正の日時・種別をご確認ください。' }, { status: 400 })
+        return privateApiJson({ error: '打刻訂正の日時・種別をご確認ください。' }, { status: 400 })
       }
       const [hour, minute] = details.correctedTime.split(':').map(Number)
       const correctedTimestamp = new Date(dateOnly.getTime() - 9 * 3600000 + (hour * 60 + minute) * 60000)
       if (correctedTimestamp.getTime() > Date.now()) {
-        return NextResponse.json({ error: '未来の時刻には打刻を訂正できません。' }, { status: 400 })
+        return privateApiJson({ error: '未来の時刻には打刻を訂正できません。' }, { status: 400 })
       }
     }
     if (type === 'leave') {
-      if (!details?.startDate) return NextResponse.json({ error: '開始日は必須です' }, { status: 400 })
-      if (!details?.endDate) return NextResponse.json({ error: '終了日は必須です' }, { status: 400 })
+      if (!details?.startDate) return privateApiJson({ error: '開始日は必須です' }, { status: 400 })
+      if (!details?.endDate) return privateApiJson({ error: '終了日は必須です' }, { status: 400 })
       const start = new Date(details.startDate + 'T00:00:00Z')
       const end = new Date(details.endDate + 'T00:00:00Z')
       if (!['paid', 'special', 'unpaid'].includes(details.leaveType) ||
           !/^\d{4}-\d{2}-\d{2}$/.test(details.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(details.endDate) ||
           !Number.isFinite(+start) || !Number.isFinite(+end) || start.toISOString().slice(0, 10) !== details.startDate || end.toISOString().slice(0, 10) !== details.endDate || end < start) {
-        return NextResponse.json({ error: '休暇の種別・日付範囲をご確認ください。' }, { status: 400 })
+        return privateApiJson({ error: '休暇の種別・日付範囲をご確認ください。' }, { status: 400 })
       }
-      if ((+end - +start) / 86400000 + 1 > 366) return NextResponse.json({ error: '1件の休暇申請は366日以内で指定してください。' }, { status: 400 })
+      if ((+end - +start) / 86400000 + 1 > 366) return privateApiJson({ error: '1件の休暇申請は366日以内で指定してください。' }, { status: 400 })
     }
     if (type === 'overtime') {
       if (typeof details.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(details.date) ||
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
           !Number.isInteger(details.hours) || details.hours < 0 || details.hours > 24 ||
           !Number.isInteger(details.minutes) || details.minutes < 0 || details.minutes > 59 ||
           details.hours * 60 + details.minutes < 1 || details.hours * 60 + details.minutes > 1440) {
-        return NextResponse.json({ error: '残業の日付・時間をご確認ください。' }, { status: 400 })
+        return privateApiJson({ error: '残業の日付・時間をご確認ください。' }, { status: 400 })
       }
     }
     if (type === 'holiday_work') {
@@ -150,11 +151,11 @@ export async function POST(req: NextRequest) {
           typeof details.startTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(details.startTime) ||
           typeof details.endTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(details.endTime) ||
           details.startTime === details.endTime) {
-        return NextResponse.json({ error: '休日出勤の日付・時刻をご確認ください。' }, { status: 400 })
+        return privateApiJson({ error: '休日出勤の日付・時刻をご確認ください。' }, { status: 400 })
       }
     }
     if (typeof reason !== 'string' || !reason.trim()) {
-      return NextResponse.json({ error: '理由を入力してください' }, { status: 400 })
+      return privateApiJson({ error: '理由を入力してください' }, { status: 400 })
     }
 
     const savedDetails = { ...(details || {}) }
@@ -180,11 +181,11 @@ export async function POST(req: NextRequest) {
       return entry
     })
 
-    return NextResponse.json({ request }, { status: 201 })
+    return privateApiJson({ request }, { status: 201 })
   } catch (e) {
-    if (e instanceof RequestForbidden) return NextResponse.json({ error: e.message }, { status: 403 })
-    if (e instanceof RequestOnceError) return NextResponse.json({ error: e.message }, { status: e.status })
+    if (e instanceof RequestForbidden) return privateApiJson({ error: e.message }, { status: 403 })
+    if (e instanceof RequestOnceError) return privateApiJson({ error: e.message }, { status: e.status })
     console.error('[kintai/requests POST]')
-    return NextResponse.json({ error: '申請の作成に失敗しました' }, { status: 500 })
+    return privateApiJson({ error: '申請の作成に失敗しました' }, { status: 500 })
   }
 }
