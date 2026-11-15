@@ -233,6 +233,27 @@ test('再送が認証・権限エラーになっても、再ログイン後に�
   assert.equal(new Set(ids).size, 1)
 })
 
+test('結果不明の登録を再送して4xxでも、元の登録番号が残る', async () => {
+  const receivedIds: string[] = []
+  const storedIds = new Set<string>()
+  const send = async (id: string) => {
+    receivedIds.push(id)
+    if (receivedIds.length === 2) throw httpError(429)
+    if (receivedIds.length === 3) throw httpError(400)
+    storedIds.add(id)
+    if (receivedIds.length === 1) throw new TypeError('lost')
+    return 'ok'
+  }
+  const save = () => submitOnce({ scope: 's', input: { a: 1 }, readScope, send, resolve: never })
+
+  await assert.rejects(save(), TypeError)
+  await assert.rejects(save(), { status: 429 })
+  await assert.rejects(save(), { status: 400 })
+  assert.equal(await save(), 'ok')
+  assert.equal(new Set(receivedIds).size, 1)
+  assert.equal(storedIds.size, 1)
+})
+
 test('旧控えを現在の区分で照会し、保存済みのときは送信せず別利用者用の控えを残す', async () => {
   const { localStorage } = (globalThis as unknown as { window: { localStorage: Storage } }).window
   const legacy = JSON.stringify({ operationId: OP, fingerprint: onceFingerprint({ a: 1 }), at: Date.now() })

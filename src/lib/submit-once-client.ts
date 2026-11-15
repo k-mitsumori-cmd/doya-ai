@@ -125,7 +125,10 @@ export async function submitOnce<T>(options: {
       window.localStorage.removeItem(key)
       return result
     } catch (error) {
-      if (isDefiniteFailure(error)) window.localStorage.removeItem(key)
+      // 再送のエラーは、前回の送信が保存されていないことの証明にはならない。
+      if (pending?.operationId !== operationId && isDefiniteFailure(error)) {
+        window.localStorage.removeItem(key)
+      }
       throw error
     }
   })
