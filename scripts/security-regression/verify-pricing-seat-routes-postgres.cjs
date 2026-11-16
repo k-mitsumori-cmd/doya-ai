@@ -46,7 +46,8 @@ const unified = load('src/lib/unified-plan.ts', {}, globals);
 const view = load('src/lib/pricing-v2/view.ts', { '@/lib/unified-plan': unified }, globals);
 const powerRules = load('src/lib/doya-power/rules.ts', {}, globals);
 const core = load('src/lib/pricing-v2/seat-operation.ts', { 'node:crypto': crypto, '@/lib/prisma': { prisma: db }, './team': team }, globals);
-const rollout = { isNewPricingEnabledFor: () => true, newPricingRollout: () => 'all' };
+// 1人いくらの旗（PER_SEAT_PRICING_ROLLOUT）は off とみなす。基本料ありの案内の文を確かめる
+const rollout = { isNewPricingEnabledFor: () => true, newPricingRollout: () => 'all', isPerSeatPricingFor: () => false };
 const subscription = () => ({ id: 'sub_synthetic', object: 'subscription', customer: 'cus_synthetic', livemode: false, status: state.currentStatus || 'active', collection_method: state.collectionMethod || 'charge_automatically', pending_update: null, latest_invoice: state.latestInvoice, items: { has_more: false, data: [{ id: 'si_synthetic', quantity: state.purchased, price: { id: state.currentInterval === 'year' ? 'price_seat_y' : 'price_seat_m', currency: 'jpy' } }] } });
 const stripe = { subscriptions: {
   retrieve: async id => ({ ...subscription(), id }),
