@@ -2,6 +2,7 @@
 // https://llmstxt.org/ の形式に準拠。SERVICES（正本）から自動生成する
 import { SERVICES, HIDDEN_SERVICE_IDS } from '@/lib/services'
 import { SITE_CONFIG } from '@/lib/seo'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 export const dynamic = 'force-static'
 
@@ -17,10 +18,10 @@ export function GET() {
   const lines: string[] = [
     '# ドヤAI',
     '',
-    '> 株式会社スリスタが運営するAI SaaSサービス群。記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成など、マーケティングと業務を支援するAIツールを1つのアカウントで利用できます。無料プランと、全ツールが使えるプロプラン（月額9,980円）の統一プラン方式です。',
+    '> 株式会社スリスタが運営するAI SaaSサービス群。記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成など、マーケティングと業務を支援するAIツールを1つのアカウントで利用できます。料金は会社ごとです。',
     '',
     `- 運営会社: 株式会社スリスタ（代表: 三森 捷暉）`,
-    `- 料金: 無料プラン / プロプラン 月額9,980円（1契約で全ツールのPRO機能を利用可能）`,
+    `- 料金: ${PUBLIC_PRICE_SENTENCE}`,
     `- 料金ページ: ${base}/pricing`,
     `- 関連メディア: ドヤマーケ（BtoBマーケティングのノウハウ・事例・無料テンプレート） https://doyamarke.surisuta.jp/`,
     `- AIマーケティングチーム構築サービス（半自動AIマーケティング）: https://doyamarke.surisuta.jp/lp/doyamarke`,

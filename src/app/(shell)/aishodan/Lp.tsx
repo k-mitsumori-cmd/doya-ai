@@ -10,6 +10,7 @@ import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { AishodanTalkMock, AishodanSlotsMock, AishodanFitMock } from './mocks'
 import ServiceDiagram from './diagram'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 const SVC = getServiceById('aishodan')!
 
@@ -78,7 +79,7 @@ export default function AishodanLp() {
 
       <CtaBand
         title="次の問い合わせから、待たせません"
-        subtitle="無料プランで商談5件まで。プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。"
+        subtitle={`無料枠は商談5件まで。${PUBLIC_PRICE_SENTENCE}`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         note="クレジットカードの登録は不要です"

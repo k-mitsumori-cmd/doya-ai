@@ -12,6 +12,7 @@ import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { MensetsuLiveMock, MensetsuScoreMock, MensetsuGuardMock } from './mocks'
 import ServiceDiagram from './diagram'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 const SVC = getServiceById('mensetsu')!
 
@@ -80,7 +81,7 @@ export default function MensetsuLp() {
 
       <CtaBand
         title="次の募集から、日程調整を無くせます"
-        subtitle="無料プランで面接3件まで。プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。"
+        subtitle={`無料枠は面接3件まで。${PUBLIC_PRICE_SENTENCE}`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         note="クレジットカードの登録は不要です"

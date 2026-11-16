@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤHR LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -19,8 +19,8 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('hr')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('hr')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
-  { q: '料金プランを教えてください。', a: '無料プランとプロプラン（月額9,980円・税込）の2つです。プロプランはドヤAIの統一プランで、1契約で全サービスのプロ機能をご利用いただけます。さらに拡張が必要な場合は個別にご相談を承ります。' },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('hr')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
+  { q: '料金プランを教えてください。', a: `${PUBLIC_PRICE_SENTENCE}さらに拡張が必要な場合は個別にご相談を承ります。` },
   { q: 'Excelで管理しているデータを移行できますか？', a: 'CSVの一括インポート／エクスポートに対応しています。既存の従業員リストを取り込んで、そのまま使い始められます。' },
   { q: 'AIは何をしてくれますか？', a: '人事評価のコメントをAIが下書きします。ゼロから書く負担を減らし、評価の粒度を揃えるサポートをします。最終的な内容はご担当者が確認・調整いただけます。' },
   { q: '少人数の会社でも使えますか？', a: '中小企業のために設計しています。5名までの無料プランから始められるため、小さなチームでもタレントマネジメントを無理なく導入できます。' },

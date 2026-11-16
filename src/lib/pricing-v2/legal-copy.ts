@@ -10,11 +10,11 @@ import {
   FREE_MAX_MEMBERS,
   LEGACY_PRO_PRICE_TAX_INCLUDED,
   POWER_PACK,
-  TEAM_BASE_MONTHLY,
-  TEAM_SEAT_TIERS,
+  planConfig,
   YEARLY_FREE_MONTHS,
   withTax,
 } from './plans'
+import { isPerSeatPricingPublic } from './rollout'
 import { PURCHASE_MAX_MONTHS } from '../doya-power/rules'
 
 // 新しい料金（チーム）を全員に出した日。2026-11-05 夜に NEW_PRICING_ROLLOUT を all にした（Obsidian ドヤAI_04・05）。
@@ -24,11 +24,16 @@ export const LEGACY_CUTOFF_LABEL = '2026年11月5日'
 const yen = (n: number) => `¥${n.toLocaleString('ja-JP')}`
 const exTax = (n: number) => `${yen(n)}（税抜。税込 ${yen(withTax(n))}）`
 
-export function tokushohoPriceLines(): string[] {
-  const [first, second] = TEAM_SEAT_TIERS
+// 1人いくらの料金（基本料なし）の行は、ログイン前のページと同じ条件（旗が両方 all）で出す（public-copy.ts と同じ判定）
+export function tokushohoPriceLines(perSeat: boolean = isPerSeatPricingPublic()): string[] {
+  const plan = planConfig(perSeat ? 'per_seat' : 'base_plus_seat')
+  const [first, second] = plan.tiers
+  const teamLine = perSeat
+    ? `チーム（月払い）: 使う人数1人につき月額 ${exTax(first!.unitMonthly)}。${plan.tiers.slice(1).map((t, i) => `${plan.tiers[i]!.upTo + 1}人目からは1人につき月額 ${exTax(t.unitMonthly)}`).join('。')}`
+    : `チーム（月払い）: 基本料 月額 ${exTax(plan.baseMonthly)} ＋ 使う人数1人につき月額 ${exTax(first!.unitMonthly)}。${first!.upTo + 1}人目からは1人につき月額 ${exTax(second!.unitMonthly)}`
   return [
     `フリー: ¥0（${FREE_MAX_MEMBERS}人までの会社）`,
-    `チーム（月払い）: 基本料 月額 ${exTax(TEAM_BASE_MONTHLY)} ＋ 使う人数1人につき月額 ${exTax(first!.unitMonthly)}。${first!.upTo + 1}人目からは1人につき月額 ${exTax(second!.unitMonthly)}`,
+    teamLine,
     `チーム（年払い）: 月払いの${12 - YEARLY_FREE_MONTHS}か月分を、1年分としてお支払いいただきます`,
     `${ENTERPRISE_MIN_SEATS}人以上: 個別にお見積りします`,
     `ドヤパワーの追加購入: ${POWER_PACK.points.toLocaleString('ja-JP')}ごとに ${exTax(POWER_PACK.price)}。購入した分は${PURCHASE_MAX_MONTHS}か月で失効します`,

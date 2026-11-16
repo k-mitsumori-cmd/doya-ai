@@ -12,7 +12,7 @@ import { parseRecent, RECENT_COOKIE } from '@/lib/shell/recent'
 import ShellGate from '@/components/shell/ShellGate'
 import PricingNext from '@/components/pricing/PricingNext'
 import PricingV2 from '@/components/pricing/PricingV2'
-import { resolvePricingView } from '@/lib/pricing-v2/view.server'
+import { resolvePerSeatForView, resolvePricingView } from '@/lib/pricing-v2/view.server'
 import { powerPackPriceId } from '@/lib/pricing-v2/prices'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { isSupportChatEnabled } from '@/lib/support-chat/flag'
@@ -22,8 +22,10 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   const canceled = Boolean(params.canceled) || params.payment === 'cancelled'
   const session = await getServerSession(authOptions).catch(() => null)
   const view = await resolvePricingView(session?.user?.email, params.pricing)
+  const perSeat = await resolvePerSeatForView(session?.user?.email, view)
   // 新しい料金のときだけ: 追加購入を出すか（価格の設定とドヤパワーの台帳の旗）と、決済から戻ったときの値
   const v2Extra = view === 'current' ? {} : {
+    perSeat,
     canBuyPack: Boolean(powerPackPriceId()) && doyaPowerLedgerAllowed(),
     powerPackSessionId: params.power_pack === 'done' && typeof params.cs === 'string' ? params.cs : null,
     powerPackCanceled: params.power_pack === 'cancel',

@@ -12,7 +12,7 @@ const ogImage = `${SITE_CONFIG.url}/ogp/banner.jpg`
 
 export const metadata: Metadata = {
   title: { absolute: pageTitle },
-  description: SVC.longDescription || SVC.description,
+  description: SVC.metaDescription || SVC.longDescription || SVC.description,
   keywords: SERVICE_SEO.banner.keywords,
   alternates: { canonical: '/banner/landing' },
   openGraph: {

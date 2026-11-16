@@ -11,6 +11,7 @@ import {
 import { getServiceById } from '@/lib/services'
 import { PromaneProjectMock, PromaneBoardMock, PromaneProfitMock } from './mocks'
 import ServiceDiagram from './diagram'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 const SVC = getServiceById('promane')!
 const ACCENT = '#009bff'
@@ -35,7 +36,7 @@ const ROWS: ShowcaseRow[] = [
 ]
 
 const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランでは${SVC.pricing.free.limit}ご利用いただけます。プロプラン（月額9,980円）にすると案件数が無制限になり、ドヤAIの他のツールもすべて使えるようになります。` },
+  { q: '無料で使えますか？', a: `無料プランでは${SVC.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: '人件費はどう計算されますか？', a: 'メンバーごとに単価を設定し、記録された作業時間を掛け合わせて自動で算出します。案件の原価としてそのまま収支に反映されます。' },
   { q: 'チームで使えますか？', a: 'はい。ワークスペースにメンバーを招待して、オーナー／管理者／メンバー／ゲストの権限で共同利用できます。' },
   { q: '他のドヤAIのツールと同じアカウントで使えますか？', a: 'はい。1つのアカウントで全ツールを利用でき、プロプランの契約も共通です。' },
@@ -79,7 +80,7 @@ export function PromaneLp() {
           subtitle="ドヤプロマネは無料ではじめられます。"
           ctaHref={CTA}
           ctaLabel="無料ではじめる"
-          note="プロプラン（月額9,980円・税込）は全サービス共通。サービスごとに利用上限があります。"
+          note={PUBLIC_PRICE_SENTENCE}
         />
       </LpShell>
     </>

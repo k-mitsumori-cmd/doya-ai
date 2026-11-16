@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤポップアップ LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -20,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('popup')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('popup')!.pricing.pro.limit}。1つの契約で全サービスのプロプランが使えます。` },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('popup')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: 'どんなサイトに設置できますか？', a: 'HTMLの<head>にタグを1行追加できるサイトなら設置できます。WordPress、Studio、Wix、HubSpot CMS などでも、ヘッダーにコードを追加する設定から貼れます。' },
   { q: 'サイトの表示が遅くなりませんか？', a: '設置タグは、ページの表示が終わるのを待たせない形で読み込みます。スクリプトの大きさは、圧縮した状態で約7KBです。' },
   { q: '「AIに聞く」ボタンを押すと何が起きますか？', a: 'ChatGPTが新しいタブで開き、サイトに合わせた質問文が入力欄に入った状態になります。ChatGPTに質問文を渡す仕組みはOpenAIの公式仕様ではないため、将来動かなくなる可能性があります。' },
