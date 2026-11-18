@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
@@ -35,12 +36,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       // Apple（設定されているときだけ存在する）は、同じメールの既存ユーザーを自動では結び付けない（account-integrity.md の 4.1）。
-      // Google の動き（既存ユーザー・新規ユーザー）は変えない。確認の画面は次の段で、いまは /auth/signin?error=LinkConfirmationRequired へ移動する。
+      // Google の動き（既存ユーザー・新規ユーザー）は変えない。
+      // 旗 APP_AUTH_ENABLED がオンなら、結び付けの待ちを作って確認の画面 /auth/link?request=<id> へ移動する。オフなら、これまでどおり /auth/signin?error=LinkConfirmationRequired
       if (account?.provider === 'apple') {
         try {
-          const verdict = await decideWebSignIn(createPrismaAuthRepo(prisma), {
+          const repo = createPrismaAuthRepo(prisma)
+          const linkRequests = isAppAuthEnabled()
+            ? { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) }
+            : undefined
+          const verdict = await decideWebSignIn(repo, {
             provider: 'apple', providerAccountId: account.providerAccountId, profile: profile as any,
-          })
+          }, linkRequests)
           if (verdict !== true) return verdict
         } catch {
           return '/auth/signin?error=AccessDenied'

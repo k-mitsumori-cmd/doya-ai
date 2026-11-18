@@ -468,7 +468,9 @@ export async function confirmLink(deps: AuthDeps, args: { authorization?: string
   // コード
   if (!isValidCodeFormat(raw.code)) return fail(400, 'INVALID_REQUEST')
   const platform = typeof raw.platform === 'string' ? raw.platform : ''
-  if (!PLATFORMS.has(platform)) return fail(400, 'INVALID_REQUEST')
+  // platform が 'web' のときは、Web の確認の画面（/auth/link）から。結び付けるだけで、ログインのトークンは返さない（Apple のログインをやり直してもらう）
+  const fromWeb = platform === 'web'
+  if (!fromWeb && !PLATFORMS.has(platform)) return fail(400, 'INVALID_REQUEST')
   if (!request.codeHash) return fail(409, 'CODE_NOT_SENT')
   // 照合の前に、試せる回数を原子的に1つ取る。取れなければ（上限に達している）429。同時に何本送っても、照合できるのは上限の回数まで
   const attempt = await deps.repo.takeLinkAttempt(request.id, LINK_MAX_ATTEMPTS)
@@ -481,7 +483,8 @@ export async function confirmLink(deps: AuthDeps, args: { authorization?: string
   const err = await link()
   if (err) return err
   await notifyLinked(deps, targetUserId, account.provider)
-  return issueFor(deps, target, { deviceLabel: optStr(raw.deviceLabel, 100), platform })
+  if (fromWeb) return { status: 200, body: { linked: true } }
+  return issueFor(deps, target,{ deviceLabel: optStr(raw.deviceLabel, 100), platform })
 }
 
 // ---------------------------------------------------------------------------
@@ -490,25 +493,46 @@ export async function confirmLink(deps: AuthDeps, args: { authorization?: string
 /**
  * 戻り値: true なら NextAuth が続きを処理する。文字列なら、その URL へ移動させる。
  * 同じメールの既存ユーザーがいるときは、自動では結び付けず /auth/signin?error=LinkConfirmationRequired へ移動する
- * （確認の画面は次の段。いまは、Web でその人が入れない代わりに、別のユーザーを作らない）。
+ * （別のユーザーを作らない。linkRequests を渡したときは、結び付けの待ちを作って /auth/link?request=<id> の確認の画面へ移動する）。
  */
 export async function decideWebSignIn(
   repo: Pick<AuthRepo, 'findAccount' | 'findUserByEmail'>,
   input: { provider: string; providerAccountId: string; profile: { email?: unknown; email_verified?: unknown } | null | undefined },
+  /**
+   * 渡したときだけ（旗がオンのとき）、確認が要る場合に結び付けの待ちを作り、確認の画面 /auth/link?request=<id> へ移動させる。
+   * 15分のあいだ、同じ組み合わせの待ちは1つだけ（アプリの exchange と同じ。作り直さず、同じ待ちを使う）。
+   * 渡さなければ、これまでどおり /auth/signin?error=LinkConfirmationRequired。
+   */
+  linkRequests?: { repo: Pick<AuthRepo, 'findLiveLinkRequest' | 'createLinkRequest'>; now: Date; randomBytes: RandomBytes },
 ): Promise<true | string> {
   const email = normalizeEmail(input.profile?.email)
   const verified = parseBooleanClaim(input.profile?.email_verified) === true
   const existingAccount = await repo.findAccount(input.provider, input.providerAccountId)
   const matchable = Boolean(email) && verified && !isApplePrivateRelay(email)
   const userByEmail = !existingAccount && matchable && email ? await repo.findUserByEmail(email) : null
-  if (userByEmail && !userByEmail.emailVerified) return '/auth/signin?error=AccessDenied'
+  if (userByEmail && !userByEmail.emailVerified) {
+    // 確認済みでないメールの人は、コードの確認に進めない。確認の画面で問い合わせへ案内する
+    return linkRequests ? '/auth/link?error=LINK_TARGET_UNVERIFIED' : '/auth/signin?error=AccessDenied'
+  }
   const d = decideLink({
     identity: { provider: input.provider, providerAccountId: input.providerAccountId, email: email, emailVerified: verified },
     existingAccount,
     userByEmail: userByEmail ? { userId: userByEmail.id } : null,
     currentUserId: null,
   })
-  if (d.action === 'require-confirmation') return '/auth/signin?error=LinkConfirmationRequired'
+  if (d.action === 'require-confirmation') {
+    if (!linkRequests) return '/auth/signin?error=LinkConfirmationRequired'
+    let request = await linkRequests.repo.findLiveLinkRequest(input.provider, input.providerAccountId, d.targetUserId, linkRequests.now)
+    if (!request) {
+      const id = generateOpaqueToken(linkRequests.randomBytes)
+      await linkRequests.repo.createLinkRequest({
+        id, userId: d.targetUserId, provider: input.provider, providerAccountId: input.providerAccountId,
+        providerEmail: email, expiresAt: new Date(linkRequests.now.getTime() + LINK_REQUEST_TTL_MS),
+      })
+      request = { id } as LinkRequestRecord
+    }
+    return `/auth/link?request=${encodeURIComponent(request.id)}`
+  }
   if (d.action === 'reject') return '/auth/signin?error=AccessDenied'
   return true
 }

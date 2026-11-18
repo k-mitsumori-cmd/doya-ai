@@ -480,3 +480,43 @@ test('id_token の使い回し: 署名の末尾の別の書き方の同じトー
   // claims（sub）が違えば、同じ jti でも通る
   assert.equal((await exchangeIdToken(deps, body('google', google({ jti: 'fixed-jti', sub: 'g-mal2', email: 'mal2@example.com' })))).status, 200)
 })
+
+// ---- Web の確認の画面（/auth/link） ----
+test('Web の Apple: linkRequests を渡すと、待ちを作って /auth/link?request=<id> へ。15分のあいだ同じ待ちを使い回す。メールは URL に入らない', async () => {
+  const { repo, deps } = makeDeps()
+  repo.addUser({ id: 'u1', email: 'taro@example.com', emailNormalized: 'taro@example.com' })
+  const lr = { repo, now: clock, randomBytes: deps.randomBytes }
+  const input = { provider: 'apple', providerAccountId: 'a-web2', profile: { email: 'Taro@Example.com', email_verified: 'true' } }
+  const to = await decideWebSignIn(repo, input, lr)
+  assert.equal(typeof to, 'string')
+  const m = /^\/auth\/link\?request=([A-Za-z0-9_-]{16,})$/.exec(to as string)
+  assert.ok(m, String(to))
+  const id = m![1]
+  assert.equal((to as string).includes('example.com'), false)
+  const link = repo.links.get(id)!
+  assert.deepEqual([link.userId, link.provider, link.providerAccountId, link.providerEmail], ['u1', 'apple', 'a-web2', 'taro@example.com'])
+  assert.equal(link.expiresAt.getTime(), clock.getTime() + LINK_REQUEST_TTL_MS)
+  assert.equal(await decideWebSignIn(repo, input, lr), to) // 同じ待ち
+  assert.equal(repo.links.size, 1)
+  // 渡さなければ、これまでどおり
+  assert.equal(await decideWebSignIn(repo, input), '/auth/signin?error=LinkConfirmationRequired')
+  // 確認済みでないメールの人は、確認の画面で問い合わせへ案内する
+  repo.users.get('u1')!.emailVerifiedForLink = false
+  assert.equal(await decideWebSignIn(repo, input, lr), '/auth/link?error=LINK_TARGET_UNVERIFIED')
+  assert.equal(await decideWebSignIn(repo, input), '/auth/signin?error=AccessDenied')
+})
+
+test('Web からのコード確認（platform: web）: Account だけが足され、ログインのトークンは返さない。誤りは残り回数つきの 400', async () => {
+  const { deps, repo, mails, requestId } = await pending()
+  assert.equal((await sendLinkCode(deps, { requestId })).status, 200)
+  const right = lastCode(mails)
+  const wrong = right === '000000' ? '111111' : '000000'
+  const bad = await confirmLink(deps, { body: { requestId, code: wrong, platform: 'web' } })
+  assert.deepEqual([bad.status, bad.body.code, bad.body.remainingAttempts], [400, 'LINK_CODE_INVALID', LINK_MAX_ATTEMPTS - 1])
+  const ok = await confirmLink(deps, { body: { requestId, code: right, platform: 'web' } })
+  assert.deepEqual([ok.status, ok.body], [200, { linked: true }])
+  assert.equal(repo.sessions.length, 1) // トークンは発行しない（google の最初の1つだけ）
+  assert.deepEqual(repo.accounts.map((a) => a.provider).sort(), ['apple', 'google'])
+  assert.equal(repo.devices.length, 1) // google の最初の1端末だけ。web の確認では増えない
+  assert.equal((await confirmLink(deps, { body: { requestId, code: right, platform: 'web' } })).status, 410) // 使用済み
+})
