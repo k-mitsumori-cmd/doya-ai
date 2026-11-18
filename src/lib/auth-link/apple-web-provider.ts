@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import AppleProvider from 'next-auth/providers/apple'
+import { isAppAuthEnabled } from './app-auth-flag'
 
 /**
  * Web（NextAuth）の Apple ログイン。環境変数が4つとも揃っているときだけ、providers に足す。
@@ -10,6 +11,7 @@ import AppleProvider from 'next-auth/providers/apple'
  * 値は、Apple Developer の設定（株式会社スリスタの組織）ができてから、環境変数に入れる（三森さんの承認のあと）。
  */
 export type AppleEnv = Record<string, string | undefined>
+// 旗 APP_AUTH_ENABLED がオフのあいだは、4つの環境変数が入っていても何も足さない（旗オフで既存の動きを変えない）
 
 const APPLE_SECRET_TTL_SEC = 150 * 24 * 60 * 60
 
@@ -22,6 +24,7 @@ export function buildAppleClientSecret(a: { teamId: string; clientId: string; ke
 }
 
 export function buildAppleProviders(env: AppleEnv = process.env, now: Date = new Date()) {
+  if (!isAppAuthEnabled(env)) return []
   const { APPLE_CLIENT_ID: clientId, APPLE_TEAM_ID: teamId, APPLE_KEY_ID: keyId, APPLE_PRIVATE_KEY: rawKey } = env
   if (!clientId || !teamId || !keyId || !rawKey) return []
   try {
