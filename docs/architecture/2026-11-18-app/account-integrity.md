@@ -312,7 +312,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS account_company_members_active_user
 5. アプリは2つとも iOS の Keychain に置く（`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`。iCloud のキーチェーンで別の端末に写らないようにする）。
 6. アプリは API を `Authorization: Bearer <sessionToken>` で呼ぶ。`src/middleware.ts` で、`/api/` あての要求に Bearer があれば、要求のヘッダーの Cookie を `__Secure-next-auth.session-token=<sessionToken>` に置き換えて次へ渡す。Cookie と Bearer が両方来たら Bearer だけを使い、Cookie は捨てる。これで `getServerSession` を使う API は書き換えずに動く（推測。Next.js 15 の middleware で要求のヘッダーを替えたとき、`cookies()` がその値を読むかを、プレビューで確かめる。9章）。
 7. 期限が切れたら `POST /api/app/auth/refresh` でつなぎ直す。ログアウトは `POST /api/app/auth/logout`（`Session` の行と、その端末のリフレッシュトークンを消す）。
-8. 「ログイン中の端末」の画面を Web とアプリに置き、端末ごとに止められるようにする（案3の表の行を `revokedAt` にし、その端末の `Session` を消す）。
+8. 「ログイン中の端末」の画面を Web（実装済み: `/settings/devices`、API は api-contract.md の 3.11）とアプリ（未実装）に置き、端末ごとに止められるようにする（案3の表の行を `revokedAt` にし、その端末の `Session` を消す）。
 
 CSRF と Origin。
 

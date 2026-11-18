@@ -21,7 +21,7 @@
 | リフレッシュトークン | 43文字ほどの乱数 | 90日。使うたびに新しいものに替わる（ローテーション） | iOS の Keychain |
 
 - Keychain の属性は `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`（iCloud のキーチェーンで別の端末に写らないようにする）。両方とも Keychain に置き、AsyncStorage などには置かない。
-- サーバーが DB に持つのは、リフレッシュトークンの SHA-256 だけ。端末を無くしたときは、Web の画面から端末ごとに止められる（次の段）。
+- サーバーが DB に持つのは、リフレッシュトークンの SHA-256 だけ。端末を無くしたときは、Web の画面（`/settings/devices`）から端末ごとに止められる（3.11）。
 - 更新の手順（アプリがすること）:
   1. API が `401`（`INVALID_TOKEN`）を返したら、`POST /api/app/auth/refresh` を1回呼ぶ。
   2. 成功したら、返ってきた2つのトークンを、両方とも Keychain に上書きして、元の要求をやり直す。
@@ -125,11 +125,42 @@
 { "requestId": "…", "code": "123456", "platform": "ios", "deviceLabel": "iPhone" }
 ```
 
-成功（`200`）は 3.1 と同じ形で、ログイン済みの状態になる。同時に、新しいログイン手段（Apple など）が既存のユーザーに足される。試せる回数は、照合の前に1回ずつ取る（同時に何本送っても、5回まで）。まち違えたときは `400 LINK_CODE_INVALID` と `remainingAttempts`（残りの回数。5回めのまち違いは 0）。6回めからは、正しいコードでも `429`（待ちは使えなくなる）。
+`platform` は `ios`・`android`、または `web`（Web の確認の画面 3.13 から。結び付けだけを行い、トークンは返さず `200 { "linked": true }`）。成功（`200`）は 3.1 と同じ形で、ログイン済みの状態になる。同時に、新しいログイン手段（Apple など）が既存のユーザーに足される。試せる回数は、照合の前に1回ずつ取る（同時に何本送っても、5回まで）。まち違えたときは `400 LINK_CODE_INVALID` と `remainingAttempts`（残りの回数。5回めのまち違いは 0）。6回めからは、正しいコードでも `429`（待ちは使えなくなる）。
 
 (b) 前のログイン手段でログイン済み: 既存のユーザーとして（例: Google で 3.1 を呼んで）得たアクセストークンを付けて、`Authorization: Bearer <accessToken>` と `{ "requestId": "…" }`。成功は `200 { "linked": true }`。待ちのつなぎ先と、トークンのユーザーが同じときだけ（違えば `403`）。
 
 どちらも、成功すると、既存のユーザーのメールに「新しいログイン方法を追加しました」とお知らせが届く。
+
+### 3.11 ログイン中の端末（GET /api/app/auth/devices、DELETE /api/app/auth/devices/{id}）
+
+旗がオフなら、どちらも `404 NOT_FOUND`（セッションも DB も読まない）。認証は、`Authorization: Bearer <accessToken>`（アプリ）か、Web の Cookie のセッション。Authorization があれば Bearer だけを見る（不正なら、Cookie に切り替えず `401`）。退会済みのユーザーは `401`。この経路は middleware の置き換えの対象外なので、Authorization を route が自分で読む。
+
+`GET`: 自分の、いま使える端末の一覧（系統ごとに1件。失効・期限切れ・替え済みは出ない）。新しい順。
+
+```json
+{ "devices": [ { "id": "…", "deviceLabel": "Taro の iPhone", "platform": "ios", "lastUsedAt": "2026-11-18T03:00:00.000Z", "createdAt": "…", "isCurrent": true } ] }
+```
+
+`isCurrent` は、Bearer のセッションが、その端末の行のものであるとき真（Web の Cookie では、すべて偽）。メール・トークンのハッシュ・プッシュトークン・ユーザー ID・`sessionId` は返さない。
+
+`DELETE`: その端末を失効させる。系統の全行に `revokedAt` を入れ、対の `Session` と、その端末から引き渡した Web のセッションを消し、`pushToken` を消す。`200 { "ok": true, "loggedOutCurrent": false }`。いまの端末を消すとログアウトと同じで、`loggedOutCurrent` が真（以後そのトークンは `401`）。他人の id・存在しない id・失効済みは、すべて同じ `404 NOT_FOUND`。
+
+### 3.12 POST /api/app/auth/devices/{id}/push-token
+
+`Authorization: Bearer <accessToken>` だけ（Cookie では `401`）。本文は `{ "token": "ExponentPushToken[...]" }`（登録）か `{ "token": null }`（取り消し）。形は `ExponentPushToken[...]` か `ExpoPushToken[...]`（中は英数字・`-`・`_`。8〜200文字）で、違えば `400 INVALID_REQUEST`。成功は `200 { "ok": true, "enabled": true|false }`（トークンは返さない）。旗がオフなら `404`。
+
+- 登録できるのは、その端末の行を持つセッションだけ。`AppDevice.id`・`userId`・`sessionId`（Bearer のセッションの id）がすべて一致し、いま使える行のときだけ（条件つきの1文の更新で、件数が1のときだけ成功）。ほかの端末の id・他人の id・失効した端末は `404 NOT_FOUND`。失効と同時に来ても、失効のあとにトークンは残らない。
+- 同じトークンをほかの行が持っていれば、ユーザーを問わず、同じ処理の中で外す（新しい登録が優先）。理由: プッシュトークンは、物理的な端末（アプリのインストール）を指す。1つのインストールで同時に使えるアプリのログインは1つで、いま新しくログインしたセッションが、その端末の持ち主だから。トークンを知らない人は登録できず、トークンの推測は現実的でない。
+- 同時の登録の競合は、DB の部分一意索引（生きている行の `pushToken` は一意）が守る。一意違反になったら1回だけやり直し、それでも違えば `409 RETRY`。
+- リフレッシュで行が替わるときは、新しい行へトークンを引き継ぐ。失効・ログアウト・退会で消える。
+
+### 3.13 結び付けの確認（Web の画面 /auth/link）
+
+旗がオフなら、画面は `404`。Web の Apple ログインで、同じメールの既存ユーザーがいるとき、サーバー（`decideWebSignIn`）が結び付けの待ち（3.1 と同じ表）を作り（15分のあいだ、同じ組み合わせは同じ待ちを使う）、`/auth/link?request=<待ちの ID>` へ移動させる。待ちの ID はコードでもメールでもなく、これだけでは何もできない（コードの入力が要る）。ページは `Referrer-Policy: no-referrer` を付け、検索にも出さない。メール・コードは URL にもログにも出さない。
+
+流れ: 案内 → 「確認コードを送る」（3.5 を呼ぶ）→ 6桁の入力（3.6 (a) を、`platform: "web"` で呼ぶ）→ 「ログイン手段を追加しました」→ ログインの画面で、もう一度 Apple でログインする。`platform: "web"` のときは、結び付けだけを行い、ログインのトークンは返さない（`200 { "linked": true }`）。
+
+画面の文言の対応（`src/lib/auth-link/link-flow.ts`）: `LINK_CODE_INVALID` は「あと N 回、入力をやり直せます」、`LINK_TOO_MANY_ATTEMPTS` は上限の案内、`LINK_REQUEST_EXPIRED`・`LINK_REQUEST_USED` は期限切れの案内、`CODE_ALREADY_SENT` は「すでに送りました」でコードの入力へ。メールが確認済みでない人は、`/auth/link?error=LINK_TARGET_UNVERIFIED` へ移動し、問い合わせへ案内する（`NO_EMAIL` も同じ案内）。
 
 ### 3.7 POST /api/account/delete（退会）
 
@@ -227,7 +258,7 @@ source={{ uri: url, headers: { 'x-doya-handoff': verifier } }}
 | 409 | `LINK_CONFIRMATION_REQUIRED` | 3.1 の説明 |
 | 409 | `REFRESH_RETRY_CONFLICT` | 更新の直後の再送、または同時の更新。少し待ってやり直す |
 | 409 | `LINK_TARGET_UNVERIFIED` | 同じメールのユーザーがいるが、そのメールが確認済みでないため、メールでは結び付けられない。別のユーザーも作らない。問い合わせへ案内する |
-| 409 | `RETRY` | 同時に同じ人のログインが重なった。もう1回呼ぶ |
+| 409 | `RETRY` | 同時に同じ人のログインが重なった、または同時のプッシュトークンの登録が重なった。もう1回呼ぶ |
 | 409 | `CODE_ALREADY_SENT`、`CODE_NOT_SENT`、`IDENTITY_TAKEN`、`LINK_REQUEST_USED` | 結び付けの確認の状態の不一致 |
 | 409 | `ACTIVE_SUBSCRIPTION`、`COMPANY_HAS_MEMBERS` | 退会の条件 |
 | 410 | `LINK_REQUEST_EXPIRED` | 結び付けの待ちが15分を過ぎた、または使用済み・存在しない。3.1 からやり直す |
@@ -245,7 +276,7 @@ source={{ uri: url, headers: { 'x-doya-handoff': verifier } }}
    - `200`: 2つのトークンを Keychain に置く。
    - `409 LINK_CONFIRMATION_REQUIRED`: 「前に使ったログイン方法でログイン」（Google など。得たトークンで 3.6 (b)）か「メールで確認コードを受け取る」（3.5 のあと 3.6 (a)）を選ばせる。
 3. 以降の API は `Authorization: Bearer` で呼ぶ。401 は 2章の更新の手順で扱う。
-4. 画面のログインの順は、Apple より先に Google を出す（Web で Google を使っていた人が、別のユーザーを作らないため）。Apple の「メールを隠す」を選んだ人は、あとから Web のアカウントと結び付けられる（次の段で画面を作る）。
+4. 画面のログインの順は、Apple より先に Google を出す（Web で Google を使っていた人が、別のユーザーを作らないため）。Apple の「メールを隠す」を選んだ人は、あとから Web のアカウントと結び付けられる（Web の確認の画面 `/auth/link`。3.13）。
 
 ## 6. サーバーの設定（環境変数。値はコードに書かない。三森さんの承認のあとに入れる）
 
@@ -257,11 +288,11 @@ source={{ uri: url, headers: { 'x-doya-handoff': verifier } }}
 | `APP_APPLE_BUNDLE_IDS` | アプリの Bundle ID（カンマ区切り）。Apple の id_token の `aud`。株式会社スリスタの Apple Developer のものを使う |
 | `APPLE_CLIENT_ID`・`APPLE_TEAM_ID`・`APPLE_KEY_ID`・`APPLE_PRIVATE_KEY` | Web の Apple ログイン用。4つとも揃ったときだけ有効（任意） |
 
-本番の DB に先に反映するもの: `db-push-runbook.md`（36文）。
+本番の DB に先に反映するもの: `db-push-runbook.md`（38文）。
 
 ## 7. 次の段の項目（サーバー）
 
 - 期限切れ・失効した行を消す定期の処理: `app_device`（`expiresAt` を過ぎた行、`revokedAt` が古い行）、`app_id_token_use`（`expiresAt` を過ぎた行）、`auth_link_request`（`expiresAt` を過ぎた行）。いまは消えずに残る（動きには影響しない）。
 - IP ごとの回数制限（exchange、send-code、confirm、refresh）: このリポジトリには、共通の使い回せる IP 制限の部品が無い（管理者のログイン用の `checkRateLimit` と、アップロード用の `allowIssue` が、それぞれ専用にある）。足す場合は、Vercel のファイアウォールのルール、または共通の部品を新しく作る。確認コードの回数は、待ちごとに5回までで制限済み。
-- Web の結び付けの確認の画面（いまは `/auth/signin?error=LinkConfirmationRequired` の文言だけ）。
+- （完了）Web の結び付けの確認の画面（3.13）、ログイン中の端末の API と画面（3.11）、プッシュトークンの登録（3.12）。残り: アプリ側の「ログイン中の端末」の画面、プッシュの送信（`push-design.md`）、`/auth/signin` に Apple のボタンを足す。
 - Apple の連携の取り消し（退会のとき）。
