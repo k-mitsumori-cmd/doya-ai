@@ -56,6 +56,9 @@ export type VerifiedIdentity = {
   emailVerified: boolean
   /** Apple の「メールを隠す」か（claim の is_private_email、またはドメイン） */
   isPrivateEmail: boolean
+  /** トークンに name・picture があるときだけ入る（Google）。Apple は名前をトークンに入れない */
+  name?: string
+  picture?: string
 }
 
 export type VerifyIdTokenResult = { ok: true; identity: VerifiedIdentity } | { ok: false; reason: IdTokenFailure }
@@ -158,6 +161,8 @@ export function verifyIdToken(input: VerifyIdTokenInput): VerifyIdTokenResult {
       // email が無いときは、確認済みとは言わない
       emailVerified: Boolean(email) && verifiedClaim === true,
       isPrivateEmail: privateClaim === true || isApplePrivateRelay(email),
+      ...(typeof (claims as Record<string, unknown>).name === 'string' && (claims as Record<string, unknown>).name ? { name: String((claims as Record<string, unknown>).name).slice(0, 200) } : {}),
+      ...(typeof (claims as Record<string, unknown>).picture === 'string' && /^https:\/\//.test(String((claims as Record<string, unknown>).picture)) ? { picture: String((claims as Record<string, unknown>).picture).slice(0, 500) } : {}),
     },
   }
 }
