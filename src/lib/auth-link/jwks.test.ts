@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { getJwks, JWKS_URLS, JWKS_CACHE_TTL_MS, JwksUnavailableError, type JwksCache } from './jwks'
+import { getJwks, JWKS_URLS, JWKS_CACHE_TTL_MS, JWKS_MIN_FORCE_INTERVAL_MS, JwksUnavailableError, type JwksCache } from './jwks'
 
 const keys = { keys: [{ kty: 'RSA', kid: 'k1', n: 'n', e: 'AQAB' }] }
 const okFetch = (calls: string[], body: unknown = keys) => (async (url: string) => { calls.push(String(url)); return { ok: true, json: async () => body } }) as unknown as typeof fetch
@@ -20,7 +20,7 @@ test('取得先は Apple・Google の公開の鍵の URL。10分はキャッシ�
 test('forceRefresh はキャッシュを無視する', async () => {
   const cache: JwksCache = new Map(); const calls: string[] = []
   await getJwks('google', { fetchImpl: okFetch(calls), now: t0, cache })
-  await getJwks('google', { fetchImpl: okFetch(calls), now: at(1000), cache, forceRefresh: true })
+  await getJwks('google', { fetchImpl: okFetch(calls), now: at(JWKS_MIN_FORCE_INTERVAL_MS), cache, forceRefresh: true })
   assert.equal(calls.length, 2)
 })
 
@@ -38,4 +38,13 @@ test('応答の形が違う・ステータスが失敗のときも JwksUnavailab
   await assert.rejects(getJwks('apple', { fetchImpl: okFetch([], { keys: [] }), now: t0, cache: new Map() }), JwksUnavailableError)
   const notOk = (async () => ({ ok: false, json: async () => keys })) as unknown as typeof fetch
   await assert.rejects(getJwks('apple', { fetchImpl: notOk, now: t0, cache: new Map() }), JwksUnavailableError)
+})
+
+test('強制の取り直しは60秒に1回まで。それより短い間隔の強制は、キャッシュを返し、外へ取りに行かない', async () => {
+  const cache: JwksCache = new Map(); const calls: string[] = []
+  await getJwks('apple', { fetchImpl: okFetch(calls), now: t0, cache })
+  for (let i = 1; i <= 5; i++) await getJwks('apple', { fetchImpl: okFetch(calls), now: at(i * 1000), cache, forceRefresh: true })
+  assert.equal(calls.length, 1)
+  await getJwks('apple', { fetchImpl: okFetch(calls), now: at(JWKS_MIN_FORCE_INTERVAL_MS), cache, forceRefresh: true })
+  assert.equal(calls.length, 2)
 })
