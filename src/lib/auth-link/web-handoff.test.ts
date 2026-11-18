@@ -289,6 +289,17 @@ test('通し: dev-login → web-handoff → consume で 302 と Cookie（HttpOnl
     assert.match(sc, /Path=\//)
     assert.doesNotMatch(sc, /Secure/i)
     assert.match(sc, /Expires=/i)
+    // アプリ表示モードの印 doya_app=1（HttpOnly ではない。SameSite=Lax・Path=/・http なので Secure なし。期限はセッションと同じ）
+    const cookies = c1.headers.getSetCookie()
+    assert.equal(cookies.length, 2)
+    const appCookie = cookies.find((c) => c.startsWith('doya_app='))!
+    assert.match(appCookie, /^doya_app=1;/)
+    assert.doesNotMatch(appCookie, /HttpOnly/i)
+    assert.match(appCookie, /SameSite=lax/i)
+    assert.match(appCookie, /Path=\//)
+    assert.doesNotMatch(appCookie, /Secure/i)
+    const exp = (c: string) => /Expires=([^;]+)/i.exec(c)![1]
+    assert.equal(exp(appCookie), exp(cookies.find((c) => c.startsWith('next-auth.session-token='))!))
     // 作った Session は24時間。アプリ用の端末には結び付かない
     const value = /session-token=([^;]+)/.exec(sc)![1]
     const sess = await repo.findSession(value)
@@ -317,6 +328,11 @@ test('consume: URL の next を書き換えても、DB に控えた next へ行�
     assert.match(sc, /^__Secure-next-auth\.session-token=/)
     assert.match(sc, /Secure/)
     assert.match(sc, /HttpOnly/i)
+    // https なら、アプリ表示モードの印にも Secure が付く。HttpOnly は付かない
+    const appCookie = res.headers.getSetCookie().find((c) => c.startsWith('doya_app='))!
+    assert.match(appCookie, /^doya_app=1;/)
+    assert.match(appCookie, /Secure/)
+    assert.doesNotMatch(appCookie, /HttpOnly/i)
   })
 })
 
