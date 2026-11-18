@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Zap, Clock, Sparkles, Rocket } from 'lucide-react'
 import { getFreeHourRemainingMs, FREE_HOUR_DURATION_MS } from '@/lib/pricing'
@@ -16,13 +17,15 @@ interface FreeHourPopupProps {
  * - 一度閉じたらセッション中は再表示しない（sessionStorage）
  */
 export function FreeHourPopup({ firstLoginAt, onClose }: FreeHourPopupProps) {
+  // アプリ表示モード（ドヤバディの WebView）では、無料キャンペーンのお知らせを出さない（旗オフなら appMode は常に false）
+  const appMode = useAppMode()
   const [isOpen, setIsOpen] = useState(false)
   const [remainingMs, setRemainingMs] = useState(0)
 
   useEffect(() => {
     // 既に閉じた場合はスキップ
     const dismissed = sessionStorage.getItem('doya_free_hour_dismissed')
-    if (dismissed === '1') return
+    if (dismissed === '1' || appMode) return
 
     const remaining = getFreeHourRemainingMs(firstLoginAt)
     if (remaining > 0) {
@@ -31,7 +34,7 @@ export function FreeHourPopup({ firstLoginAt, onClose }: FreeHourPopupProps) {
       const timer = setTimeout(() => setIsOpen(true), 800)
       return () => clearTimeout(timer)
     }
-  }, [firstLoginAt])
+  }, [firstLoginAt, appMode])
 
   // 残り時間のカウントダウン
   useEffect(() => {

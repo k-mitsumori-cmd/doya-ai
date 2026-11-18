@@ -1,6 +1,8 @@
 'use client'
 
 import React, { memo, useState } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Plus, Tag, Presentation, Zap } from 'lucide-react'
@@ -43,6 +45,9 @@ function DoyaSlideSidebarImpl({
 }: DoyaSlideSidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const subNav = navForMode(SUB_NAV, appMode)
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -130,7 +135,7 @@ function DoyaSlideSidebarImpl({
 
             <div className="pt-4 mt-3 border-t border-white/10 space-y-1">
               <SidebarSectionTitle title="その他" isCollapsed={isCollapsed} theme={doyaslideTheme} />
-              {SUB_NAV.map((item) => (
+              {subNav.map((item) => (
                 <SidebarNavLink
                   key={item.href}
                   item={item}
@@ -144,7 +149,7 @@ function DoyaSlideSidebarImpl({
           </nav>
 
           {/* プラン案内（プロ未満のみ・アクティブ各サービスと統一） */}
-          {sessionReady && (isMobile || !isCollapsed) && (planLabel === 'FREE' || planLabel === 'GUEST') && (
+          {!appMode && sessionReady && (isMobile || !isCollapsed) && (planLabel === 'FREE' || planLabel === 'GUEST') && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="hidden md:block relative z-10">
                 <div className="flex items-center gap-2 mb-2">

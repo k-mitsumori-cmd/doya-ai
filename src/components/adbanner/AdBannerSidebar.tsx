@@ -1,6 +1,8 @@
 'use client'
 
 import { memo, useState } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Sparkles, CreditCard, Zap, Megaphone } from 'lucide-react'
@@ -25,6 +27,9 @@ const NAV: NavItem[] = [
 function AdBannerSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const adbannerNav = navForMode(NAV, appMode)
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -52,11 +57,11 @@ function AdBannerSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <SidebarSectionTitle title="ドヤ広告バナーAI" isCollapsed={isCollapsed} theme={adbannerTheme} />
-            {NAV.map((item) => (
+            {adbannerNav.map((item) => (
               <SidebarNavLink key={item.href} item={item} isActive={isActive(item.href)} showLabel={showLabel} theme={adbannerTheme} layoutId="adbannerActiveIndicator" />
             ))}
           </nav>
-          {sessionReady && (isMobile || !isCollapsed) && (
+          {!appMode && sessionReady && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-white grid place-items-center shadow-md"><Zap className="w-4 h-4 text-orange-500 fill-orange-500" /></div>
