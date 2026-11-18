@@ -73,7 +73,7 @@ start_web() {
   nohup env -i PATH="$PATH" HOME="$HOME" TERM=dumb NEXT_TELEMETRY_DISABLED=1 \
     DATABASE_URL="$DB_URL" DIRECT_URL="$DB_URL" POSTGRES_PRISMA_URL="$DB_URL" POSTGRES_URL_NON_POOLING="$DB_URL" \
     NEXTAUTH_URL="http://localhost:${WEBPORT}" NEXTAUTH_SECRET="dev-only-secret-not-for-production-0123456789" \
-    APP_AUTH_ENABLED=1 APP_DEV_LOGIN=1 APP_GOOGLE_CLIENT_IDS="" APP_APPLE_BUNDLE_IDS="" \
+    APP_AUTH_ENABLED=1 APP_DEV_LOGIN=1 APP_MODE_ENABLED=1 APP_GOOGLE_CLIENT_IDS="" APP_APPLE_BUNDLE_IDS="" \
     node node_modules/next/dist/bin/next dev -p "$WEBPORT" >"$WORK/next-dev.log" 2>&1 &
   echo $! >"$WORK/next-dev.pid"
   # 準備ができるまで待つ（最大15分）。me は、トークンが無いので 401 が返れば、route が動いている

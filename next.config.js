@@ -33,6 +33,8 @@ const APP_ONLY_PATHS = APP_ONLY_PREFIXES.flatMap((p) => [p, `${p}/:path*`])
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 手元のアプリ確認（scripts/dev-local-app-auth.sh。APP_DEV_LOGIN=1）のときだけ、開発の印（左下の N の丸）を出さない。本番・通常の開発には影響しない。
+  ...(process.env.APP_DEV_LOGIN === '1' ? { devIndicators: false } : {}),
   // ビルド時のコミットハッシュを環境変数に注入 (UIで表示してキャッシュ確認用)
   env: {
     NEXT_PUBLIC_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
