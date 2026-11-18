@@ -16,6 +16,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Check, X, Rocket, CalendarClock } from 'lucide-react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { TrialBadge, TrialNote, useTrialEligible, TRIAL_DAYS } from '@/components/TrialCallout'
+import { useAppMode } from '@/lib/app-mode/client'
+import AppLimitNotice from '@/components/app-mode/AppLimitNotice'
 
 export interface BannerLimitModalProps {
   isOpen: boolean
@@ -55,6 +57,7 @@ export default function BannerLimitModal({
   const visible = isOpen && knownSession && notice.current.valid
   const router = useRouter()
   const trialEligible = useTrialEligible()
+  const appMode = useAppMode()
 
   const panel = useRef<HTMLDivElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -98,6 +101,8 @@ export default function BannerLimitModal({
   }, [visible])
 
   if (!visible) return null
+  // アプリ表示モード: 料金・プラン・契約への案内を出さず、中立の1文だけにする（旗オフなら appMode は常に false）
+  if (appMode) return <AppLimitNotice onClose={onClose} />
 
   const isEnterprise = (monthlyLimit ?? 0) >= (BANNER_PRICING.enterpriseLimit ?? 1000)
   const isPro = !isEnterprise && (monthlyLimit ?? 0) >= BANNER_PRICING.proLimit

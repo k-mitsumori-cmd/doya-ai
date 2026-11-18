@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
 import { getRunningServices } from '@/lib/services'
 import { isRecentRegistration } from '@/lib/registration-classification'
+import { useAppMode } from '@/lib/app-mode/client'
 
 // GA4測定ID（ドヤマーケと同一プロパティ・同一ストリーム）
 // 同一プロパティにすることで「ドヤマーケ記事 → doya-ai登録 → 課金」の
@@ -163,7 +164,10 @@ function GaEventsTrackerInner() {
 }
 
 export function GoogleAnalytics() {
-  if (!GA_ID) return null
+  // アプリ表示モード（ドヤバディの WebView）では、GA4 の読み込みも、計測イベントの送信も、アトリビューション Cookie の書き込みもしない。
+  // 判定は同期で、読み込みの前に行う（旗がオフなら常に false で、今までと同じ）。
+  const appMode = useAppMode()
+  if (!GA_ID || appMode) return null
   return (
     <>
       <Script

@@ -11,6 +11,7 @@ import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallo
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan, tierFrom } from '@/lib/plan-utils'
 import { useBillingPlanResync } from '@/hooks/useBillingPlanResync'
+import { useAppMode } from '@/lib/app-mode/client'
 import {
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
@@ -49,6 +50,7 @@ export function UnifiedPricingPlans({
   const pathname = usePathname()
   const returnTo = pathname || `/${serviceId}/pricing`
   const trialEligible = useTrialEligible()
+  const appMode = useAppMode()
   // 新しい料金（旗 NEW_PRICING_ROLLOUT）を出している人には、今のプロの申し込みの代わりに /pricing へ案内する
 
   // 決済済みなのに反映されていない方の自己回復。押しても二重課金にはならない
@@ -74,6 +76,8 @@ export function UnifiedPricingPlans({
     onVerified: () => { window.location.reload() },
   })
   if (!svc) return null
+  // アプリ表示モード（ドヤバディの WebView）: 料金表・契約の案内は何も描画しない（旗オフなら appMode は常に false）
+  if (appMode) return null
   // Only an explicit legacy-pricing response may display legacy prices or checkout.
   // The server resolves existing contracts; PRO alone cannot identify a legacy contract.
   if (newPricing !== false) {

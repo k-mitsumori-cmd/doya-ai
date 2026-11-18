@@ -11,6 +11,7 @@ import { Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { usePathname } from 'next/navigation'
+import { useAppMode } from '@/lib/app-mode/client'
 import { readBillingResponse } from '@/lib/billing-response-client'
 
 interface Meter {
@@ -98,6 +99,8 @@ export function SidebarUsagePanel({
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
   const { data: session, status } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、プラン・料金のページへのリンクを出さない（旗オフなら appMode は常に false）
+  const appMode = useAppMode()
   const pathname = usePathname()
   const user = session?.user as { id?: string; email?: string; plan?: string; bannerPlan?: string; seoPlan?: string } | undefined
   const actor = user?.id || user?.email || ''
@@ -191,7 +194,7 @@ export function SidebarUsagePanel({
           {summary.planLabel}プランのため<span className="text-white">上限はありません</span>
         </p>
       )}
-      {pricingHref && (
+      {pricingHref && !appMode && (
         <Link href={pricingHref} className="mt-3 block rounded-lg bg-white px-3 py-2 text-center text-[11px] font-black text-slate-800 hover:bg-slate-100">
           {pricingLabel}
         </Link>

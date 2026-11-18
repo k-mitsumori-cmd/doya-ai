@@ -20,6 +20,7 @@ const pageExports = {}
 const mocks = {
   'react/jsx-runtime': require('react/jsx-runtime'),
   react: React,
+  '@/lib/app-mode/client': { useAppMode: () => false },
   'next-auth/react': { useSession: () => ({ data: { user: { id: 'synthetic-owner', plan: personalPlan } }, status: 'authenticated' }) },
   'next/link': ({ children, href, ...props }) => React.createElement('a', { href, ...props }, children),
   'next/navigation': { usePathname: () => '/aio/pricing' },

@@ -44,6 +44,7 @@ import { ShellPowerMeter } from './power'
 import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
 // 名前（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT が all ならドヤバディ、それ以外はドヤAI）
 import { brandName } from '@/lib/brand'
+import { useAppMode } from '@/lib/app-mode/client'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -380,6 +381,7 @@ export default function AppShell({ children, userName, initialRecent, department
   const otherGroups = useMemo<NavGroup[]>(() => (productsOn ? buildProductGroups(product).map((g) => ({ key: g.product ?? 'other', label: g.label, tools: g.tools })) : []), [product, productsOn])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
+  const appMode = useAppMode()
   // 1日1つの決まりで止めた知らせ（新機能・「〜でできること」）。あるときだけ、左下に「お知らせ」を出す
   const { enabled: noticeOn, held, openHeld } = useNotice()
   const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
@@ -557,10 +559,13 @@ export default function AppShell({ children, userName, initialRecent, department
               <span className={styles.navLabel}>お知らせ{held.length ? <span className={styles.noticeCount}>{held.length}</span> : null}</span>
             </button>
           ) : null}
+          {/* アプリ表示モード（ドヤバディの WebView）では、料金プランへの入口を出さない（旗オフなら appMode は常に false） */}
+          {!appMode && (
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>料金プラン</span>
           </Link>
+          )}
           <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => signOut({ callbackUrl: '/' })} title="ログアウト">
             <LogOut size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>ログアウト</span>

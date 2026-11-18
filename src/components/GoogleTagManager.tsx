@@ -1,12 +1,16 @@
 'use client'
 
 import Script from 'next/script'
+import { useAppMode } from '@/lib/app-mode/client'
 
 // 環境変数からGTM IDを取得
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
 
 export function GoogleTagManager() {
-  if (!GTM_ID) {
+  // アプリ表示モード（ドヤバディの WebView）では、GTM（GA4・HubSpot を載せている）を読み込まない。
+  // 判定は同期で、読み込みの前に行う（旗がオフなら常に false で、今までと同じ）。
+  const appMode = useAppMode()
+  if (!GTM_ID || appMode) {
     return null
   }
 
