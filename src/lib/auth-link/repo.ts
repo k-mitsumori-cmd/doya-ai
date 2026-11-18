@@ -28,6 +28,17 @@ export type DeviceRecord = DeviceRow & {
   platform: string
 }
 
+/** 「ログイン中の端末」の一覧に出す列。リフレッシュトークンのハッシュ・プッシュトークン・メールは含めない */
+export type DeviceListItem = {
+  id: string
+  deviceLabel: string | null
+  platform: string
+  lastUsedAt: Date | null
+  createdAt: Date
+  /** いまのアクセストークン（Session）の id。「いまの端末か」の判定にだけ使い、画面には返さない */
+  sessionId: string | null
+}
+
 export type NewDevice = {
   familyId: string
   refreshTokenHash: string
@@ -101,6 +112,19 @@ export interface AuthRepo {
   revokeBySessionId(sessionId: string, now: Date): Promise<void>
   /** このアクセストークン（Session）に対応する端末の行。無ければ null（アプリ用ではない通常のセッション） */
   findDeviceBySessionId(sessionId: string): Promise<{ id: string; userId: string; revokedAt: Date | null } | null>
+
+  /**
+   * そのユーザーの、いま使える端末（系統ごとに、まだ新しいトークンに替えていない行。失効していず、期限内）。新しい順。
+   * 他人の端末は、userId の条件で決して含まれない。
+   */
+  listLiveDevices(userId: string, now: Date): Promise<DeviceListItem[]>
+  /** id とユーザーの両方が一致する、いま使える端末の行。他人の id・失効・期限切れ・替え済みの行は null */
+  findLiveDevice(id: string, userId: string, now: Date): Promise<DeviceRecord | null>
+  /**
+   * 端末にプッシュトークンを置く（null なら消す）。その端末がそのユーザーの、いま使える行のときだけ。置けたら true。
+   * 同じトークンがほかの行に付いていれば、先に外す（1つのトークンは1つの端末だけ。端末にアプリを入れ直したとき、古い行に残さない）。
+   */
+  setDevicePushToken(id: string, userId: string, token: string | null, now: Date): Promise<boolean>
 
   /** 引き渡しのコード（ハッシュ）を作る。端末の行に結び付ける */
   createWebHandoff(input: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }): Promise<void>

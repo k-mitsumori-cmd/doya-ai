@@ -12,6 +12,8 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
     await prisma.$transaction(async (tx) => {
       // 先に失効させる（引き渡しの consume が、端末の行を FOR SHARE で読んでから Session を作るので、失効が先に確定すれば consume は失敗し、後に確定する consume の Session は下で見つかる）
       await tx.appDevice.updateMany({ where: { familyId, revokedAt: null }, data: { revokedAt: now } })
+      // 失効した端末には通知を送らない（プッシュトークンを消す）
+      await tx.appDevice.updateMany({ where: { familyId, pushToken: { not: null } }, data: { pushToken: null } })
       const rows = await tx.appDevice.findMany({ where: { familyId }, select: { id: true, sessionId: true } })
       const ids = rows.map((r) => r.sessionId).filter((x): x is string => Boolean(x))
       // その端末から引き渡した Web のセッションも消す
@@ -96,13 +98,16 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
         if (claimed.count !== 1) return false
         if (input.old.sessionId) await tx.session.deleteMany({ where: { id: input.old.sessionId } })
         const s = await tx.session.create({ data: { sessionToken: input.sessionToken, userId: input.userId, expires: input.sessionExpires }, select: { id: true } })
+        // プッシュトークンは、新しい行へ引き継ぐ（トークンを替えるたびに通知の許可が消えないように）
+        const prev = await tx.appDevice.findUnique({ where: { id: input.old.id }, select: { pushToken: true } })
         await tx.appDevice.create({
           data: {
             userId: input.userId, deviceLabel: input.device.deviceLabel, platform: input.device.platform,
             refreshTokenHash: input.device.refreshTokenHash, familyId: input.device.familyId, sessionId: s.id,
-            expiresAt: input.device.expiresAt, lastUsedAt: input.rotatedAt,
+            expiresAt: input.device.expiresAt, lastUsedAt: input.rotatedAt, pushToken: prev?.pushToken ?? null,
           },
         })
+        if (prev?.pushToken) await tx.appDevice.update({ where: { id: input.old.id }, data: { pushToken: null } })
         return true
       })
     },
@@ -118,6 +123,26 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
 
     async findDeviceBySessionId(sessionId) {
       return prisma.appDevice.findFirst({ where: { sessionId }, select: { id: true, userId: true, revokedAt: true } })
+    },
+    async listLiveDevices(userId, now) {
+      return prisma.appDevice.findMany({
+        where: { userId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, deviceLabel: true, platform: true, lastUsedAt: true, createdAt: true, sessionId: true },
+      })
+    },
+    async findLiveDevice(id, userId, now) {
+      const d = await prisma.appDevice.findFirst({ where: { id, userId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } } })
+      return d ? toDevice(d) : null
+    },
+    async setDevicePushToken(id, userId, token, now) {
+      return prisma.$transaction(async (tx) => {
+        const live = await tx.appDevice.findFirst({ where: { id, userId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } }, select: { id: true } })
+        if (!live) return false
+        if (token) await tx.appDevice.updateMany({ where: { pushToken: token, NOT: { id } }, data: { pushToken: null } })
+        await tx.appDevice.update({ where: { id }, data: { pushToken: token } })
+        return true
+      })
     },
     async createWebHandoff(i) {
       await prisma.appWebHandoff.create({ data: i })

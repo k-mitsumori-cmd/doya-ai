@@ -1,16 +1,17 @@
-import type { AuthRepo, DeviceRecord, LinkRequestRecord, NewAccount, NewDevice, UserRecord } from '../repo'
+import type { AuthRepo, DeviceListItem, DeviceRecord, LinkRequestRecord, NewAccount, NewDevice, UserRecord } from '../repo'
 import { UniqueViolationError } from '../repo'
 
 /** 試験用のメモリの repo。本物の DB には接続しない。 */
 export type MemUser = UserRecord & { emailNormalized: string | null; emailVerifiedForLink?: boolean }
 export type MemAccount = NewAccount & { userId: string }
 export type MemSession = { id: string; sessionToken: string; userId: string; expires: Date }
+export type MemDevice = DeviceRecord & { createdAt: Date; lastUsedAt: Date | null; pushToken: string | null }
 
 export class MemoryRepo implements AuthRepo {
   users = new Map<string, MemUser>()
   accounts: MemAccount[] = []
   sessions: MemSession[] = []
-  devices: DeviceRecord[] = []
+  devices: MemDevice[] = []
   links = new Map<string, LinkRequestRecord>()
   companies = new Set<string>()
   handoffs: Array<{ id: string; codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date; consumedAt: Date | null; webSessionId: string | null }> = []
@@ -49,7 +50,7 @@ export class MemoryRepo implements AuthRepo {
   async createSession(input: { userId: string; sessionToken: string; sessionExpires: Date; device: NewDevice }) {
     const sid = this.nextId('sess-')
     this.sessions.push({ id: sid, sessionToken: input.sessionToken, userId: input.userId, expires: input.sessionExpires })
-    this.devices.push({ id: this.nextId('dev-'), userId: input.userId, ...input.device, sessionId: sid, rotatedAt: null, revokedAt: null })
+    this.devices.push({ id: this.nextId('dev-'), userId: input.userId, ...input.device, sessionId: sid, rotatedAt: null, revokedAt: null, createdAt: new Date(), lastUsedAt: new Date(), pushToken: null })
   }
   async findDeviceByHash(h: string) { return this.devices.find((d) => d.refreshTokenHash === h) ?? null }
   async rotateDevice(input: { old: DeviceRecord; rotatedAt: Date; userId: string; sessionToken: string; sessionExpires: Date; device: NewDevice }): Promise<boolean> {
@@ -59,7 +60,9 @@ export class MemoryRepo implements AuthRepo {
     this.sessions = this.sessions.filter((s) => s.id !== old.sessionId)
     const sid = this.nextId('sess-')
     this.sessions.push({ id: sid, sessionToken: input.sessionToken, userId: input.userId, expires: input.sessionExpires })
-    this.devices.push({ id: this.nextId('dev-'), userId: input.userId, ...input.device, sessionId: sid, rotatedAt: null, revokedAt: null })
+    // 新しい行へ、プッシュトークンを引き継ぐ（トークンを替えるたびに通知の許可が消えないように）
+    this.devices.push({ id: this.nextId('dev-'), userId: input.userId, ...input.device, sessionId: sid, rotatedAt: null, revokedAt: null, createdAt: new Date(), lastUsedAt: input.rotatedAt, pushToken: old.pushToken })
+    old.pushToken = null
     return true
   }
   async revokeFamily(familyId: string, now: Date) {
@@ -67,6 +70,7 @@ export class MemoryRepo implements AuthRepo {
     const deviceIds = new Set<string>()
     for (const d of this.devices.filter((x) => x.familyId === familyId)) {
       if (!d.revokedAt) d.revokedAt = now
+      d.pushToken = null
       if (d.sessionId) ids.add(d.sessionId)
       deviceIds.add(d.id)
     }
@@ -87,6 +91,23 @@ export class MemoryRepo implements AuthRepo {
   async findDeviceBySessionId(sessionId: string) {
     const d = this.devices.find((x) => x.sessionId === sessionId)
     return d ? { id: d.id, userId: d.userId, revokedAt: d.revokedAt } : null
+  }
+  private isLive(d: MemDevice, now: Date) { return !d.rotatedAt && !d.revokedAt && d.expiresAt.getTime() > now.getTime() }
+  async listLiveDevices(userId: string, now: Date): Promise<DeviceListItem[]> {
+    return this.devices
+      .filter((d) => d.userId === userId && this.isLive(d, now))
+      .map((d) => ({ id: d.id, deviceLabel: d.deviceLabel, platform: d.platform, lastUsedAt: d.lastUsedAt, createdAt: d.createdAt, sessionId: d.sessionId }))
+      .reverse()
+  }
+  async findLiveDevice(id: string, userId: string, now: Date) {
+    return this.devices.find((d) => d.id === id && d.userId === userId && this.isLive(d, now)) ?? null
+  }
+  async setDevicePushToken(id: string, userId: string, token: string | null, now: Date) {
+    const d = this.devices.find((x) => x.id === id && x.userId === userId && this.isLive(x, now))
+    if (!d) return false
+    if (token) for (const o of this.devices) if (o.pushToken === token) o.pushToken = null
+    d.pushToken = token
+    return true
   }
   async createWebHandoff(i: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
     this.handoffs.push({ id: this.nextId('hand-'), ...i, consumedAt: null, webSessionId: null })
