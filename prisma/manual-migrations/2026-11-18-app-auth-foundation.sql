@@ -16,7 +16,7 @@
 -- 流し方の注意: apply-sql.cjs は、文を「;」で区切り、1つのトランザクションに入れて流す（SET LOCAL も自分で付ける）。
 -- このため、この SQL には BEGIN・COMMIT・SET を書かない。DO ブロックは、$$ ではなく単一引用符の文字列（DO '...'）で書く
 -- （apply-sql.cjs は $$ の中の「;」を区切りと見なして壊すため）。psql で流すなら、必ず -1（1つのトランザクション）と ON_ERROR_STOP を付ける。
--- 区切ったあとの文の数は、apply-sql.cjs の確認だけの実行で出る（この SQL は 22 文。apply-sql.cjs と同じ区切り方で数えた値。流す前に、確認だけの実行の表示と合うか見る）。
+-- 区切ったあとの文の数は、apply-sql.cjs の確認だけの実行で出る（この SQL は 23 文。apply-sql.cjs と同じ区切り方で数えた値。流す前に、確認だけの実行の表示と合うか見る）。
 
 -- 1. User
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailNormalized" TEXT;
@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS "app_device" (
     "platform" TEXT NOT NULL,
     "refreshTokenHash" TEXT NOT NULL,
     "familyId" TEXT NOT NULL,
+    "sessionId" TEXT,
     "rotatedAt" TIMESTAMP(3),
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "revokedAt" TIMESTAMP(3),
@@ -61,6 +62,7 @@ CREATE TABLE IF NOT EXISTS "auth_link_request" (
 CREATE UNIQUE INDEX IF NOT EXISTS "app_device_refreshTokenHash_key" ON "app_device"("refreshTokenHash");
 CREATE INDEX IF NOT EXISTS "app_device_userId_idx" ON "app_device"("userId");
 CREATE INDEX IF NOT EXISTS "app_device_familyId_idx" ON "app_device"("familyId");
+CREATE INDEX IF NOT EXISTS "app_device_sessionId_idx" ON "app_device"("sessionId");
 CREATE INDEX IF NOT EXISTS "auth_link_request_userId_idx" ON "auth_link_request"("userId");
 CREATE INDEX IF NOT EXISTS "auth_link_request_provider_providerAccountId_idx" ON "auth_link_request"("provider", "providerAccountId");
 CREATE INDEX IF NOT EXISTS "auth_link_request_expiresAt_idx" ON "auth_link_request"("expiresAt");

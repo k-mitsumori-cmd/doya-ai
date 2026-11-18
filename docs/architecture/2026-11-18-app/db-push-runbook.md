@@ -5,7 +5,7 @@
 
 ## 1. 何を変えるか
 
-`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（22文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
+`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（23文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
 
 | 対象 | 変更 | 既存の行への影響 |
 |---|---|---|
@@ -32,7 +32,7 @@ schema に入れていないもの（案だけ）: ツールのメンバー表�
 
 ### 3.1 承認が要る点（三森さんが、メインで承認する）
 
-1. 本番の DB に流すこと（22文。内容は上の 1章）。
+1. 本番の DB に流すこと（23文。内容は上の 1章）。
 2. 流す時刻（利用者の少ない時間。`User` の ALTER は短時間の表の鍵を取る。`lock_timeout = 5秒` で、取れなければ全体が取り消される）。
 3. `interviewx_projects` の外部キーの付け直し（5.2）。
 4. その後に、重複を数える読み取りの SQL（3.3）を流してよいか（読み取りだけ。件数だけを返す）。
@@ -123,11 +123,11 @@ WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u.id = p."userId");
 ```bash
 # 確認だけ（接続と文の数。何も流さない）
 node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql
-# 流す（文の数は 22）
-node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=22
+# 流す（文の数は 23）
+node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=23
 ```
 
-- 「文の数」の表示が 22 でなければ、止めて報告する。
+- 「文の数」の表示が 23 でなければ、止めて報告する。
 - 流すのは、三森さんの承認のあとで、メインの操作（担当は流さない）。
 - 代わりに psql で流すときは `psql -1 -v ON_ERROR_STOP=1 -f <ファイル>` とし、`-1` を必ず付ける（この SQL には BEGIN・COMMIT を書いていない）。
 

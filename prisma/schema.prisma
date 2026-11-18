@@ -75,6 +75,8 @@ model AppDevice {
   /// SHA-256（16進）。平文は端末の Keychain にだけある
   refreshTokenHash String    @unique
   familyId         String
+  /// この行のリフレッシュトークンと対で出したアクセストークン（Session の行）の id。失効・ローテーション・ログアウトで Session の行を消すために持つ（秘密の値ではない）
+  sessionId        String?
   /// 新しいトークンに替えた時刻。値があるトークンを再び使うと「使い回し」として系統を失効させる
   rotatedAt        DateTime?
   expiresAt        DateTime
@@ -84,6 +86,7 @@ model AppDevice {
 
   @@index([userId])
   @@index([familyId])
+  @@index([sessionId])
   @@map("app_device")
 }
 
