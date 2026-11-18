@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
@@ -41,8 +40,9 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === 'apple') {
         try {
           const repo = createPrismaAuthRepo(prisma)
+          // 旗がオンのときだけ、乱数の部品を読む（オフでは何も読まない）
           const linkRequests = isAppAuthEnabled()
-            ? { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) }
+            ? await (async () => { const { randomBytes } = await import('node:crypto'); return { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) } })()
             : undefined
           const verdict = await decideWebSignIn(repo, {
             provider: 'apple', providerAccountId: account.providerAccountId, profile: profile as any,

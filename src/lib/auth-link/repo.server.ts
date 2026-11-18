@@ -136,32 +136,36 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
       return d ? toDevice(d) : null
     },
     async setDevicePushToken({ id, userId, sessionId, token, now }) {
-      class Abort extends Error {}
-      try {
-        return await prisma.$transaction(async (tx) => {
-          // 確認と更新を、条件つきの1文で行う（件数が1のときだけ成功）。失効が先に確定していれば0件、後なら失効の処理がトークンを消す
+      const attempt = () => prisma.$transaction(async (tx) => {
+        // 確認と更新を、条件つきの1文で行う（件数が1のときだけ成功）。失効が先に確定していれば0件、後なら失効の処理がトークンを消す。
+        // ここでは、いったん null にして行を確保する（行の鍵を取る）。ほかの行からトークンを外してから、本当の値を置く（部分一意索引に当たらない順）
+        const claim = await tx.appDevice.updateMany({
+          where: { id, userId, sessionId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
+          data: { pushToken: null },
+        })
+        if (claim.count !== 1) return 'not-found' as const
+        if (token) {
+          // 新しい登録が優先。同じトークンを持つほかの行は、ユーザーを問わず外す
+          await tx.appDevice.updateMany({ where: { pushToken: token, NOT: { id } }, data: { pushToken: null } })
           const set = await tx.appDevice.updateMany({
             where: { id, userId, sessionId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
             data: { pushToken: token },
           })
           if (set.count !== 1) return 'not-found' as const
-          if (token) {
-            // ほかのユーザーの、生きている端末が持っているトークンは、上書きしない（取り消して、この更新も戻す）
-            const taken = await tx.appDevice.findFirst({
-              where: { pushToken: token, NOT: { id }, userId: { not: userId }, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
-              select: { id: true },
-            })
-            if (taken) throw new Abort()
-            // 自分の別の行と、生きていない行（失効・替え済み・期限切れ）からは外す
-            await tx.appDevice.updateMany({
-              where: { pushToken: token, NOT: { id }, OR: [{ userId }, { rotatedAt: { not: null } }, { revokedAt: { not: null } }, { expiresAt: { lte: now } }] },
-              data: { pushToken: null },
-            })
-          }
-          return 'ok' as const
-        })
+        }
+        return 'ok' as const
+      })
+      const isUnique = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002'
+      try {
+        return await attempt()
       } catch (e) {
-        if (e instanceof Abort) return 'in-use' as const
+        if (!isUnique(e)) throw e
+      }
+      // 同時の登録で、一意違反（部分一意索引）。1回だけやり直す
+      try {
+        return await attempt()
+      } catch (e) {
+        if (isUnique(e)) return 'retry' as const
         throw e
       }
     },

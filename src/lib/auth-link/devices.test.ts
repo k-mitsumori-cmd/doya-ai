@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { randomBytes } from 'node:crypto'
 import { NextRequest } from 'next/server'
 import { devLogin, refreshSession, type AuthDeps } from './app-auth-service'
 import { MemoryRepo } from './testing/memory-repo'
@@ -9,12 +10,12 @@ import { handleDeviceRevoke, handleDevicesList, handlePushToken } from './device
 
 // 試験用の部品だけを使う。本物の DB・メール・通信には触れない。
 let clock = new Date('2026-11-18T03:00:00Z')
-let seq = 1000
 function makeDeps(repo = new MemoryRepo()) {
   const deps: AuthDeps = {
     repo,
     now: () => clock,
-    randomBytes: (size) => { const k = seq++; return Uint8Array.from({ length: size }, (_, i) => (k * 37 + i * 11 + (k >> 3) + (k * 131) % 251) & 0xff) },
+    // 試験用の乱数（本物の通信ではない。別の呼び出しで同じトークンが出ないように、crypto の乱数を使う）
+    randomBytes: (size) => new Uint8Array(randomBytes(size)),
     getJwks: async () => ({ keys: [] }),
     audiences: { google: ['g'], apple: ['a'] },
     sendMail: async () => ({ success: true }),
@@ -267,40 +268,25 @@ test('旗オン: ハンドラー経由でも、Cookie のユーザーで一覧�
   }
 })
 
-// --- 指摘への対応（クロステナント・失効との競合） ---
-test('push-token: ほかのユーザーの生きている端末が同じトークンを持つと 409 PUSH_TOKEN_IN_USE。相手のトークンは消えない', async () => {
+// --- 指摘への対応（新しい登録が優先・失効との競合） ---
+test('push-token: 新しい登録が優先。ほかのユーザーの生きている端末のトークンも外れる。自分の古い行からも外れる', async () => {
   const { deps, repo } = makeDeps()
   const a = await login(deps, 'A')
   const b = await login(deps, 'B')
   const aDev = repo.devices.find((d) => d.userId === a.user.id)!
   const bDev = repo.devices.find((d) => d.userId === b.user.id)!
   assert.equal((await setPushToken(deps, bearer(a.accessToken), aDev.id, { token: TOKEN })).status, 200)
+  // 同じ端末（インストール）で B が新しくログインして、同じトークンを登録した
   const r = await setPushToken(deps, bearer(b.accessToken), bDev.id, { token: TOKEN })
-  assert.equal(r.status, 409)
-  assert.equal(r.body.code, 'PUSH_TOKEN_IN_USE')
-  assert.equal(aDev.pushToken, TOKEN, '他人のトークンを消さない')
-  assert.equal(bDev.pushToken, null)
-  // 相手の端末が生きていなければ（失効後）、取れる
-  await revokeDevice(deps, { authorization: bearer(a.accessToken) }, aDev.id)
-  assert.equal((await setPushToken(deps, bearer(b.accessToken), bDev.id, { token: TOKEN })).status, 200)
+  assert.equal(r.status, 200)
   assert.equal(bDev.pushToken, TOKEN)
-})
-
-test('push-token: 自分の古い行・生きていない他人の行にあるトークンは、整理される', async () => {
-  const { deps, repo } = makeDeps()
-  const a1 = await login(deps, 'A')
+  assert.equal(aDev.pushToken, null, '新しい登録が優先')
+  // 自分の別の行からも外れる
   const a2 = await login(deps, 'A')
-  const b = await login(deps, 'B')
-  const [d1, d2] = repo.devices.filter((d) => d.userId === a1.user.id)
-  const bDev = repo.devices.find((d) => d.userId === b.user.id)!
-  d1.pushToken = TOKEN
-  assert.equal((await setPushToken(deps, bearer(a2.accessToken), d2.id, { token: TOKEN })).status, 200)
-  assert.equal(d1.pushToken, null)
-  // 他人の行でも、期限切れ（生きていない）なら整理される
-  bDev.expiresAt = new Date(clock.getTime() - 1)
-  bDev.pushToken = 'ExponentPushToken[zzzzzzzzzz]'
-  assert.equal((await setPushToken(deps, bearer(a1.accessToken), d1.id, { token: 'ExponentPushToken[zzzzzzzzzz]' })).status, 200)
+  const aDev2 = repo.devices.filter((d) => d.userId === a.user.id)[1]
+  assert.equal((await setPushToken(deps, bearer(a2.accessToken), aDev2.id, { token: TOKEN })).status, 200)
   assert.equal(bDev.pushToken, null)
+  assert.equal(repo.devices.filter((d) => d.pushToken === TOKEN).length, 1)
 })
 
 test('push-token: その端末の行を持つセッション以外は登録できない（同じユーザーの別の端末のトークンでも 404）', async () => {
@@ -313,21 +299,40 @@ test('push-token: その端末の行を持つセッション以外は登録で�
   assert.equal((await setPushToken(deps, bearer(a2.accessToken), d2.id, { token: TOKEN })).status, 200)
 })
 
-test('push-token: 失効した端末には登録できない。失効と登録を同時に走らせても、失効のあとにトークンが残らない', async () => {
+test('push-token: 失効した端末には登録できず、登録しても他の行のトークンを消さない。失効と登録を同時に走らせても、失効のあとにトークンが残らない', async () => {
   const { deps, repo } = makeDeps()
   for (let i = 0; i < 20; i++) {
     const a = await login(deps, 'A' + i)
     const dev = repo.devices.find((d) => d.userId === a.user.id)!
-    const results = await Promise.all([
+    await Promise.all([
       setPushToken(deps, bearer(a.accessToken), dev.id, { token: `ExponentPushToken[race${String(i).padStart(8, '0')}]` }),
       revokeDevice(deps, { authorization: bearer(a.accessToken) }, dev.id),
     ])
     assert.ok(dev.revokedAt)
     assert.equal(dev.pushToken, null, '失効のあとにトークンが残る')
-    assert.ok([200, 401, 404].includes(results[0].status))
   }
+  const keep = await login(deps, 'K')
+  const kd = repo.devices.find((d) => d.userId === keep.user.id)!
+  await setPushToken(deps, bearer(keep.accessToken), kd.id, { token: TOKEN })
   const b = await login(deps, 'B')
   const bd = repo.devices.find((d) => d.userId === b.user.id)!
   await repo.revokeFamily(bd.familyId, clock)
   assert.equal(await repo.setDevicePushToken({ id: bd.id, userId: b.user.id, sessionId: bd.sessionId as string, token: TOKEN, now: clock }), 'not-found')
+  assert.equal(kd.pushToken, TOKEN, '失効した端末の登録の失敗で、他の行のトークンは消えない')
+})
+
+test('push-token: 同じトークンを2つの端末が同時に登録しても、生きている行でトークンを持つのは1つだけ', async () => {
+  const { deps, repo } = makeDeps()
+  for (let i = 0; i < 10; i++) {
+    const a = await login(deps, 'P' + i)
+    const b = await login(deps, 'Q' + i)
+    const tok = `ExponentPushToken[same${String(i).padStart(8, '0')}]`
+    const da = repo.devices.find((d) => d.userId === a.user.id)!
+    const db = repo.devices.find((d) => d.userId === b.user.id)!
+    await Promise.all([
+      setPushToken(deps, bearer(a.accessToken), da.id, { token: tok }),
+      setPushToken(deps, bearer(b.accessToken), db.id, { token: tok }),
+    ])
+    assert.equal(repo.devices.filter((d) => d.pushToken === tok && !d.revokedAt && !d.rotatedAt).length, 1)
+  }
 })
