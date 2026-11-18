@@ -83,11 +83,35 @@ model AppDevice {
   revokedAt        DateTime?
   lastUsedAt       DateTime?
   createdAt        DateTime  @default(now())
+  webHandoffs      AppWebHandoff[]
 
   @@index([userId])
   @@index([familyId])
   @@index([sessionId])
   @@map("app_device")
+}
+
+/// アプリのセッションから Web のセッション Cookie へ引き渡すための、使い捨てのコード（60秒・1回だけ）。コードそのものは持たず、SHA-256（16進）だけを持つ。
+/// consumedAt が入った時点で使用済み。webSessionId は、そのとき作った Web のセッション（Session.id）。端末のログアウト・系統の失効のとき、これも消す。
+/// 規則は src/lib/auth-link/app-auth-service.ts の createWebHandoff / consumeWebHandoff。
+model AppWebHandoff {
+  id           String    @id @default(cuid())
+  codeHash     String    @unique
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId     String
+  device       AppDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  /// 引き渡したあとに開く、同じサイトのパス（検証済み）
+  nextPath     String
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  webSessionId String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+  @@map("app_web_handoff")
 }
 
 /// ログイン手段の結び付けの待ち。同じメールの既存ユーザーがいるとき、自動では結び付けず、本人の確認が済むまでここに置く。
@@ -245,6 +269,7 @@ model User {
   /// 匿名化した時刻
   anonymizedAt    DateTime?
   appDevices      AppDevice[]
+  appWebHandoffs  AppWebHandoff[]
   authLinkRequests AccountLinkRequest[]
 
   @@index([emailNormalized])
