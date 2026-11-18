@@ -12,11 +12,18 @@ import { buildAppleProviders } from './auth-link/apple-web-provider';
 import { decideWebSignIn } from './auth-link/app-auth-service';
 import { createPrismaAuthRepo } from './auth-link/repo.server';
 import { isAppAuthEnabled } from './auth-link/app-auth-flag';
+import { guardAppSessionExpiry } from './auth-link/adapter-guard';
 import { isApplePrivateRelay, normalizeEmail } from './auth-link/email-normalize';
 
 export const authOptions: NextAuthOptions = {
   logger: authLogger,
-  adapter: PrismaAdapter(prisma) as any,
+  // 旗 APP_AUTH_ENABLED がオンのときだけ、アプリが発行したセッションの期限（1時間）を NextAuth に延ばさせない。オフなら従来のまま
+  adapter: (isAppAuthEnabled()
+    ? guardAppSessionExpiry(PrismaAdapter(prisma), async (sessionToken) => {
+        const sess = await prisma.session.findUnique({ where: { sessionToken }, select: { id: true } })
+        return Boolean(sess && (await prisma.appDevice.findFirst({ where: { sessionId: sess.id }, select: { id: true } })))
+      })
+    : PrismaAdapter(prisma)) as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
