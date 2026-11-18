@@ -37,6 +37,8 @@
 
 ### 3.3 試しで分かった、設計書の訂正（重要）
 
+【2026-11-18 追記】アプリのセッションについては、旗がオンのとき adapter を包んで `updateSession` を止めたので、下の「24時間に延びる」は起きない（`adapter-guard.ts`）。Web のセッションは、従来どおり延びる。
+
 `account-integrity.md` の 5.2 は「アクセストークン（`Session` の行）の期限は1時間。`updateAge` での延長は `maxAge`（24時間）を超えては延びない」と書いている。ソース（`core/routes/session.js` の 102〜112行）を読むと、これは実際と違う。
 
 - DB のセッションは、`expires - maxAge + updateAge <= いま` のときに、`expires` を「いま + maxAge（24時間）」に書き換える。

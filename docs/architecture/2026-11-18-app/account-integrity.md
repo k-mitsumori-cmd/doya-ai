@@ -327,7 +327,7 @@ CSRF と Origin。
   - 失効の手段は、`Session` の行を消すこと（ログアウト、端末の失効、使い回しの検出、退会）。期限と無関係に効く。`AppDevice.sessionId` が、リフレッシュトークンと対の `Session` の行を指す。
   - アプリが再ログインなしで使える期間の上限は、90日のリフレッシュトークンが決める。
   - アプリは「1時間で切れる」を前提にせず、401 が返ったらリフレッシュに回る作りにする（期限の長さに依存しない）。
-- 【決定待ち】アクセストークンを本当に1時間で止めたいときの案。`Session.expires` は延びてしまうので見ず、発行時刻を見て弾く。発行時刻は `AppDevice` の行に持つ（`rotatedAt` の無い最新の行の `createdAt`。ローテーションのたびに新しい行ができるため、最新の行の `createdAt` が、いまのアクセストークンの発行時刻になる）。middleware またはラッパー（`getSessionFromRequest`）で、Bearer の `Session` に対応する `AppDevice` の `createdAt + 1時間` を過ぎていたら 401 にする。費用は、Bearer の要求ごとの DB の読み取り1回（約212本の API すべてで増える）。三森さんが「1時間」を必須と決めたときだけ行う。決めなければ、上の扱い（失効は行の削除、上限は90日）のまま進める。
+- 【2026-11-18 実装済み】アクセストークンを本当に1時間で止める。旗 `APP_AUTH_ENABLED` がオンのときだけ、`auth.ts` の adapter を `guardAppSessionExpiry`（`src/lib/auth-link/adapter-guard.ts`）で包み、アプリが発行したセッション（`AppDevice.sessionId` が指す `Session` の行）の `updateSession` を何もしない処理にした。Web のセッションと、旗がオフのときの動きは変わらない。期限を過ぎたセッションは、NextAuth が `getSessionAndUser` で消すので、アプリは 401 を受けてリフレッシュする。費用は、`updateSession` が呼ばれるとき（セッションごとに1分に1回まで）の、`Session` と `AppDevice` の読み取り2回。
 
 ---
 
