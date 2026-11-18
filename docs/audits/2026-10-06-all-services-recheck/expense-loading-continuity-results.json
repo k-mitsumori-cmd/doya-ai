@@ -1,0 +1,154 @@
+{
+  "checkedAt": "2026-11-18T06:08:52.579Z",
+  "strictMode": false,
+  "expected": 15,
+  "sourceHashes": {
+    "src/components/ds/index.tsx": "d79752d7225c4bbbecf0aeeabb1ba6edaf167cf934903811d021433c5f98adc3",
+    "src/components/expense/ui.tsx": "922269943f8af17b14532764aef8c392ef103595274d1affd54212acdbedea81",
+    "src/components/expense/api.ts": "d00c392981fd2b7352bca884273b69378c565a9e0da366ee787420e38202b0c7",
+    "src/components/expense/AdmissionNotice.tsx": "6dc6866588f67d282733841b4bd7c0979ca5c6dccbbc00ec77c6e8ee3e0da033",
+    "src/app/(shell)/expense/[orgSlug]/layout.tsx": "7184e6fad9f874a7ea9a1dbd83f923c0c63f126bd214be886fbf2a8214e112e7",
+    "src/app/(shell)/expense/[orgSlug]/page.tsx": "29fc4a0f9be86f84bedce1511928d339d24cae822c9769339a45c72fe247ea20"
+  },
+  "cases": [
+    {
+      "name": "slow permission to slow summary keeps visible skeleton",
+      "phases": [
+        {
+          "at": 0,
+          "label": "permission begins",
+          "skeletons": 0,
+          "cardCount": 1,
+          "emptyCards": 1,
+          "dashboard": false,
+          "error": false,
+          "denied": false,
+          "queryRequests": 0
+        },
+        {
+          "at": 300,
+          "label": "permission skeleton visible",
+          "skeletons": 1,
+          "cardCount": 1,
+          "emptyCards": 0,
+          "dashboard": false,
+          "error": false,
+          "denied": false,
+          "queryRequests": 0
+        },
+        {
+          "at": 650,
+          "label": "dashboard query begins",
+          "skeletons": 1,
+          "cardCount": 1,
+          "emptyCards": 0,
+          "dashboard": false,
+          "error": false,
+          "denied": false,
+          "queryRequests": 3
+        },
+        {
+          "at": 949,
+          "label": "second timer 299ms",
+          "skeletons": 1,
+          "cardCount": 1,
+          "emptyCards": 0,
+          "dashboard": false,
+          "error": false,
+          "denied": false,
+          "queryRequests": 3
+        },
+        {
+          "at": 950,
+          "label": "second timer 300ms",
+          "skeletons": 1,
+          "cardCount": 1,
+          "emptyCards": 0,
+          "dashboard": false,
+          "error": false,
+          "denied": false,
+          "queryRequests": 3
+        },
+        {
+          "at": 1250,
+          "label": "data ready",
+          "skeletons": 0,
+          "cardCount": 2,
+          "emptyCards": 0,
+          "dashboard": true,
+          "error": false,
+          "denied": false,
+          "queryRequests": 3
+        }
+      ],
+      "passed": true
+    },
+    {
+      "name": "fast permission and summary preserve no-flash behavior",
+      "passed": true
+    },
+    {
+      "name": "missing role",
+      "passed": true,
+      "noDashboardQuery": true
+    },
+    {
+      "name": "permission HTTP500",
+      "passed": true,
+      "noDashboardQuery": true
+    },
+    {
+      "name": "permission HTTP401",
+      "passed": true,
+      "noDashboardQuery": true
+    },
+    {
+      "name": "summary HTTP403",
+      "passed": true
+    },
+    {
+      "name": "summary HTTP500",
+      "passed": true
+    },
+    {
+      "name": "permission retry retains gate until successful reply",
+      "passed": true
+    },
+    {
+      "name": "unmounted permission response cannot mount dashboard",
+      "passed": true
+    },
+    {
+      "name": "fast permission shares remaining200ms budget with summary",
+      "passed": true
+    },
+    {
+      "name": "later summary retry starts a fresh300ms anti-flash budget",
+      "passed": true
+    },
+    {
+      "name": "permission retry starts a fresh shared300ms budget",
+      "passed": true
+    },
+    {
+      "name": "unmounted permission401 cannot navigate back to expense",
+      "passed": true
+    },
+    {
+      "name": "blocked admission displays owner guidance and another organization link without dashboard queries",
+      "passed": true
+    },
+    {
+      "name": "blocked other invitation does not block usable current organization",
+      "passed": true
+    }
+  ],
+  "passed": 15,
+  "scope": "Actual current Layout, Dashboard, useExpenseQuery, expense Loading, ds Card and Skeleton mounted unchanged in React/JSDOM; controlled synthetic HTTP and virtual component timers. Visual peripherals mocked. No real network, credentials, provider, database, customer writes, CSS layout, native/browser timing or CLS measurement. This verifies initial-loading timer continuity and access/error guards only, not production CLS or all transitions.",
+  "finding": {
+    "confirmed": "Initial permission and summary share one300ms anti-flash delay; subsequent retries retain a new300ms delay.",
+    "fixImplemented": true,
+    "productionChanged": false
+  },
+  "wholeAuditComplete": false
+}

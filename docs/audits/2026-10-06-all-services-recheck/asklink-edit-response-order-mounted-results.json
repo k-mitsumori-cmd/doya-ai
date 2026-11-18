@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-11-18T06:08:51.448Z",
+  "passed": 4,
+  "failed": 0,
+  "expectedCases": 4,
+  "results": [
+    {
+      "name": "late earlier acknowledgement cannot revert another saved link",
+      "passed": true
+    },
+    {
+      "name": "late acknowledgement preserves another card next unsent draft",
+      "passed": true
+    },
+    {
+      "name": "reverse response order also retains both independent edits",
+      "passed": true
+    },
+    {
+      "name": "old run acknowledgement cannot replace a newly opened run",
+      "passed": true
+    }
+  ],
+  "source": {
+    "path": "src/components/asklink/RunResult.tsx",
+    "sha256": "bebf2a4f079210e84595efc99a2c1768c9873421cdc81274a9efe28ca29ee0dd"
+  },
+  "scope": "Actual RunResult/LinkCard, real builder/status copy and React18 StrictMode state updates in JSDOM. Deferred synthetic successful PATCH snapshots only, no browser/network/DB/providers or customer data. Independent native SQL tests cover persistence; this test covers client acknowledgement ordering, unsent drafts and run replacement, not all banner/generation/actor races."
+}

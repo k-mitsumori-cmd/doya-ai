@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-11-18T06:08:51.934Z",
+  "passed": 9,
+  "failed": 0,
+  "cases": [
+    "network rejection: draft retained, error shown, explicit retry succeeds",
+    "HTTP 500: draft retained, error shown, explicit retry succeeds",
+    "HTTP 401: draft retained, error shown, explicit retry succeeds",
+    "HTTP 409 concurrent edit: draft retained, error shown, explicit retry succeeds",
+    "invalid JSON acknowledgement: draft retained, error shown, explicit retry succeeds",
+    "missing run acknowledgement: draft retained, error shown, explicit retry succeeds",
+    "wrong run acknowledgement: draft retained, error shown, explicit retry succeeds",
+    "missing edited-link acknowledgement: draft retained, error shown, explicit retry succeeds",
+    "pending save locks editing and cancel until acknowledgement"
+  ],
+  "source": {
+    "path": "src/components/asklink/RunResult.tsx",
+    "sha256": "bebf2a4f079210e84595efc99a2c1768c9873421cdc81274a9efe28ca29ee0dd"
+  },
+  "scope": "Actual RunResult and LinkCard mounted in React/JSDOM; real link builder and status copy. Notice shell/icons mocked; PATCH synthetic only. No network/DB/providers/real accounts or production persistence verification."
+}

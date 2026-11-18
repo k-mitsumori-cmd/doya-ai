@@ -1,0 +1,73 @@
+{
+  "checkedAt": "2026-11-18T06:08:50.987Z",
+  "passed": 14,
+  "failed": 0,
+  "expectedCases": 14,
+  "results": [
+    {
+      "name": "ordinary banner response updates actual BannerCard image",
+      "passed": true
+    },
+    {
+      "name": "late banner response preserves a question saved through actual LinkCard",
+      "passed": true
+    },
+    {
+      "name": "late banner response preserves next unsent question draft",
+      "passed": true
+    },
+    {
+      "name": "late banner response cannot replace newly opened run result",
+      "passed": true
+    },
+    {
+      "name": "successful banner response without run is reported as a recoverable failure",
+      "passed": true
+    },
+    {
+      "name": "banner JSON failure is reported without replacing result",
+      "passed": true
+    },
+    {
+      "name": "banner response with different run id cannot replace current result",
+      "passed": true
+    },
+    {
+      "name": "banner response missing requested kind cannot claim success",
+      "passed": true
+    },
+    {
+      "name": "banner HTTP401 keeps result and releases retry guard",
+      "passed": true
+    },
+    {
+      "name": "banner HTTP500 keeps result and releases retry guard",
+      "passed": true
+    },
+    {
+      "name": "banner network failure releases busy state and manual retry updates image",
+      "passed": true
+    },
+    {
+      "name": "a second queued generate call cannot duplicate an active POST",
+      "passed": true
+    },
+    {
+      "name": "wide banner acknowledgement retains a newer unrelated tall banner",
+      "passed": true
+    },
+    {
+      "name": "a failed target banner is displayed with a retry action",
+      "passed": true
+    }
+  ],
+  "hookSource": {
+    "path": "src/components/asklink/useBannerQueue.ts",
+    "sha256": "d9202c0ea91c97a42209645a721a95de66f0910928d3f2b3c6a086527f4c6652"
+  },
+  "source": {
+    "path": "src/components/asklink/RunResult.tsx",
+    "sha256": "bebf2a4f079210e84595efc99a2c1768c9873421cdc81274a9efe28ca29ee0dd"
+  },
+  "scope": "Actual RunResult/LinkCard and useBannerQueue mounted together with real builder/status copy and React18 StrictMode in JSDOM. Save and next draft use actual component controls; new run is explicit state update. Synthetic deferred PATCH/banner POST only. No browser/network/provider/DB/customer writes; does not prove actual parent navigation or production persistence."
+}
