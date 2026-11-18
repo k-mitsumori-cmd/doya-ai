@@ -52,6 +52,8 @@
 
 ## 4. 条件（この方式が動く前提）
 
+【2026-11-18 追記】対象は、アプリが付ける専用のヘッダー `x-doya-app: 1` がある要求だけにする。ヘッダーが無い要求は、旗がオンでも何もしない。理由: `src/app/api` には `Authorization` を自分で読む route が多数あり（Cron の `CRON_SECRET`、webhook、管理用のトークンなど）、無条件に置き換えると、`authorization` が消える・形が違う Bearer（ドットを含む JWT など）が 401 になる。さらに、`/api/cron/`、`/api/stripe/webhook`、`/api/admin/`、`/api/app/auth/` は、ヘッダーがあっても対象外にする（定義は `bearer-cookie.ts` の `BEARER_EXCLUDED_PREFIXES`）。置き換えたあとの要求から、`x-doya-app` と `authorization` を消す。下の条件1〜6は、この前提のうえで読む。
+
 1. middleware の `matcher` が `/api/` を含むこと。現在は `/((?!_next/static|_next/image|favicon.ico).*)` なので含まれる。
 2. 置き換えは、`NextResponse.next({ request: { headers } })` で行う。`NextResponse.rewrite` の場合も同じ書き方ができる。
 3. Cookie の名前は、環境に合わせる。本番と Preview（https）は `__Secure-next-auth.session-token`、手元の dev（http）は `next-auth.session-token`。実装では、`NEXTAUTH_URL` が `https` で始まるかで決める（next-auth の `useSecureCookies` と同じ規則）。要求の `protocol` から決める案もあるが、Vercel の中の middleware ではつねに https になるため、`NEXTAUTH_URL` に合わせる方が確実である。

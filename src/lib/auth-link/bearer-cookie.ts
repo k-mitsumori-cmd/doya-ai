@@ -22,12 +22,20 @@ export type BearerResult =
 
 const SESSION_COOKIE = /^(__Secure-)?next-auth\.session-token(\.\d+)?$/
 
+/** アプリからの要求に付ける専用のヘッダー。これが付いている要求だけを、置き換えの対象にする。 */
+export const APP_REQUEST_HEADER = 'x-doya-app'
+export const APP_REQUEST_HEADER_VALUE = '1'
+
 export function bearerToCookie(args: {
+  /** x-doya-app ヘッダーの値。'1' のときだけ置き換える。無ければ何もしない（401 も返さない） */
+  appHeader?: string | null | undefined
   authorization: string | null | undefined
   cookie: string | null | undefined
   nextauthUrl: string | null | undefined
 }): BearerResult {
-  const { authorization, cookie, nextauthUrl } = args
+  const { appHeader, authorization, cookie, nextauthUrl } = args
+  // アプリの要求だけが対象。Cron（CRON_SECRET）や webhook など、Authorization を自分で読む既存の呼び出しには触らない
+  if (appHeader !== APP_REQUEST_HEADER_VALUE) return { kind: 'none' }
   if (!authorization) return { kind: 'none' }
   const m = /^Bearer(?:\s+(.*))?$/i.exec(authorization.trim())
   if (!m) return { kind: 'none' }
@@ -45,7 +53,14 @@ export function bearerToCookie(args: {
   return { kind: 'replace', cookie: kept.join('; ') }
 }
 
-/** アプリ用の認証 API 自身は、Authorization を自分で読むので、置き換えない。 */
+/**
+ * x-doya-app が付いていても置き換えない経路（1か所で定義する）。
+ *  - /api/app/auth/: 交換・更新・ログアウトなどは、Authorization を自分で読む
+ *  - /api/cron/、/api/stripe/webhook、/api/admin/: アプリから呼ばない経路（自前の秘密・署名・管理者の認証を使う）
+ */
+export const BEARER_EXCLUDED_PREFIXES = ['/api/app/auth', '/api/cron', '/api/stripe/webhook', '/api/admin'] as const
+
+/** 完全に一致するか、その下の経路のとき真（/api/app/authx のような別の名前は含めない） */
 export function isAppAuthRoute(pathname: string): boolean {
-  return pathname === '/api/app/auth' || pathname.startsWith('/api/app/auth/')
+  return BEARER_EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }

@@ -6,7 +6,9 @@
 
 - 基底の URL は Web と同じ（例: `https://doya-ai.surisuta.jp`）。すべて JSON。文字コードは UTF-8。
 - 旗: 環境変数 `APP_AUTH_ENABLED` が `'1'` のときだけ動く。オフのときは、この文書のすべての API が `404 { "code": "NOT_FOUND" }` を返す。アプリは、`404` を「このサーバーはアプリのログインにまだ対応していない」として扱う。
-- 旗がオンのとき、`/api/` あての要求の `Authorization: Bearer <accessToken>` は、サーバーの middleware で Web のセッション Cookie に置き換えられる。このため、既存の API（Web が使っているもの）は、同じ `Authorization: Bearer` で呼べる。`Bearer` の値の形が不正（英数字と `-` `_` の16〜256文字でない）なときは、`401 { "code": "INVALID_TOKEN" }`。
+- アプリは、既存の API を含め、すべての要求に専用のヘッダー `x-doya-app: 1` を付ける。旗がオンのとき、このヘッダーが付いた `/api/` あての要求の `Authorization: Bearer <accessToken>` だけが、サーバーの middleware で Web のセッション Cookie に置き換えられる。置き換えたあと、`x-doya-app` と `Authorization` は消える。ヘッダーが無い要求（Cron、webhook、管理用など、`Authorization` を自分で読む既存の呼び出し）には、何もしない（401 も返さない）。
+- `x-doya-app: 1` が付いていても置き換えない経路: `/api/app/auth/`（自分で `Authorization` を読む）、`/api/cron/`、`/api/stripe/webhook`、`/api/admin/`（アプリから呼ばない）。
+- `x-doya-app: 1` を付けて、`Bearer` の値の形が不正（英数字と `-` `_` の16〜256文字でない）なときは、`401 { "code": "INVALID_TOKEN" }`。
 - 応答にはすべて `Cache-Control: no-store` が付く。
 - ログ・エラーに、トークン・メール・id_token は出ない。アプリ側も、これらをログに出さない。
 - パスワードのログインは無い。ログイン手段は Google と Apple だけ。アプリの中では支払いができない（契約は Web だけ）。

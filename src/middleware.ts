@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { isAppAuthEnabled } from '@/lib/auth-link/app-auth-flag'
-import { bearerToCookie, isAppAuthRoute } from '@/lib/auth-link/bearer-cookie'
+import { APP_REQUEST_HEADER, bearerToCookie, isAppAuthRoute } from '@/lib/auth-link/bearer-cookie'
 
 /**
  * Host ベース rewrite middleware
@@ -64,12 +64,13 @@ export function middleware(req: NextRequest) {
 
   // ===============================================
   // アプリ版の認証（旗 APP_AUTH_ENABLED が '1' のときだけ。オフなら、この中は一切動かない）
-  // /api/ あての要求の Authorization: Bearer <値> を、next-auth のセッション Cookie に置き換える。
+  // x-doya-app: 1 が付いた、/api/ あての要求だけ（Cron・webhook・管理用など、Authorization を自分で読む既存の呼び出しは対象外）。Authorization: Bearer <値> を、next-auth のセッション Cookie に置き換える。
   // 既存の API は getServerSession をそのまま使える。仕組みと根拠: docs/architecture/2026-11-18-app/spike-middleware-bearer.md
   // /api/ は、下のホスト振り分けでも素通しなので、ここで返しても既存の動きは変わらない。
   // ===============================================
   if (isAppAuthEnabled() && pathname.startsWith('/api/') && !isAppAuthRoute(pathname)) {
     const r = bearerToCookie({
+      appHeader: req.headers.get(APP_REQUEST_HEADER),
       authorization: req.headers.get('authorization'),
       cookie: req.headers.get('cookie'),
       nextauthUrl: process.env.NEXTAUTH_URL,
@@ -81,6 +82,7 @@ export function middleware(req: NextRequest) {
       const headers = new Headers(req.headers)
       headers.set('cookie', r.cookie)
       headers.delete('authorization')
+      headers.delete(APP_REQUEST_HEADER)
       return NextResponse.next({ request: { headers } })
     }
   }

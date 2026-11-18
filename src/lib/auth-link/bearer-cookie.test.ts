@@ -1,9 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { bearerToCookie, isAppAuthRoute, sessionCookieName, SAFE_BEARER_VALUE } from './bearer-cookie'
+import { APP_REQUEST_HEADER, bearerToCookie as rawBearerToCookie, isAppAuthRoute, sessionCookieName, SAFE_BEARER_VALUE } from './bearer-cookie'
 import { isSafeTokenValue } from './device-token'
 
 const T = 'a'.repeat(43)
+// 既定でアプリのヘッダー（x-doya-app: 1）を付ける。ヘッダー無しの試験は appHeader を明示する
+const bearerToCookie = (a: Parameters<typeof rawBearerToCookie>[0]) => rawBearerToCookie({ appHeader: '1', ...a })
 
 test('Authorization が無い・Bearer でないときは何もしない', () => {
   for (const authorization of [undefined, null, '', 'Basic abc', 'Token xyz']) {
@@ -39,4 +41,20 @@ test('アプリ用の認証 API は置き換えの対象外', () => {
   assert.equal(isAppAuthRoute('/api/app/auth'), true)
   assert.equal(isAppAuthRoute('/api/app/authx'), false)
   assert.equal(isAppAuthRoute('/api/account/delete'), false)
+})
+
+test('x-doya-app が無い・値が違う Bearer は、CRON_SECRET 形でも JWT 形でも、何も変えず 401 にもならない', () => {
+  const cron = 'c'.repeat(40) // 英数字の CRON_SECRET
+  const jwt = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcdefghijklmnop' // ドットを含む（Bearer の形の範囲外）
+  for (const appHeader of [undefined, null, '', '0', 'true']) {
+    for (const t of [cron, jwt, 'short', 'a;b']) {
+      assert.deepEqual(rawBearerToCookie({ appHeader, authorization: `Bearer ${t}`, cookie: 'a=b', nextauthUrl: 'https://x.example' }), { kind: 'none' }, `${appHeader}/${t}`)
+    }
+  }
+  assert.equal(APP_REQUEST_HEADER, 'x-doya-app')
+})
+
+test('対象外の経路: Cron・Stripe の webhook・管理用・アプリ用の認証は、そのもの・配下とも true。似た名前は false', () => {
+  for (const p of ['/api/cron/daily-summary', '/api/cron', '/api/stripe/webhook', '/api/admin/users', '/api/app/auth/me']) assert.equal(isAppAuthRoute(p), true, p)
+  for (const p of ['/api/cronx', '/api/stripe/webhooks', '/api/stripe/checkout', '/api/administrator', '/api/account/delete', '/api/seo/x']) assert.equal(isAppAuthRoute(p), false, p)
 })
