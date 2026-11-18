@@ -102,12 +102,18 @@ export class MemoryRepo implements AuthRepo {
   async findLiveDevice(id: string, userId: string, now: Date) {
     return this.devices.find((d) => d.id === id && d.userId === userId && this.isLive(d, now)) ?? null
   }
-  async setDevicePushToken(id: string, userId: string, token: string | null, now: Date) {
-    const d = this.devices.find((x) => x.id === id && x.userId === userId && this.isLive(x, now))
-    if (!d) return false
-    if (token) for (const o of this.devices) if (o.pushToken === token) o.pushToken = null
-    d.pushToken = token
-    return true
+  // 確認と更新を、await を挟まない1つの同期の区間で行う（本番は、条件つきの1文の更新）
+  async setDevicePushToken(i: { id: string; userId: string; sessionId: string; token: string | null; now: Date }) {
+    const d = this.devices.find((x) => x.id === i.id && x.userId === i.userId && x.sessionId === i.sessionId && this.isLive(x, i.now))
+    if (!d) return 'not-found' as const
+    if (i.token) {
+      const others = this.devices.filter((o) => o !== d && o.pushToken === i.token)
+      // ほかのユーザーの、生きている端末が持っているトークンは、上書きしない
+      if (others.some((o) => o.userId !== i.userId && this.isLive(o, i.now))) return 'in-use' as const
+      for (const o of others) o.pushToken = null
+    }
+    d.pushToken = i.token
+    return 'ok' as const
   }
   async createWebHandoff(i: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
     this.handoffs.push({ id: this.nextId('hand-'), ...i, consumedAt: null, webSessionId: null })

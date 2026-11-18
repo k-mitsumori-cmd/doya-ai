@@ -135,14 +135,35 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
       const d = await prisma.appDevice.findFirst({ where: { id, userId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } } })
       return d ? toDevice(d) : null
     },
-    async setDevicePushToken(id, userId, token, now) {
-      return prisma.$transaction(async (tx) => {
-        const live = await tx.appDevice.findFirst({ where: { id, userId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } }, select: { id: true } })
-        if (!live) return false
-        if (token) await tx.appDevice.updateMany({ where: { pushToken: token, NOT: { id } }, data: { pushToken: null } })
-        await tx.appDevice.update({ where: { id }, data: { pushToken: token } })
-        return true
-      })
+    async setDevicePushToken({ id, userId, sessionId, token, now }) {
+      class Abort extends Error {}
+      try {
+        return await prisma.$transaction(async (tx) => {
+          // 確認と更新を、条件つきの1文で行う（件数が1のときだけ成功）。失効が先に確定していれば0件、後なら失効の処理がトークンを消す
+          const set = await tx.appDevice.updateMany({
+            where: { id, userId, sessionId, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
+            data: { pushToken: token },
+          })
+          if (set.count !== 1) return 'not-found' as const
+          if (token) {
+            // ほかのユーザーの、生きている端末が持っているトークンは、上書きしない（取り消して、この更新も戻す）
+            const taken = await tx.appDevice.findFirst({
+              where: { pushToken: token, NOT: { id }, userId: { not: userId }, rotatedAt: null, revokedAt: null, expiresAt: { gt: now } },
+              select: { id: true },
+            })
+            if (taken) throw new Abort()
+            // 自分の別の行と、生きていない行（失効・替え済み・期限切れ）からは外す
+            await tx.appDevice.updateMany({
+              where: { pushToken: token, NOT: { id }, OR: [{ userId }, { rotatedAt: { not: null } }, { revokedAt: { not: null } }, { expiresAt: { lte: now } }] },
+              data: { pushToken: null },
+            })
+          }
+          return 'ok' as const
+        })
+      } catch (e) {
+        if (e instanceof Abort) return 'in-use' as const
+        throw e
+      }
     },
     async createWebHandoff(i) {
       await prisma.appWebHandoff.create({ data: i })

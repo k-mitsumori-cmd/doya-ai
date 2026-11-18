@@ -121,10 +121,15 @@ export interface AuthRepo {
   /** id とユーザーの両方が一致する、いま使える端末の行。他人の id・失効・期限切れ・替え済みの行は null */
   findLiveDevice(id: string, userId: string, now: Date): Promise<DeviceRecord | null>
   /**
-   * 端末にプッシュトークンを置く（null なら消す）。その端末がそのユーザーの、いま使える行のときだけ。置けたら true。
-   * 同じトークンがほかの行に付いていれば、先に外す（1つのトークンは1つの端末だけ。端末にアプリを入れ直したとき、古い行に残さない）。
+   * 端末にプッシュトークンを置く（null なら消す）。
+   * 置けるのは、id・userId・sessionId（いまの Bearer の Session の id）がすべて一致し、いま使える行（替え済みでなく、失効していず、期限内）だけ。
+   * 確認と更新は、条件つきの1文の更新（件数が1のときだけ成功）で行う。失効と同時に来ても、失効のあとにトークンは残らない。
+   * 同じトークンがほかの行にあるときの扱い:
+   *  - ほかのユーザーの、生きている行にある: 上書きせず 'in-use'（他人の端末のトークンを消さない）。
+   *  - 自分の別の行、または生きていない行（失効・替え済み・期限切れ）にある: その行から外す（アプリを入れ直したとき、古い行に残さない）。
+   * 返り値: 'ok'、行が条件に合わない 'not-found'、'in-use'。
    */
-  setDevicePushToken(id: string, userId: string, token: string | null, now: Date): Promise<boolean>
+  setDevicePushToken(input: { id: string; userId: string; sessionId: string; token: string | null; now: Date }): Promise<'ok' | 'not-found' | 'in-use'>
 
   /** 引き渡しのコード（ハッシュ）を作る。端末の行に結び付ける */
   createWebHandoff(input: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }): Promise<void>
