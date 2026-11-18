@@ -8,6 +8,11 @@ import { enrollUserInDripSequences } from './drip-enroll';
 import { higherPlan } from './plan-utils';
 import { authLogger } from './auth-logger';
 import { isRecentRegistration } from './registration-classification';
+import { buildAppleProviders } from './auth-link/apple-web-provider';
+import { decideWebSignIn } from './auth-link/app-auth-service';
+import { createPrismaAuthRepo } from './auth-link/repo.server';
+import { isAppAuthEnabled } from './auth-link/app-auth-flag';
+import { isApplePrivateRelay, normalizeEmail } from './auth-link/email-normalize';
 
 export const authOptions: NextAuthOptions = {
   logger: authLogger,
@@ -17,9 +22,23 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
+    // Apple は、APPLE_CLIENT_ID・APPLE_TEAM_ID・APPLE_KEY_ID・APPLE_PRIVATE_KEY が全部あるときだけ足す（無ければ何も足さない）
+    ...buildAppleProviders(),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
+      // Apple（設定されているときだけ存在する）は、同じメールの既存ユーザーを自動では結び付けない（account-integrity.md の 4.1）。
+      // Google の動き（既存ユーザー・新規ユーザー）は変えない。確認の画面は次の段で、いまは /auth/signin?error=LinkConfirmationRequired へ移動する。
+      if (account?.provider === 'apple') {
+        try {
+          const verdict = await decideWebSignIn(createPrismaAuthRepo(prisma), {
+            provider: 'apple', providerAccountId: account.providerAccountId, profile: profile as any,
+          })
+          if (verdict !== true) return verdict
+        } catch {
+          return '/auth/signin?error=AccessDenied'
+        }
+      }
       // ※ 新規ユーザーの初回OAuthログインでは、この signIn コールバックは
       //   DBにユーザーが作成される前に走る（existing === null）。その場合の
       //   firstLoginAt記録・自動エンロールは events.createUser 側で確実に行う。
@@ -143,6 +162,10 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       try {
         if (!user?.id) return
+        // 旗 APP_AUTH_ENABLED がオンのときだけ、照合用の正規化メールを入れる（隠したメールは入れない）。オフなら何もしない
+        if (isAppAuthEnabled() && user.email && !isApplePrivateRelay(user.email)) {
+          await prisma.user.updateMany({ where: { id: user.id, emailNormalized: null }, data: { emailNormalized: normalizeEmail(user.email) } }).catch(() => {})
+        }
         // 既に signIn 側で処理済みなら二重処理しない（べき等）
         const existing = await prisma.user.findUnique({
           where: { id: user.id },
