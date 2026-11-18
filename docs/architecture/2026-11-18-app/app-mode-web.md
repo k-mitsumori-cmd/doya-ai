@@ -88,6 +88,42 @@ middleware での位置: Bearer の置き換えより前に置いた。置き換
 | `UserStateSignal.tsx` | `dataLayer` への書き込みをしない |
 | `/app-unavailable`（新規） | 中立の静かなページ。「このページはアプリではご利用になれません。」だけ。`noindex` |
 
+### 4.1 共通のレイアウト（アプリの「戻る＋題」の帯と重ならないようにする）
+
+アプリ側に「戻る＋題」の帯があるため、アプリ表示モードでは Web の帯を出さない。`AppShell` が、アプリ表示モードのときだけ `data-app-mode="true"` を付け、CSS はすべてこの属性の下に書いた（付かないときの見た目は、導入前と同じ）。
+
+| 対象 | 挙動 | 場所 |
+|---|---|---|
+| 上の帯（三本線・ロゴ・虫めがね） | 出さない | `AppShell.module.css`（`.topbar`） |
+| サイドバー（三本線で開くもの）、暗幕 | どの幅でも出さない | 同（`.sidebar`・`.scrim`） |
+| 下のタブ（ホーム・すべて・アカウント） | 出さない | 同（`.tabbar`） |
+| 余白の補正 | 下のタブ分の余白（`--shell-mobile-bottom-inset`）を 0 にし、本文の下は `safe-area-inset-bottom` だけにする。サイドバーの列も外し、本文を 1 列にする。上の帯は固定位置（`sticky`）の分の余白を使っていないため、上の補正は無い | 同 |
+| パンくず（経営ホーム > ツール名） | 出さない。組織の切り替え・会社の表示は残す | `ToolFrame.module.css`（`.crumbs`） |
+| ページの題（h1） | 見えなくして、読み上げには残す（`display: none` にしない） | 同（`.title`） |
+| ツール内のタブ（タイプ記事作成など） | 残す | — |
+| 「このツールの残りとプラン」 | 「このツールの残り」に変える。開くと、残りの量のバーだけを出し、プラン名の文（「プロプランのため」）と料金・プランへのリンクは出さない。ドヤパワーの残りの表示（ツールの中の使える量）は残す | `ToolFrame.tsx`、`SidebarUsagePanel.tsx` |
+
+### 4.2 見出しの折り返し
+
+375px で、ツール画面の見出し「キーワードから、検索で読まれる記事を」が「検／索」で切れた。原因: 見出し（`ToolHero` の `heroTitle`）に折り返しの指定が無く、`<wbr>` があっても、ブラウザは行に入るだけの文字（9 文字）で切るため。`text-wrap: balance` は、9 文字と 9 文字に均等に割って、同じ位置で切れるので、直らない。`text-wrap` の一括指定は `white-space: nowrap` を上書きするため（renewal.css の件）、使わなかった。
+
+直し方（アプリ表示モードの下だけ。Web のブラウザの見た目は変えない）: `ds.module.css` に、`word-break: keep-all; overflow-wrap: anywhere` を足した。`<wbr>` のある見出しは、`<wbr>` の位置でだけ折り返す。`<wbr>` の無い見出しは、行に収まらないときだけ、従来どおりどこでも折り返す。`word-break: auto-phrase` に対応するブラウザでは、見出しと説明文にそちらを使う（Safari・WKWebView の対応は未確認）。
+
+注意: `<wbr>` を入れていない見出しは、この直しの効果が無い（従来どおり）。`<wbr>` を入れるのは、各ツールの見出しごとの作業である。
+
+### 4.3 帯を隠したあとに、画面に「ドヤAI」が出る所（直すかは三森さんの判断。今回は直していない）
+
+| ファイル（行） | 内容 | 出る条件 | 直し方の案 |
+|---|---|---|---|
+| `shell/AppShell.tsx`（474, 493） | `brandName()`（上の帯のロゴ、サイドバーの先頭）。どちらも、アプリ表示モードでは隠れる | 旗 `NEXT_PUBLIC_BRAND_RENAME_ROLLOUT` が `all` なら「ドヤバディ」 | 隠れているので対応は不要 |
+| `shell/ProductSwitcher.tsx`（46, 87, 91） | 製品の切り替え（`ブランド名 製品名`）。上の帯の中なので、隠れる | 同 | 同上 |
+| `notice/ShellNotices.tsx`（71, 80） | 初回の知らせ「ドヤAI へようこそ」「ドヤAI の使い方」 | 初回のログイン後など | アプリ表示モードでは出さないか、`brandName()` を通す |
+| `support-chat/SupportChat.tsx`（268） | サポートの表題「ドヤAI サポート」 | ツール名が無いとき | `brandName()` を通す |
+| `home-agent/HomeAgent.tsx`（418, 607, 665, 747） | ホームの依頼の画面の「ドヤAIに頼む」「ドヤAIが、依頼を読んでいます…」 | ホーム画面 | 同上 |
+| `shell-next/DeptShellSample.tsx`（60, 196, 209, 422-423） | 見本の画面の「ドヤAI」 | 見本の画面だけ | 対応は不要（本番の導線ではない） |
+| `(shell)/banner/layout.tsx`（14） | コメントのみ。ブラウザのタブの題の末尾に「ドヤAI」が付く（ルートの template）。アプリの WebView では画面に出ない | — | 対応は不要 |
+| 各ツールの Lp・`lp-data` | LP の文中の「ドヤAI」 | LP を開いたとき | アプリは LP を開かない前提 |
+
 そのほか: 新しい料金の行動の欄（`pricing/UpsellActions`）と、ドヤパワーの知らせのシート（`notice/PowerOutNotices`）は、`/api/pricing/upsell` を読めたときだけ動く。アプリ表示モードではこの API が 404 になるため、旗オフのときと同じく動かない。
 
 確認だけして、手を入れていないもの: フィードバックのカード（`FeedbackMount`）は自社の `/api/feedback` にだけ送る。`package.json` に posthog・Sentry・mixpanel などの外部の計測は無い。`kintai/layout.tsx` と `AppShell` にある HubSpot の非表示の CSS は、GTM を読み込まなければ働かないだけで、無害である。
@@ -116,17 +152,17 @@ middleware での位置: Bearer の置き換えより前に置いた。置き換
 
 ## 6. 試験
 
-`npm run test:app-mode`（`tsx --test`。24 件）。`npm run test:app-auth`（160 件）とは別に両方通す。
+`npm run test:app-mode`（`tsx --test`。25 件）。`npm run test:app-auth`（160 件）とは別に両方通す。
 
 | ファイル | 件数 | 確かめること |
 |---|---|---|
 | `src/lib/app-mode/detect.test.ts` | 6 | 旗、User-Agent（大文字小文字・似た名前）、Cookie、サーバーとブラウザの判定、旗オフで常に「アプリではない」 |
 | `src/lib/app-mode/blocked-routes.test.ts` | 6 | 止める経路の一覧の固定、通常の経路が止まらないこと、パスの正規化での迂回の防止、正規化できないパスの扱い |
 | `src/lib/app-mode/middleware.test.ts` | 5 | 旗オフと非アプリでは何も変わらない、旗オンで画面は rewrite・API は 404、Bearer の置き換えより前に止まること、アプリ認証だけオンの従来の動き |
-| `src/lib/app-mode/source-guards.test.ts` | 7 | TrialCallout の 4 部品、GTM・GA の条件、共通の部品の条件、`/app-unavailable` の中身、middleware での順番、AppShell |
+| `src/lib/app-mode/source-guards.test.ts` | 8 | TrialCallout の 4 部品、GTM・GA の条件、共通の部品の条件、`/app-unavailable` の中身、middleware での順番、AppShell、共通レイアウト（帯・サイドバー・下のタブ・パンくず・題を隠す条件）、見出しの折り返しの CSS |
 | `src/lib/auth-link/web-handoff.test.ts`（既存を更新） | — | consume が `doya_app` Cookie（HttpOnly なし、https で Secure、期限が同じ）をセットする |
 
-あわせて、部品の読み込みを模擬する既存の検証スクリプト 14 本（`verify-banner-*`・`verify-google-analytics-*`・`verify-service-limit-provider-mounted`・`verify-sidebar-usage-mounted` など）に、`@/lib/app-mode/client` の模擬（`useAppMode: () => false`）を足した。足さないと、新しい import が「模擬されていない」と失敗するため。
+あわせて、部品の読み込みを模擬する既存の検証スクリプト 16 本（`verify-banner-*`・`verify-google-analytics-*`・`verify-service-limit-provider-mounted`・`verify-sidebar-usage-mounted` など）に、`@/lib/app-mode/client` の模擬（`useAppMode: () => false`）を足した。足さないと、新しい import が「模擬されていない」と失敗するため。
 
 ## 7. 本番に入れる前に承認が要る点
 
@@ -153,3 +189,9 @@ middleware での位置: Bearer の置き換えより前に置いた。置き換
 2. ツール本体の上限の案内（`ErrorNotice`・`LimitState`・各ツールの個別の文）を共通の部品に寄せる。
 3. 導線の語を含むファイルが `useAppMode` を使っているかを見る、止め漏れの検査（ソースの grep）を、`test:app-mode` に足す。
 4. 実機の WebView（iOS シミュレータ）で、旗オンの手元の開発サーバーを開き、主要なツール 5 本の画面を、導線の有無でスクリーンショットに撮る。
+
+## 10. 追加分（帯・折り返し）で確かめていないこと
+
+- 4.1 と 4.2 は、CSS とソースの条件の試験だけで確かめた。実機の WebView で、帯を隠したあとの空白・位置ずれ、見出しの折り返しの結果は、見ていない。
+- `word-break: keep-all` は、日本語の読点の直後での折り返しを許すかが、ブラウザで違う。「キーワードから、」のあとで折り返すかは、実機で確かめる必要がある。
+- 上の帯のドヤパワーの残り（`ShellPowerMeter` の `topbar`）も、帯ごと隠れる。残りの表示は「このツールの残り」の中だけになる。
