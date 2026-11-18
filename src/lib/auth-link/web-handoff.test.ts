@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { NextRequest } from 'next/server'
 import {
-  consumeWebHandoff, createWebHandoff, devLogin, exchangeIdToken, logout, me, refreshSession, type AuthDeps,
+  consumeWebHandoff as consumeRaw, createWebHandoff, devLogin, exchangeIdToken, logout, me, refreshSession, type AuthDeps,
 } from './app-auth-service'
 import { MemoryRepo } from './testing/memory-repo'
 import { isSafeNextPath, resolveOrigin, HANDOFF_TTL_MS, WEB_SESSION_TTL_MS } from './web-handoff'
@@ -33,9 +33,13 @@ async function login(deps: AuthDeps, name?: string) {
   assert.equal(r.status, 200)
   return r.body as { accessToken: string; refreshToken: string; user: { id: string } }
 }
+// アプリが作る verifier と、その SHA-256 の challenge（受け取る側の WebView への束縛）
+const VERIFIER = 'Av'.repeat(22)
+const CHALLENGE = sha256Hex(VERIFIER)
+const consumeWebHandoff = (d: AuthDeps, code: unknown, ...v: unknown[]) => consumeRaw(d, code, v.length ? v[0] : VERIFIER)
 const bearer = (t: string) => `Bearer ${t}`
 const createArgs = (t: string, next: unknown = '/seo', over: Record<string, unknown> = {}) => ({
-  authorization: bearer(t), appHeader: '1', body: { next }, origin: 'http://localhost:3000', ...over,
+  authorization: bearer(t), appHeader: '1', body: { next, challenge: CHALLENGE }, origin: 'http://localhost:3000', ...over,
 })
 const codeOf = (url: string) => new URL(url).searchParams.get('code') as string
 
@@ -73,6 +77,8 @@ test('web-handoff 作成: コードは60秒・DB にはハッシュだけ。平�
   assert.equal(HANDOFF_TTL_MS, 60_000)
   assert.equal(repo.handoffs.length, 1)
   assert.equal(repo.handoffs[0].codeHash, sha256Hex(code))
+  assert.equal(repo.handoffs[0].challengeHash, CHALLENGE)
+  assert.equal(JSON.stringify(repo.handoffs).includes(VERIFIER), false)
   assert.equal(JSON.stringify(repo.handoffs).includes(code), false)
 })
 
@@ -267,11 +273,11 @@ test('通し: dev-login → web-handoff → consume で 302 と Cookie（HttpOnl
     const dl = await handleDevLogin(rq('POST', 'http://localhost:3000/api/app/auth/dev-login', {}, { name: 'テスト太郎' }), mk)
     assert.equal(dl.status, 200)
     const tok = await dl.json()
-    const hr = await handleWebHandoffCreate(rq('POST', 'http://localhost:3000/api/app/auth/web-handoff', { 'x-doya-app': '1', authorization: bearer(tok.accessToken) }, { next: '/seo?a=1' }), mk)
+    const hr = await handleWebHandoffCreate(rq('POST', 'http://localhost:3000/api/app/auth/web-handoff', { 'x-doya-app': '1', authorization: bearer(tok.accessToken) }, { next: '/seo?a=1', challenge: CHALLENGE }), mk)
     assert.equal(hr.status, 200)
     const { url } = await hr.json()
     assert.equal(new URL(url).origin, 'http://localhost:3000')
-    const c1 = await handleWebHandoffConsume(rq('GET', url), mk)
+    const c1 = await handleWebHandoffConsume(rq('GET', url, { 'x-doya-handoff': VERIFIER }), mk)
     assert.equal(c1.status, 302)
     assert.equal(c1.headers.get('location'), 'http://localhost:3000/seo?a=1')
     assert.equal(c1.headers.get('cache-control'), 'no-store')
@@ -288,7 +294,7 @@ test('通し: dev-login → web-handoff → consume で 302 と Cookie（HttpOnl
     const sess = await repo.findSession(value)
     assert.equal(sess!.expires.getTime(), clock.getTime() + WEB_SESSION_TTL_MS)
     // 2回目は、理由を出さずにサインインへ
-    const c2 = await handleWebHandoffConsume(rq('GET', url), mk)
+    const c2 = await handleWebHandoffConsume(rq('GET', url, { 'x-doya-handoff': VERIFIER }), mk)
     assert.equal(c2.status, 302)
     assert.equal(c2.headers.get('location'), 'http://localhost:3000/auth/signin?error=HandoffInvalid')
     assert.equal(c2.headers.get('set-cookie'), null)
@@ -304,7 +310,7 @@ test('consume: URL の next を書き換えても、DB に控えた next へ行�
     const { url } = (await createWebHandoff(deps, { ...createArgs(t.accessToken, '/banner'), origin: 'https://doya.example' })).body as { url: string }
     const tampered = new URL(url)
     tampered.searchParams.set('next', '//evil.com')
-    const res = await handleWebHandoffConsume(rq('GET', tampered.toString().replace('http://', 'https://')), mk)
+    const res = await handleWebHandoffConsume(rq('GET', tampered.toString().replace('http://', 'https://'), { 'x-doya-handoff': VERIFIER }), mk)
     assert.equal(res.status, 302)
     assert.equal(res.headers.get('location'), 'https://doya.example/banner')
     const sc = res.headers.get('set-cookie') ?? ''
@@ -445,4 +451,59 @@ test("ソース: 'dev' の提供元を許すのは dev-login.ts・開発用ロ�
 test('middleware: web-handoff と dev-login は /api/app/auth/ の下なので、Bearer の置き換えの対象外', async () => {
   const { isAppAuthRoute } = await import('./bearer-cookie')
   for (const p of ['/api/app/auth/web-handoff', '/api/app/auth/web-handoff/consume', '/api/app/auth/dev-login']) assert.equal(isAppAuthRoute(p), true, p)
+})
+
+// --- 受け取る側への束縛（ログイン CSRF の防止） ---
+test('web-handoff 作成: challenge が無い・形が不正なら 400（コードを作らない）', async () => {
+  const { deps, repo } = makeDeps()
+  const t = await login(deps)
+  for (const c of [undefined, null, '', 'abc', 'g'.repeat(64), CHALLENGE.slice(1), CHALLENGE + '0', 12345, VERIFIER]) {
+    const r = await createWebHandoff(deps, { ...createArgs(t.accessToken), body: { next: '/seo', challenge: c } })
+    assert.equal(r.status, 400, String(c))
+  }
+  assert.equal(repo.handoffs.length, 0)
+  assert.equal((await createWebHandoff(deps, { ...createArgs(t.accessToken), body: { next: '/seo', challenge: CHALLENGE.toUpperCase() } })).status, 200)
+})
+
+test('consume: verifier が無い・誤り・形が不正のときは、コードを消費せず失敗。そのあと正しい verifier で1回だけ成功', async () => {
+  const { deps, repo } = makeDeps()
+  const t = await login(deps)
+  const code = codeOf((await createWebHandoff(deps, createArgs(t.accessToken))).body.url as string)
+  const before = repo.sessions.length
+  for (const v of [undefined, null, '', 'short', 'B'.repeat(44), VERIFIER + 'x'.repeat(100), `${VERIFIER}!`, CHALLENGE, VERIFIER.slice(1)]) {
+    assert.deepEqual(await consumeWebHandoff(deps, code, v), { ok: false }, String(v).slice(0, 20))
+  }
+  assert.equal(repo.handoffs[0].consumedAt, null)
+  assert.equal(repo.sessions.length, before)
+  assert.equal((await consumeWebHandoff(deps, code)).ok, true)
+  assert.deepEqual(await consumeWebHandoff(deps, code), { ok: false })
+})
+
+test('consume: 正しい verifier での同時消費も、成功は1回だけ。誤った verifier が混ざっても妨害されない', async () => {
+  const { deps, repo } = makeDeps()
+  const t = await login(deps)
+  const code = codeOf((await createWebHandoff(deps, createArgs(t.accessToken))).body.url as string)
+  const before = repo.sessions.length
+  const rs = await Promise.all(Array.from({ length: 60 }, (_, i) => consumeWebHandoff(deps, code, i % 2 ? VERIFIER : 'Z'.repeat(43))))
+  assert.equal(rs.filter((r) => r.ok).length, 1)
+  assert.equal(repo.sessions.length, before + 1)
+})
+
+test('consume（ハンドラ）: x-doya-handoff が無い普通のブラウザのリンクは、Cookie をセットせず HandoffInvalid へ。コードは残る', async () => {
+  const { deps, repo } = makeDeps()
+  const mk = () => deps
+  await withEnv({ APP_AUTH_ENABLED: '1', NEXTAUTH_URL: 'http://localhost:3000' }, async () => {
+    const t = await login(deps)
+    const { url } = (await createWebHandoff(deps, createArgs(t.accessToken))).body as { url: string }
+    const attack = await handleWebHandoffConsume(rq('GET', url), mk)
+    assert.equal(attack.status, 302)
+    assert.equal(attack.headers.get('location'), 'http://localhost:3000/auth/signin?error=HandoffInvalid')
+    assert.equal(attack.headers.get('set-cookie'), null)
+    const wrong = await handleWebHandoffConsume(rq('GET', url, { 'x-doya-handoff': 'Q'.repeat(43) }), mk)
+    assert.equal(wrong.headers.get('set-cookie'), null)
+    assert.equal(repo.handoffs[0].consumedAt, null)
+    const good = await handleWebHandoffConsume(rq('GET', url, { 'x-doya-handoff': VERIFIER }), mk)
+    assert.equal(good.status, 302)
+    assert.match(good.headers.get('set-cookie') ?? '', /^next-auth\.session-token=/)
+  })
 })

@@ -13,7 +13,7 @@ export class MemoryRepo implements AuthRepo {
   devices: DeviceRecord[] = []
   links = new Map<string, LinkRequestRecord>()
   companies = new Set<string>()
-  handoffs: Array<{ id: string; codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date; consumedAt: Date | null; webSessionId: string | null }> = []
+  handoffs: Array<{ id: string; codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date; consumedAt: Date | null; webSessionId: string | null }> = []
   private seq = 0
   nextId(prefix: string) { return `${prefix}${++this.seq}` }
 
@@ -88,13 +88,17 @@ export class MemoryRepo implements AuthRepo {
     const d = this.devices.find((x) => x.sessionId === sessionId)
     return d ? { id: d.id, userId: d.userId, revokedAt: d.revokedAt } : null
   }
-  async createWebHandoff(i: { codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
+  async createWebHandoff(i: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
     this.handoffs.push({ id: this.nextId('hand-'), ...i, consumedAt: null, webSessionId: null })
   }
   // 確認から更新までを、await を挟まない1つの同期の区間で行う（同時に何本来ても、1回しか成功しない）
-  async consumeWebHandoff(i: { codeHash: string; now: Date; sessionToken: string; sessionExpires: Date }) {
+  async getWebHandoffChallenge(codeHash: string, now: Date) {
+    const h = this.handoffs.find((x) => x.codeHash === codeHash)
+    return h && !h.consumedAt && h.expiresAt.getTime() > now.getTime() ? h.challengeHash : null
+  }
+  async consumeWebHandoff(i: { codeHash: string; challengeHash: string; now: Date; sessionToken: string; sessionExpires: Date }) {
     const h = this.handoffs.find((x) => x.codeHash === i.codeHash)
-    if (!h || h.consumedAt || h.expiresAt.getTime() <= i.now.getTime()) return null
+    if (!h || h.consumedAt || h.challengeHash !== i.challengeHash || h.expiresAt.getTime() <= i.now.getTime()) return null
     const user = this.users.get(h.userId)
     const device = this.devices.find((d) => d.id === h.deviceId)
     if (!user || user.deletedAt || !device || device.revokedAt) return null

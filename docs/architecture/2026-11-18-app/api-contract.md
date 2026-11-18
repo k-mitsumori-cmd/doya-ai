@@ -152,6 +152,64 @@
   - 「最初の100」「初月無料」の受け取りの記録（メールのハッシュ。二重付与を防ぐため）
 - 未実装: Apple の連携の取り消し（Sign in with Apple の token revoke）。Apple の refresh_token をまだ保存していないため。次の段の項目。
 
+### 3.8 POST /api/app/auth/web-handoff（Web への引き渡しのコードを作る）
+
+アプリが、ツールの画面を WebView で開くとき、アプリのセッションから Web のセッション Cookie へ引き渡すために使う。旗がオンのときだけ（オフは `404`）。
+
+準備: アプリは、43〜128文字のランダムな値 `verifier`（使える文字は `[A-Za-z0-9_-]`）を作り、その SHA-256（16進、64文字）を `challenge` として送る。`verifier` そのものは、この API には送らない。
+
+```
+Authorization: Bearer <accessToken>
+x-doya-app: 1
+```
+
+```json
+{ "next": "/seo", "challenge": "<verifier の SHA-256 の16進。64文字>" }
+```
+
+- `next` は、同じサイトのパスだけ。「/」で始まり、「//」で始まらず、`/api/` の下ではなく、空白・改行・タブ・バックスラッシュを含まないこと（クエリは可）。条件に合わなければ `400 INVALID_REQUEST`。`challenge` が無い、または形が不正でも `400 INVALID_REQUEST`（コードは作らない）。
+- 成功（`200`）: `{ "url": "<origin>/api/app/auth/web-handoff/consume?code=…&next=…", "expiresAt": "…" }`。コードは、ランダムな32バイトで、60秒で期限が切れ、1回だけ使える。DB にはコードのハッシュと `challenge` だけを置く。`origin` は、環境変数 `NEXTAUTH_URL` があればその origin、無ければリクエストの Host から作る（手元の開発では `http://localhost:3000`）。
+- `401 INVALID_TOKEN`: `x-doya-app: 1` が無い、Bearer が不正・期限切れ・失効、アプリ用でないセッション（端末に結び付かないもの）、または退会済み。
+
+### 3.9 GET /api/app/auth/web-handoff/consume（WebView が開く）
+
+アプリは、3.8 で受け取った `url` を、WebView の source として、次の形で開く（`verifier` をヘッダーに付ける）。
+
+```
+source={{ uri: url, headers: { 'x-doya-handoff': verifier } }}
+```
+
+- 成功の条件: コードが未使用で、60秒以内で、ユーザーが退会していず、その端末が失効していず、**ヘッダー `x-doya-handoff` の `verifier` の SHA-256 が、作成時の `challenge` と一致する**こと。比較は定数時間で行う。
+- 成功: Web の通常のセッション（`Session` の行。期間は next-auth の `maxAge` と同じ24時間。`AppDevice` には結び付けない。そのため、既存の延長の動きに従う）を作り、Cookie（名前は `next-auth.session-token`、`NEXTAUTH_URL` が https なら `__Secure-next-auth.session-token`。HttpOnly、SameSite=Lax、Path=/、https なら Secure）をセットして、`next` へ `302`。開く先は、DB に控えた検証済みの `next` で、URL の `next` は使わない。
+- 失敗（期限切れ・使用済み・不正なコード、ヘッダーが無い、`verifier` の不一致など、理由は区別しない）: `/auth/signin?error=HandoffInvalid` へ `302`。`verifier` が無い・不一致のときは、**コードを消費しない**（消費すると、コードを知る別の人に使い切られて、妨害されるため）。
+- 応答には常に `Cache-Control: no-store` と `Referrer-Policy: no-referrer` を付ける。
+- なぜヘッダーで束縛するか（ログイン CSRF の防止）: 束縛が無いと、攻撃者が自分のアカウントでコードを作り、60秒以内にその url を被害者に踏ませて、被害者のブラウザを攻撃者のセッションにできる。普通のブラウザのリンクは、カスタムヘッダーを付けられないので、この攻撃は成立しない。
+- WebView に、すでに別のユーザーのセッション Cookie があっても、上書きを許す。束縛があるので、上書きできるのは、アプリ専用の領域（WebView）だけになる。
+- 退会・ログアウトとの関係: 端末のログアウト（`3.3`）、および更新トークンの再利用の検出による系統の失効で、その端末から引き渡した Web のセッションも消える。退会（3.7）は、ユーザーの全 `Session` を消すので、引き渡した Web のセッションも消える。
+
+### 3.10 POST /api/app/auth/dev-login（手元の開発だけ）
+
+アプリを、Apple・Google の設定が無くても、手元の Simulator でつなぐための、開発用のログイン。**本番では動かない。**
+
+次の5つがすべてそろったときだけ動く。1つでも欠ければ、理由を出さずに `404 { "code": "NOT_FOUND" }`。
+
+1. `APP_AUTH_ENABLED` が `'1'`
+2. `APP_DEV_LOGIN` が `'1'`
+3. `NODE_ENV` が `production` ではない
+4. `VERCEL` が未設定
+5. リクエストの Host が `localhost`・`127.0.0.1`・`[::1]`（ポート付き可）のいずれか
+
+```json
+{ "name": "テスト太郎", "deviceLabel": "Simulator", "platform": "ios" }
+```
+
+すべて任意。`name` を指定すると、同じ `name` は同じ人になる。指定しなければ、毎回新しいテストユーザーを作る。`platform` は `ios`（既定）か `android`。
+
+- 成功（`200`）は 3.1 と同じ形（`accessToken`・`accessExpiresAt`・`refreshToken`・`refreshExpiresAt`・`user`）。メールは返さない。そのあとの `refresh`・`me`・`logout`・退会・Bearer での既存 API の呼び出しは、本物のログインと同じ経路を通る。
+- 作るもの: `User`（email は `dev-<識別子>@dev.invalid`）と、`Account`（提供元は `dev`、`providerAccountId` は `dev-<識別子>`）。Slack の通知とドリップのエンロールは行わない。
+- 本番に入らない理由（二重に止める）: (1) 上の5条件。本番では、`NODE_ENV=production`、Vercel の `VERCEL`、手元ではない Host、`APP_DEV_LOGIN` が無いこと、のどれでも止まる。(2) 提供元 `dev` を、本物の経路（`exchange` の id_token の検証、結び付けの決定、Web の認証）が受け付けない。`exchange` に `provider: "dev"` を送っても `400` になる。どちらも、`src/lib/auth-link/web-handoff.test.ts` の試験で確かめている。
+- 本番の環境変数に `APP_DEV_LOGIN` を入れてはならない。
+
 ## 4. エラーコード
 
 | status | code | 意味・アプリの動き |
@@ -160,11 +218,11 @@
 | 400 | `LINK_CODE_INVALID` | コードが違う。`remainingAttempts` を表示 |
 | 400 | `CONFIRMATION_REQUIRED` | 退会の確認文字列が違う |
 | 401 | `ID_TOKEN_INVALID` | id_token の検証に失敗（署名の base64url が正規形でない書き方は `malformed`）。`reason`: `malformed` / `unsupported-alg` / `no-matching-key` / `bad-key` / `bad-signature` / `expired` / `bad-issuer` / `bad-audience` / `bad-authorized-party` / `missing-sub` / `missing-nonce` / `nonce-mismatch` / `already-used`。ログインをやり直させる |
-| 401 | `INVALID_TOKEN` | アクセストークンが不正・期限切れ・失効。リフレッシュに回る |
+| 401 | `INVALID_TOKEN` | アクセストークンが不正・期限切れ・失効。リフレッシュに回る（3.8 では、`x-doya-app: 1` が無い場合も） |
 | 401 | `REFRESH_TOKEN_INVALID` | `reason`: `malformed` / `unknown` / `expired` / `revoked` / `reused`。ログイン画面へ戻す |
 | 401 | `ACCOUNT_UNAVAILABLE` | 退会済みなど。ログイン画面へ戻す |
 | 403 | `LINK_TARGET_MISMATCH` | 3.6 (b) で、別のユーザーのトークンを使った |
-| 404 | `NOT_FOUND` | 旗がオフ |
+| 404 | `NOT_FOUND` | 旗がオフ。3.10 では、動かしてよい条件がそろっていない場合も |
 | 404 | `USER_NOT_FOUND` | 退会の対象のユーザーがいない |
 | 409 | `LINK_CONFIRMATION_REQUIRED` | 3.1 の説明 |
 | 409 | `REFRESH_RETRY_CONFLICT` | 更新の直後の再送、または同時の更新。少し待ってやり直す |
@@ -195,10 +253,11 @@
 |---|---|
 | `APP_AUTH_ENABLED` | `'1'` で、この文書の API・Bearer の置き換え・退会 API・管理画面の Google の Account の確認を有効にする。既定はオフ |
 | `APP_GOOGLE_CLIENT_IDS` | Google の **iOS のクライアント ID だけ**（カンマ区切り）。id_token の `aud` と `azp` を、この一覧と照合する。**Web のクライアント ID は入れない**（入れると、Web 用のトークンも通ってしまう） |
+| `APP_DEV_LOGIN` | `'1'` で、開発用ログイン（3.10）を有効にする。**手元の開発だけ。本番の環境変数には入れない**（入れても、`NODE_ENV=production`・`VERCEL`・Host の条件で動かないが、入れない） |
 | `APP_APPLE_BUNDLE_IDS` | アプリの Bundle ID（カンマ区切り）。Apple の id_token の `aud`。株式会社スリスタの Apple Developer のものを使う |
 | `APPLE_CLIENT_ID`・`APPLE_TEAM_ID`・`APPLE_KEY_ID`・`APPLE_PRIVATE_KEY` | Web の Apple ログイン用。4つとも揃ったときだけ有効（任意） |
 
-本番の DB に先に反映するもの: `db-push-runbook.md`（23文）。
+本番の DB に先に反映するもの: `db-push-runbook.md`（36文）。
 
 ## 7. 次の段の項目（サーバー）
 

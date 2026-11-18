@@ -122,13 +122,17 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
     async createWebHandoff(i) {
       await prisma.appWebHandoff.create({ data: i })
     },
+    async getWebHandoffChallenge(codeHash, now) {
+      const r = await prisma.appWebHandoff.findFirst({ where: { codeHash, consumedAt: null, expiresAt: { gt: now } }, select: { challengeHash: true } })
+      return r?.challengeHash ?? null
+    },
     async consumeWebHandoff(i) {
       class Abort extends Error {}
       try {
         return await prisma.$transaction(async (tx) => {
           // 先に取った1回だけが進める（未使用・期限内・退会していない・端末の系統が失効していない、を1つの条件つきの更新で確かめる）
           const claimed = await tx.appWebHandoff.updateMany({
-            where: { codeHash: i.codeHash, consumedAt: null, expiresAt: { gt: i.now }, user: { deletedAt: null }, device: { revokedAt: null } },
+            where: { codeHash: i.codeHash, challengeHash: i.challengeHash, consumedAt: null, expiresAt: { gt: i.now }, user: { deletedAt: null }, device: { revokedAt: null } },
             data: { consumedAt: i.now },
           })
           if (claimed.count !== 1) return null

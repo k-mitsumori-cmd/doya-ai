@@ -70,6 +70,7 @@ CREATE INDEX IF NOT EXISTS "app_id_token_use_expiresAt_idx" ON "app_id_token_use
 CREATE TABLE IF NOT EXISTS "app_web_handoff" (
     "id" TEXT NOT NULL,
     "codeHash" TEXT NOT NULL,
+    "challengeHash" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "deviceId" TEXT NOT NULL,
     "nextPath" TEXT NOT NULL,

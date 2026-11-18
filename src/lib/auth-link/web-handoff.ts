@@ -31,6 +31,17 @@ export function isSafeNextPath(next: unknown): next is string {
   return true
 }
 
+/** challenge（verifier の SHA-256 の16進。64文字） */
+export function isValidChallenge(v: unknown): v is string {
+  return typeof v === 'string' && /^[0-9a-fA-F]{64}$/.test(v)
+}
+/** verifier（アプリが作るランダムな値。43〜128文字の [A-Za-z0-9_-]） */
+export function isValidVerifier(v: unknown): v is string {
+  return typeof v === 'string' && /^[A-Za-z0-9_-]{43,128}$/.test(v)
+}
+/** consume のリクエストに verifier を載せるヘッダー（ブラウザのリンクは、カスタムヘッダーを付けられない） */
+export const HANDOFF_VERIFIER_HEADER = 'x-doya-handoff'
+
 const HOST_PATTERN = /^[A-Za-z0-9.\-]+(:\d{1,5})?$|^\[[0-9A-Fa-f:]+\](:\d{1,5})?$/
 
 /**

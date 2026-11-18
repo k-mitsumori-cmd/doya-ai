@@ -97,6 +97,8 @@ model AppDevice {
 model AppWebHandoff {
   id           String    @id @default(cuid())
   codeHash     String    @unique
+  /// 受け取る側（WebView）に束縛するための値。アプリが作った verifier の SHA-256（16進、64文字）。consume は、ヘッダー x-doya-handoff の verifier の SHA-256 がこれと一致するときだけ成功する（ログイン CSRF の防止）
+  challengeHash String
   userId       String
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   deviceId     String

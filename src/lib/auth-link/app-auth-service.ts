@@ -11,7 +11,8 @@ import {
   generateLinkCode, hashLinkCode, isValidCodeFormat, maskEmail, LINK_MAX_ATTEMPTS, LINK_REQUEST_TTL_MS,
 } from './link-code'
 import { UniqueViolationError, type AuthRepo, type LinkRequestRecord } from './repo'
-import { HANDOFF_TTL_MS, WEB_SESSION_TTL_MS, isSafeNextPath } from './web-handoff'
+import { HANDOFF_TTL_MS, WEB_SESSION_TTL_MS, isSafeNextPath, isValidChallenge, isValidVerifier } from './web-handoff'
+import { timingSafeEqual } from 'node:crypto'
 import { DEV_PROVIDER } from './dev-login'
 import { APP_REQUEST_HEADER_VALUE } from './bearer-cookie'
 
@@ -285,6 +286,9 @@ export async function createWebHandoff(
   if (!isObj(args.body) || !isSafeNextPath(args.body.next)) return fail(400, 'INVALID_REQUEST')
   if (!args.origin) return fail(400, 'INVALID_REQUEST')
   const next = args.body.next
+  // 受け取る側（WebView）に束縛する challenge（verifier の SHA-256 の16進、64文字）が必須。無いコードは作らない
+  if (!isValidChallenge(args.body.challenge)) return fail(400, 'INVALID_REQUEST')
+  const challengeHash = args.body.challenge.toLowerCase()
   // アプリ用のセッション（端末に結び付いたもの）だけが、引き渡せる。端末が失効していたら 401
   const device = await deps.repo.findDeviceBySessionId(session.id)
   if (!device || device.revokedAt) return fail(401, 'INVALID_TOKEN')
@@ -294,7 +298,7 @@ export async function createWebHandoff(
   const now = deps.now()
   const code = generateOpaqueToken(deps.randomBytes)
   const expiresAt = new Date(now.getTime() + HANDOFF_TTL_MS)
-  await deps.repo.createWebHandoff({ codeHash: sha256Hex(code), userId: session.userId, deviceId: device.id, nextPath: next, expiresAt })
+  await deps.repo.createWebHandoff({ codeHash: sha256Hex(code), challengeHash, userId: session.userId, deviceId: device.id, nextPath: next, expiresAt })
   const url = `${args.origin}/api/app/auth/web-handoff/consume?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`
   return { status: 200, body: { url, expiresAt: expiresAt.toISOString() } }
 }
@@ -306,12 +310,17 @@ export type ConsumeHandoffResult = { ok: true; sessionToken: string; expires: Da
  * 失敗の理由（期限切れ・使用済み・不正・退会・失効）は区別せず、呼び出し側が同じ応答にする。
  * 開く先は、DB に控えた検証済みのパスを使う（URL の next は信用しない）。
  */
-export async function consumeWebHandoff(deps: AuthDeps, code: unknown): Promise<ConsumeHandoffResult> {
-  if (!isSafeTokenValue(code)) return { ok: false }
+export async function consumeWebHandoff(deps: AuthDeps, code: unknown, verifier: unknown): Promise<ConsumeHandoffResult> {
+  if (!isSafeTokenValue(code) || !isValidVerifier(verifier)) return { ok: false }
   const now = deps.now()
+  const codeHash = sha256Hex(code)
+  // verifier が合わないときは、コードを消費しない（消費すると、コードを知る別の人に使い切られて妨害される）。比較は定数時間
+  const stored = await deps.repo.getWebHandoffChallenge(codeHash, now)
+  const given = sha256Hex(verifier)
+  if (!stored || stored.length !== given.length || !timingSafeEqual(Buffer.from(stored), Buffer.from(given))) return { ok: false }
   const sessionToken = generateOpaqueToken(deps.randomBytes)
   const sessionExpires = new Date(now.getTime() + WEB_SESSION_TTL_MS)
-  const r = await deps.repo.consumeWebHandoff({ codeHash: sha256Hex(code), now, sessionToken, sessionExpires })
+  const r = await deps.repo.consumeWebHandoff({ codeHash, challengeHash: given, now, sessionToken, sessionExpires })
   if (!r) return { ok: false }
   return { ok: true, sessionToken, expires: sessionExpires, nextPath: r.nextPath }
 }

@@ -4,7 +4,7 @@ import { handleAppAuth } from './route-helpers.server'
 import { consumeWebHandoff, createWebHandoff, devLogin, type AuthDeps } from './app-auth-service'
 import { APP_REQUEST_HEADER, sessionCookieName } from './bearer-cookie'
 import { isDevLoginAllowed } from './dev-login'
-import { resolveOrigin } from './web-handoff'
+import { HANDOFF_VERIFIER_HEADER, resolveOrigin } from './web-handoff'
 
 /**
  * web-handoff（2本）と dev-login の、route の中身。route は、これを呼ぶだけにする。
@@ -38,6 +38,7 @@ function redirectTo(req: NextRequest, path: string): NextResponse {
 
 /**
  * GET /api/app/auth/web-handoff/consume?code=
+ * 受け取る側の束縛: ヘッダー x-doya-handoff の verifier の SHA-256 が、作成時の challenge と一致するときだけ成功する。無い・不一致のときは、コードを消費せずに失敗の応答にする。
  * 成功: Web の通常のセッションの Cookie（HttpOnly・SameSite=Lax・Path=/・https なら Secure）をセットして、検証済みの next へ 302。
  * 失敗: 理由を出さず、/auth/signin?error=HandoffInvalid へ 302。
  */
@@ -51,7 +52,7 @@ export async function handleWebHandoffConsume(req: NextRequest, makeDeps?: MakeD
       const { createRealAuthDeps } = await import('./deps.server')
       deps = createRealAuthDeps()
     }
-    const r = await consumeWebHandoff(deps, req.nextUrl.searchParams.get('code'))
+    const r = await consumeWebHandoff(deps, req.nextUrl.searchParams.get('code'), req.headers.get(HANDOFF_VERIFIER_HEADER))
     if (!r.ok) return redirectTo(req, FAIL_PATH)
     const res = redirectTo(req, r.nextPath)
     const name = sessionCookieName(process.env.NEXTAUTH_URL)

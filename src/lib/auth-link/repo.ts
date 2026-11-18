@@ -103,13 +103,15 @@ export interface AuthRepo {
   findDeviceBySessionId(sessionId: string): Promise<{ id: string; userId: string; revokedAt: Date | null } | null>
 
   /** 引き渡しのコード（ハッシュ）を作る。端末の行に結び付ける */
-  createWebHandoff(input: { codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }): Promise<void>
+  createWebHandoff(input: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }): Promise<void>
+  /** コード（ハッシュ）に結び付けた challengeHash を返す（未使用・期限内の行だけ。無ければ null）。消費はしない */
+  getWebHandoffChallenge(codeHash: string, now: Date): Promise<string | null>
   /**
    * 引き渡しのコードを1回だけ使い、Web のセッション（アプリ用ではない通常の Session。AppDevice には結び付けない）を作る。1つの処理。
-   * 使えるのは、未使用・期限内で、ユーザーが退会していず、端末の系統が失効していないときだけ。条件つきの更新で原子的に取る（同時に何本来ても、1回しか成功しない）。
+   * 使えるのは、未使用・期限内・challengeHash が一致し、ユーザーが退会していず、端末の系統が失効していないときだけ。条件つきの更新で原子的に取る（同時に何本来ても、1回しか成功しない）。
    * 作った Session の id を引き渡しの行に控える（端末のログアウトのとき、この Session も消すため）。使えなければ null。
    */
-  consumeWebHandoff(input: { codeHash: string; now: Date; sessionToken: string; sessionExpires: Date }): Promise<{ userId: string; nextPath: string } | null>
+  consumeWebHandoff(input: { codeHash: string; challengeHash: string; now: Date; sessionToken: string; sessionExpires: Date }): Promise<{ userId: string; nextPath: string } | null>
 
   getLinkRequest(id: string): Promise<LinkRequestRecord | null>
   findLiveLinkRequest(provider: string, providerAccountId: string, userId: string, now: Date): Promise<LinkRequestRecord | null>
