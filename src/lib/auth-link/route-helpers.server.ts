@@ -10,8 +10,9 @@ const MAX_BODY_BYTES = 16 * 1024
  */
 export async function handleAppAuth(
   req: NextRequest,
-  run: (deps: AuthDeps, ctx: { body: unknown; authorization: string | null }) => Promise<ServiceResult>,
-  opts: { readBody?: boolean } = {},
+  run: (deps: AuthDeps, ctx: { body: unknown; authorization: string | null; headers: Headers }) => Promise<ServiceResult>,
+  /** makeDeps は試験用（本番は省略して、本物の部品を使う） */
+  opts: { readBody?: boolean; makeDeps?: () => AuthDeps | Promise<AuthDeps> } = {},
 ): Promise<NextResponse> {
   const off = appAuthOffResponse()
   if (off) return off
@@ -22,8 +23,13 @@ export async function handleAppAuth(
       if (text.length > MAX_BODY_BYTES) return json({ code: 'INVALID_REQUEST' }, 413)
       try { body = text ? JSON.parse(text) : null } catch { return json({ code: 'INVALID_REQUEST' }, 400) }
     }
-    const { createRealAuthDeps } = await import('./deps.server')
-    const r = await run(createRealAuthDeps(), { body, authorization: req.headers.get('authorization') })
+    let deps: AuthDeps
+    if (opts.makeDeps) deps = await opts.makeDeps()
+    else {
+      const { createRealAuthDeps } = await import('./deps.server')
+      deps = createRealAuthDeps()
+    }
+    const r = await run(deps, { body, authorization: req.headers.get('authorization'), headers: req.headers })
     return json(r.body, r.status)
   } catch {
     return json({ code: 'INTERNAL' }, 500)

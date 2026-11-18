@@ -11,6 +11,9 @@ import {
   generateLinkCode, hashLinkCode, isValidCodeFormat, maskEmail, LINK_MAX_ATTEMPTS, LINK_REQUEST_TTL_MS,
 } from './link-code'
 import { UniqueViolationError, type AuthRepo, type LinkRequestRecord } from './repo'
+import { HANDOFF_TTL_MS, WEB_SESSION_TTL_MS, isSafeNextPath } from './web-handoff'
+import { DEV_PROVIDER } from './dev-login'
+import { APP_REQUEST_HEADER_VALUE } from './bearer-cookie'
 
 /**
  * アプリ用の認証の処理（トークンの交換・更新・ログアウト、結び付けの確認）。DB は repo、時刻・乱数・通信・メール送信は deps で受け取る。
@@ -262,6 +265,95 @@ export async function me(deps: AuthDeps, authorization: string | null | undefine
     status: 200,
     body: { id: user.id, name: user.name, image: user.image, plan: user.plan, hasCompany: await deps.repo.hasCompany(user.id) },
   }
+}
+
+// ---------------------------------------------------------------------------
+// Web への引き渡し（POST /api/app/auth/web-handoff、GET /api/app/auth/web-handoff/consume）
+// ---------------------------------------------------------------------------
+/**
+ * アプリのセッション（Bearer）から、使い捨てのコードを作る。コードは60秒・1回だけ。DB にはハッシュだけを置く。
+ * x-doya-app: 1 のヘッダーが付いていなければ、Bearer があっても認証しない（ブラウザのフォームなどから呼ばせないため）。
+ * origin は、呼び出し側（route）が決めて渡す。
+ */
+export async function createWebHandoff(
+  deps: AuthDeps,
+  args: { authorization: string | null | undefined; appHeader: string | null | undefined; body: unknown; origin: string | null },
+): Promise<ServiceResult> {
+  if (args.appHeader !== APP_REQUEST_HEADER_VALUE) return fail(401, 'INVALID_TOKEN')
+  const session = await sessionFromBearer(deps, args.authorization)
+  if (!session) return fail(401, 'INVALID_TOKEN')
+  if (!isObj(args.body) || !isSafeNextPath(args.body.next)) return fail(400, 'INVALID_REQUEST')
+  if (!args.origin) return fail(400, 'INVALID_REQUEST')
+  const next = args.body.next
+  // アプリ用のセッション（端末に結び付いたもの）だけが、引き渡せる。端末が失効していたら 401
+  const device = await deps.repo.findDeviceBySessionId(session.id)
+  if (!device || device.revokedAt) return fail(401, 'INVALID_TOKEN')
+  const user = await deps.repo.getUser(session.userId)
+  if (!user || user.deletedAt) return fail(401, 'INVALID_TOKEN')
+
+  const now = deps.now()
+  const code = generateOpaqueToken(deps.randomBytes)
+  const expiresAt = new Date(now.getTime() + HANDOFF_TTL_MS)
+  await deps.repo.createWebHandoff({ codeHash: sha256Hex(code), userId: session.userId, deviceId: device.id, nextPath: next, expiresAt })
+  const url = `${args.origin}/api/app/auth/web-handoff/consume?code=${encodeURIComponent(code)}&next=${encodeURIComponent(next)}`
+  return { status: 200, body: { url, expiresAt: expiresAt.toISOString() } }
+}
+
+export type ConsumeHandoffResult = { ok: true; sessionToken: string; expires: Date; nextPath: string } | { ok: false }
+
+/**
+ * コードを1回だけ消費し、Web の通常のセッション（Session の行。期間は next-auth の maxAge と同じ24時間。AppDevice には結び付けない）を作る。
+ * 失敗の理由（期限切れ・使用済み・不正・退会・失効）は区別せず、呼び出し側が同じ応答にする。
+ * 開く先は、DB に控えた検証済みのパスを使う（URL の next は信用しない）。
+ */
+export async function consumeWebHandoff(deps: AuthDeps, code: unknown): Promise<ConsumeHandoffResult> {
+  if (!isSafeTokenValue(code)) return { ok: false }
+  const now = deps.now()
+  const sessionToken = generateOpaqueToken(deps.randomBytes)
+  const sessionExpires = new Date(now.getTime() + WEB_SESSION_TTL_MS)
+  const r = await deps.repo.consumeWebHandoff({ codeHash: sha256Hex(code), now, sessionToken, sessionExpires })
+  if (!r) return { ok: false }
+  return { ok: true, sessionToken, expires: sessionExpires, nextPath: r.nextPath }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/app/auth/dev-login（手元の開発だけ。動かしてよいかの確認は、呼び出し側が dev-login.ts の isDevLoginAllowed で行う）
+// ---------------------------------------------------------------------------
+/**
+ * 開発用のテストユーザー（email は dev-<識別子>@dev.invalid、Account の提供元は 'dev'）を作り、exchange と同じ形のトークンを返す。
+ * name を指定すると、同じ name は同じ人になる（識別子を name から決める）。指定しなければ、毎回新しい人。
+ * メールは返さない。Slack への通知・ドリップのエンロールは行わない（onUserCreated を呼ばない）。
+ */
+export async function devLogin(deps: AuthDeps, raw: unknown): Promise<ServiceResult> {
+  const body = raw === null || raw === undefined ? {} : raw
+  if (!isObj(body)) return fail(400, 'INVALID_REQUEST')
+  const platform = body.platform === undefined ? 'ios' : typeof body.platform === 'string' ? body.platform : ''
+  if (!PLATFORMS.has(platform)) return fail(400, 'INVALID_REQUEST')
+  const given = optStr(body.name, 50)
+  const deviceLabel = optStr(body.deviceLabel, 100) ?? '開発用ログイン'
+  const key = given ? sha256Hex(`dev-login:${given}`).slice(0, 16) : generateOpaqueToken(deps.randomBytes).replace(/[^A-Za-z0-9]/g, '').slice(0, 16).toLowerCase()
+  const providerAccountId = `dev-${key}`
+  const device = { deviceLabel, platform }
+
+  const existing = await deps.repo.findAccount(DEV_PROVIDER, providerAccountId)
+  if (existing) {
+    const user = await deps.repo.getUser(existing.userId)
+    if (!user || user.deletedAt) return fail(401, 'ACCOUNT_UNAVAILABLE')
+    return issueFor(deps, user, device)
+  }
+  const email = `dev-${key}@dev.invalid`
+  const name = given ?? `開発ユーザー ${key.slice(0, 4)}`
+  let created: { id: string }
+  try {
+    created = await deps.repo.createUserWithAccount({
+      email, emailNormalized: normalizeEmail(email), emailVerified: deps.now(), name, image: null,
+      account: { provider: DEV_PROVIDER, providerAccountId, providerEmail: email, emailVerified: true },
+    })
+  } catch (e) {
+    if (e instanceof UniqueViolationError) return fail(409, 'RETRY')
+    throw e
+  }
+  return issueFor(deps, { id: created.id, name, image: null }, device)
 }
 
 // ---------------------------------------------------------------------------

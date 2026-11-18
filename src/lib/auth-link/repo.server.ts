@@ -10,9 +10,13 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
 
   const revokeFamily = async (familyId: string, now: Date) => {
     await prisma.$transaction(async (tx) => {
-      const rows = await tx.appDevice.findMany({ where: { familyId }, select: { sessionId: true } })
-      const ids = rows.map((r) => r.sessionId).filter((x): x is string => Boolean(x))
+      // 先に失効させる（引き渡しの consume が、端末の行を FOR SHARE で読んでから Session を作るので、失効が先に確定すれば consume は失敗し、後に確定する consume の Session は下で見つかる）
       await tx.appDevice.updateMany({ where: { familyId, revokedAt: null }, data: { revokedAt: now } })
+      const rows = await tx.appDevice.findMany({ where: { familyId }, select: { id: true, sessionId: true } })
+      const ids = rows.map((r) => r.sessionId).filter((x): x is string => Boolean(x))
+      // その端末から引き渡した Web のセッションも消す
+      const handoffs = await tx.appWebHandoff.findMany({ where: { deviceId: { in: rows.map((r) => r.id) }, webSessionId: { not: null } }, select: { webSessionId: true } })
+      for (const h of handoffs) if (h.webSessionId) ids.push(h.webSessionId)
       if (ids.length) await tx.session.deleteMany({ where: { id: { in: ids } } })
     })
   }
@@ -110,6 +114,37 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
       const d = await prisma.appDevice.findFirst({ where: { sessionId }, select: { familyId: true } })
       if (d) await revokeFamily(d.familyId, now)
       await prisma.session.deleteMany({ where: { id: sessionId } })
+    },
+
+    async findDeviceBySessionId(sessionId) {
+      return prisma.appDevice.findFirst({ where: { sessionId }, select: { id: true, userId: true, revokedAt: true } })
+    },
+    async createWebHandoff(i) {
+      await prisma.appWebHandoff.create({ data: i })
+    },
+    async consumeWebHandoff(i) {
+      class Abort extends Error {}
+      try {
+        return await prisma.$transaction(async (tx) => {
+          // 先に取った1回だけが進める（未使用・期限内・退会していない・端末の系統が失効していない、を1つの条件つきの更新で確かめる）
+          const claimed = await tx.appWebHandoff.updateMany({
+            where: { codeHash: i.codeHash, consumedAt: null, expiresAt: { gt: i.now }, user: { deletedAt: null }, device: { revokedAt: null } },
+            data: { consumedAt: i.now },
+          })
+          if (claimed.count !== 1) return null
+          const row = await tx.appWebHandoff.findUnique({ where: { codeHash: i.codeHash }, select: { id: true, userId: true, deviceId: true, nextPath: true } })
+          if (!row) throw new Abort()
+          // 端末の行を FOR SHARE で読む。同時に走るログアウト（revokeFamily）は、この処理が終わるまで待つので、作った Session を見落とさない
+          const live = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "app_device" WHERE id = ${row.deviceId} AND "revokedAt" IS NULL FOR SHARE`
+          if (live.length !== 1) throw new Abort()
+          const s = await tx.session.create({ data: { sessionToken: i.sessionToken, userId: row.userId, expires: i.sessionExpires }, select: { id: true } })
+          await tx.appWebHandoff.update({ where: { id: row.id }, data: { webSessionId: s.id } })
+          return { userId: row.userId, nextPath: row.nextPath }
+        })
+      } catch (e) {
+        if (e instanceof Abort) return null
+        throw e
+      }
     },
 
     async getLinkRequest(id) {

@@ -30,6 +30,7 @@ const errorMessages: Record<string, string> = {
   OAuthCreateAccount: 'アカウントの作成に失敗しました。',
   OAuthAccountNotLinked: 'このメールは別の方法で登録されています。',
   LinkConfirmationRequired: 'このメールアドレスのアカウントがすでにあります。前にお使いのログイン方法でログインしてください。',
+  HandoffInvalid: 'アプリからの画面の引き渡しの有効期限が切れたか、すでに使われています。アプリに戻って、もう一度開いてください。',
   Default: 'ログインに失敗しました。もう一度お試しください。',
 }
 

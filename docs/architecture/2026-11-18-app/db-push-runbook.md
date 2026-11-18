@@ -142,9 +142,9 @@ WHERE table_name = 'User' AND column_name IN ('emailNormalized','deletedAt','ano
 -- Account の2列が入った（2行）
 SELECT column_name FROM information_schema.columns
 WHERE table_name = 'Account' AND column_name IN ('providerEmail','emailVerified');
--- 新しい表がある（両方とも NULL でない）
+-- 新しい表がある（4つとも NULL でない）
 SELECT to_regclass('public.app_device'), to_regclass('public.auth_link_request'), to_regclass('public.app_id_token_use'), to_regclass('public.app_web_handoff');
--- RLS が有効（2行とも true）
+-- RLS が有効（4行とも true）
 SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('app_device','auth_link_request','app_id_token_use','app_web_handoff');
 -- interviewx_projects の User への外部キーが CASCADE（confdeltype が 'c'）
 SELECT conname, confdeltype FROM pg_constraint

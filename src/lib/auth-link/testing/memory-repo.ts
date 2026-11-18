@@ -13,6 +13,7 @@ export class MemoryRepo implements AuthRepo {
   devices: DeviceRecord[] = []
   links = new Map<string, LinkRequestRecord>()
   companies = new Set<string>()
+  handoffs: Array<{ id: string; codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date; consumedAt: Date | null; webSessionId: string | null }> = []
   private seq = 0
   nextId(prefix: string) { return `${prefix}${++this.seq}` }
 
@@ -63,10 +64,14 @@ export class MemoryRepo implements AuthRepo {
   }
   async revokeFamily(familyId: string, now: Date) {
     const ids = new Set<string>()
+    const deviceIds = new Set<string>()
     for (const d of this.devices.filter((x) => x.familyId === familyId)) {
       if (!d.revokedAt) d.revokedAt = now
       if (d.sessionId) ids.add(d.sessionId)
+      deviceIds.add(d.id)
     }
+    // その端末から引き渡した Web のセッションも消す
+    for (const h of this.handoffs) if (deviceIds.has(h.deviceId) && h.webSessionId) ids.add(h.webSessionId)
     this.sessions = this.sessions.filter((s) => !ids.has(s.id))
   }
   async findSession(token: string) {
@@ -77,6 +82,27 @@ export class MemoryRepo implements AuthRepo {
     const d = this.devices.find((x) => x.sessionId === sessionId)
     if (d) await this.revokeFamily(d.familyId, now)
     this.sessions = this.sessions.filter((s) => s.id !== sessionId)
+  }
+
+  async findDeviceBySessionId(sessionId: string) {
+    const d = this.devices.find((x) => x.sessionId === sessionId)
+    return d ? { id: d.id, userId: d.userId, revokedAt: d.revokedAt } : null
+  }
+  async createWebHandoff(i: { codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
+    this.handoffs.push({ id: this.nextId('hand-'), ...i, consumedAt: null, webSessionId: null })
+  }
+  // 確認から更新までを、await を挟まない1つの同期の区間で行う（同時に何本来ても、1回しか成功しない）
+  async consumeWebHandoff(i: { codeHash: string; now: Date; sessionToken: string; sessionExpires: Date }) {
+    const h = this.handoffs.find((x) => x.codeHash === i.codeHash)
+    if (!h || h.consumedAt || h.expiresAt.getTime() <= i.now.getTime()) return null
+    const user = this.users.get(h.userId)
+    const device = this.devices.find((d) => d.id === h.deviceId)
+    if (!user || user.deletedAt || !device || device.revokedAt) return null
+    h.consumedAt = i.now
+    const sid = this.nextId('sess-')
+    this.sessions.push({ id: sid, sessionToken: i.sessionToken, userId: h.userId, expires: i.sessionExpires })
+    h.webSessionId = sid
+    return { userId: h.userId, nextPath: h.nextPath }
   }
 
   async getLinkRequest(id: string) { return this.links.get(id) ?? null }

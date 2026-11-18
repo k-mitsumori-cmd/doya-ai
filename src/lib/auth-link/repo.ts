@@ -97,8 +97,19 @@ export interface AuthRepo {
   /** 系統の全行に revokedAt を入れ（まだ null の行）、系統の Session の行を全部消す */
   revokeFamily(familyId: string, now: Date): Promise<void>
   findSession(sessionToken: string): Promise<{ id: string; userId: string; expires: Date } | null>
-  /** この Session に対応する端末の系統を失効させ、この Session の行も消す（ログアウト） */
+  /** この Session に対応する端末の系統を失効させ、この Session の行も消す（ログアウト）。その端末から引き渡した Web のセッションも消す */
   revokeBySessionId(sessionId: string, now: Date): Promise<void>
+  /** このアクセストークン（Session）に対応する端末の行。無ければ null（アプリ用ではない通常のセッション） */
+  findDeviceBySessionId(sessionId: string): Promise<{ id: string; userId: string; revokedAt: Date | null } | null>
+
+  /** 引き渡しのコード（ハッシュ）を作る。端末の行に結び付ける */
+  createWebHandoff(input: { codeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }): Promise<void>
+  /**
+   * 引き渡しのコードを1回だけ使い、Web のセッション（アプリ用ではない通常の Session。AppDevice には結び付けない）を作る。1つの処理。
+   * 使えるのは、未使用・期限内で、ユーザーが退会していず、端末の系統が失効していないときだけ。条件つきの更新で原子的に取る（同時に何本来ても、1回しか成功しない）。
+   * 作った Session の id を引き渡しの行に控える（端末のログアウトのとき、この Session も消すため）。使えなければ null。
+   */
+  consumeWebHandoff(input: { codeHash: string; now: Date; sessionToken: string; sessionExpires: Date }): Promise<{ userId: string; nextPath: string } | null>
 
   getLinkRequest(id: string): Promise<LinkRequestRecord | null>
   findLiveLinkRequest(provider: string, providerAccountId: string, userId: string, now: Date): Promise<LinkRequestRecord | null>
