@@ -1,0 +1,62 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { anonymizedEmail, deleteAccount, type DeleteRepo, type DeletionFacts } from './account-delete'
+
+const now = new Date('2026-11-18T00:00:00Z')
+function repo(facts: Partial<DeletionFacts> & { plan?: string } = {}) {
+  const calls: string[] = []
+  const r: DeleteRepo = {
+    getDeletionFacts: async () => ({
+      user: facts.user === null ? null : (facts.user ?? { id: 'u1', plan: facts.plan ?? 'FREE', deletedAt: null }),
+      liveSubscriptions: facts.liveSubscriptions ?? 0,
+      ownsCompanyWithOtherMembers: facts.ownsCompanyWithOtherMembers ?? false,
+    }),
+    anonymize: async (id) => { calls.push(id) },
+  }
+  return { r, calls }
+}
+
+test('確認文字列が DELETE でなければ 400 で、何も消さない', async () => {
+  for (const confirm of [undefined, '', 'delete', 'YES', 1, null]) {
+    const { r, calls } = repo()
+    assert.deepEqual(await deleteAccount(r, { userId: 'u1', confirm, now }), { status: 400, body: { code: 'CONFIRMATION_REQUIRED' } })
+    assert.equal(calls.length, 0)
+  }
+})
+
+test('有料のプラン、または有効な契約の行があれば 409 ACTIVE_SUBSCRIPTION。解約はここではせず、何も消さない', async () => {
+  for (const f of [{ plan: 'PRO' }, { plan: 'BUSINESS' }, { liveSubscriptions: 1 }]) {
+    const { r, calls } = repo(f)
+    const res = await deleteAccount(r, { userId: 'u1', confirm: 'DELETE', now })
+    assert.equal(res.status, 409)
+    assert.equal(res.body.code, 'ACTIVE_SUBSCRIPTION')
+    assert.match(String(res.body.message), /Web/)
+    assert.equal(calls.length, 0)
+  }
+})
+
+test('会社の持ち主で、ほかに参加中のメンバーがいれば 409 COMPANY_HAS_MEMBERS', async () => {
+  const { r, calls } = repo({ ownsCompanyWithOtherMembers: true })
+  const res = await deleteAccount(r, { userId: 'u1', confirm: 'DELETE', now })
+  assert.deepEqual([res.status, res.body.code], [409, 'COMPANY_HAS_MEMBERS'])
+  assert.equal(calls.length, 0)
+})
+
+test('無料で、メンバーもいなければ、匿名化する。2回めは何もせず 200', async () => {
+  const { r, calls } = repo()
+  assert.deepEqual(await deleteAccount(r, { userId: 'u1', confirm: 'DELETE', now }), { status: 200, body: { deleted: true } })
+  assert.deepEqual(calls, ['u1'])
+  const done = repo({ user: { id: 'u1', plan: 'FREE', deletedAt: now } })
+  assert.equal((await deleteAccount(done.r, { userId: 'u1', confirm: 'DELETE', now })).status, 200)
+  assert.equal(done.calls.length, 0)
+})
+
+test('ユーザーがいなければ 404', async () => {
+  assert.equal((await deleteAccount(repo({ user: null }).r, { userId: 'x', confirm: 'DELETE', now })).status, 404)
+})
+
+test('匿名化のメールは、ユーザーごとに一意で、復元できず、実在しないドメイン', () => {
+  assert.equal(anonymizedEmail('abc'), 'deleted-abc@deleted.invalid')
+  assert.notEqual(anonymizedEmail('a'), anonymizedEmail('b'))
+  assert.equal(anonymizedEmail('abc').includes('@example'), false)
+})
