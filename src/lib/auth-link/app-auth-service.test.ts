@@ -460,3 +460,23 @@ test('Google の azp: 許可リストに無い azp は 401（bad-authorized-part
   assert.equal((await exchangeIdToken(deps, body('google', google({ sub: 'g-ok', email: 'ok1@example.com', azp: AUD_G })))).status, 200)
   assert.equal((await exchangeIdToken(deps, body('google', google({ sub: 'g-ok2', email: 'ok2@example.com' })))).status, 200)
 })
+
+test('id_token の使い回し: 署名の末尾の別の書き方の同じトークンは、すでに使った扱いではなく不正（malformed）として拒否され、ユーザーも増えない。claims が違えば通る', async () => {
+  const { deps, repo } = makeDeps()
+  const t = google({ jti: 'fixed-jti', sub: 'g-mal', email: 'mal@example.com' })
+  assert.equal((await exchangeIdToken(deps, body('google', t))).status, 200)
+  const [h, p, sg] = t.split('.')
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+  const alt = alphabet.split('').find((c) => c !== sg.slice(-1) && Buffer.from(sg.slice(0, -1) + c, 'base64url').equals(Buffer.from(sg, 'base64url')))!
+  for (const variant of [`${h}.${p}.${sg}=`, `${h}.${p}.${sg.slice(0, -1)}${alt}`]) {
+    const r = await exchangeIdToken(deps, body('google', variant))
+    assert.equal(r.status, 401)
+    assert.notEqual(r.status, 200)
+  }
+  assert.equal(repo.users.size, 1)
+  assert.equal(repo.devices.length, 1)
+  // 同じ jti でも、元のトークンの2回めは拒否（already-used）
+  assert.equal((await exchangeIdToken(deps, body('google', t))).body.reason, 'already-used')
+  // claims（sub）が違えば、同じ jti でも通る
+  assert.equal((await exchangeIdToken(deps, body('google', google({ jti: 'fixed-jti', sub: 'g-mal2', email: 'mal2@example.com' })))).status, 200)
+})

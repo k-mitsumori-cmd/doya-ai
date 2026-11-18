@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash, generateKeyPairSync, type KeyObject } from 'node:crypto'
 import jwt from 'jsonwebtoken'
-import { parseBooleanClaim, verifyIdToken, type Jwks } from './id-token'
+import { idTokenReplayKey, parseBooleanClaim, verifyIdToken, type Jwks } from './id-token'
 
 // 試験用に作った鍵のペアだけを使う。本物の Apple・Google には通信しない。
 const pair = (kid: string) => {
@@ -121,4 +121,32 @@ test('形が崩れた入力・壊れた鍵は、例外を投げずに失敗を�
   assert.equal(broken.ok, false)
   assert.deepEqual(verifyIdToken({ token: sign(goodGoogle()), provider: 'google', jwks: { keys: [{ kty: 'RSA', kid: 'key-a' } as any] }, audience: AUD, nonce: RAW, now }), { ok: false, reason: 'bad-key' })
   assert.deepEqual(verifyIdToken({ token: sign(goodGoogle()), provider: 'google', jwks: { keys: [] }, audience: AUD, nonce: RAW, now }), { ok: false, reason: 'no-matching-key' })
+})
+
+test('署名の base64url が正規形でないトークン（パディングの付加・末尾の余りビットの変更）は、署名が有効でも拒否する', () => {
+  const t = sign(goodGoogle())
+  assert.equal(run(t).ok, true)
+  const [h, p, sg] = t.split('.')
+  // パディングの付加
+  assert.deepEqual(run(`${h}.${p}.${sg}=`), { ok: false, reason: 'malformed' })
+  // 2048bit の署名は 256 バイト = 43*6 ビット余り… 末尾の文字の余りビットだけを変える（デコードすると同じバイト列になる別の文字列）
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+  const last = sg[sg.length - 1]
+  const alt = alphabet.split('').find((c) => c !== last && Buffer.from(sg.slice(0, -1) + c, 'base64url').equals(Buffer.from(sg, 'base64url')))
+  assert.ok(alt, '同じバイト列になる別の末尾文字がある')
+  assert.deepEqual(run(`${h}.${p}.${sg.slice(0, -1)}${alt}`), { ok: false, reason: 'malformed' })
+})
+
+test('使い回しの鍵: claims から作る。jti の有無・区切りの曖昧さ・claims の違いを正しく扱う', () => {
+  const base = { iss: 'i', aud: 'a', sub: 's', jti: 'j1', iat: 1, exp: 2, nonce: 'n' }
+  assert.equal(idTokenReplayKey(base), idTokenReplayKey({ ...base, extra: 'x' }))
+  assert.notEqual(idTokenReplayKey(base), idTokenReplayKey({ ...base, jti: 'j2' }))
+  assert.notEqual(idTokenReplayKey(base), idTokenReplayKey({ ...base, sub: 's2' }))
+  // 区切りの曖昧さ: (a|bc) と (ab|c) は別の鍵
+  assert.notEqual(idTokenReplayKey({ iss: 'i', aud: 'a', sub: 'bc', jti: 'j' }), idTokenReplayKey({ iss: 'i', aud: 'ab', sub: 'c', jti: 'j' }))
+  // jti が無いときは iat・exp・nonce も使う
+  const nojti = { iss: 'i', aud: 'a', sub: 's', iat: 1, exp: 2, nonce: 'n' }
+  assert.notEqual(idTokenReplayKey(nojti), idTokenReplayKey({ ...nojti, nonce: 'm' }))
+  assert.notEqual(idTokenReplayKey(nojti), idTokenReplayKey({ ...nojti, exp: 3 }))
+  assert.match(idTokenReplayKey(nojti), /^[0-9a-f]{64}$/)
 })

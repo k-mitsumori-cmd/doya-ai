@@ -12,7 +12,7 @@
 | `"User"` | 列を足す: `emailNormalized`（索引のみ。`@unique` にしない）、`deletedAt`、`anonymizedAt` | 既存の行は3列とも null。動きは変わらない |
 | `"Account"` | 列を足す: `providerEmail`、`emailVerified` | 既存の行は2列とも null（不明） |
 | `"app_device"`（新規） | 端末ごとのリフレッシュトークンの表。`refreshTokenHash` が一意。`userId` の外部キーは `ON DELETE CASCADE`。RLS を有効にし、公開の役割からの権限を外す | 新しい表なので影響なし |
-| `"app_id_token_use"`（新規） | 使った id_token の SHA-256 の控え（`hash` が主キー、`expiresAt`）。1回しか使えないようにするため。RLS を有効にし、公開の役割からの権限を外す。期限を過ぎた行を消す処理は、次の段 | 新しい表なので影響なし |
+| `"app_id_token_use"`（新規） | 使った id_token の控え（`hash` が主キー、`expiresAt`。`hash` は、署名を確かめたあとの claims から作る SHA-256。トークンの文字列そのものではない）。1回しか使えないようにするため。RLS を有効にし、公開の役割からの権限を外す。期限を過ぎた行を消す処理は、次の段 | 新しい表なので影響なし |
 | `"auth_link_request"`（新規） | 結び付けの待ち。外部キー・RLS は上と同じ | 同上 |
 | `"interviewx_projects"` | `userId` の外部キーを `ON DELETE CASCADE` にそろえる（いまは指定なしで、User の削除が止まる） | 外部キーを1回外して付け直す。表の行は変わらない。すでに CASCADE なら何もしない |
 

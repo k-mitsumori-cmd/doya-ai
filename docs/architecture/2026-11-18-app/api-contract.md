@@ -52,7 +52,7 @@
 }
 ```
 
-- `idToken` は、1回しか使えない。使ったトークンのハッシュを、トークンの期限まで控え、2回めは `401 ID_TOKEN_INVALID`（`reason: "already-used"`）になる。確認の手順（`409`）や `RETRY` を返した場合も、そのトークンは使用済みになる。やり直すときは、SDK のログインをもう一度行い、新しい `id_token` と `nonce` を得る。
+- `idToken` は、1回しか使えない。署名を確かめたあとの claims（`iss`・`aud`・`sub` と `jti`。`jti` が無ければ `iat`・`exp`・`nonce`）のハッシュを、トークンの期限（`exp` + 2分）まで控え、2回めは `401 ID_TOKEN_INVALID`（`reason: "already-used"`）になる。確認の手順（`409`）や `RETRY` を返した場合も、そのトークンは使用済みになる。やり直すときは、SDK のログインをもう一度行い、新しい `id_token` と `nonce` を得る。
 - `nonce`: アプリが1回ごとに作る乱数。Google には、そのまま渡す。Apple には、SHA-256（16進）にして `ASAuthorizationAppleIDRequest.nonce` に渡す。サーバーには、生の値を送る（Apple のトークンの nonce が、生の値か、その SHA-256 のどちらでも一致を許す）。
 - `deviceLabel`（任意、100文字まで）、`givenName`・`familyName`（任意。Apple は、名前を初回の認可でしか返さない。アプリが受け取った初回に、必ず送る。Apple のときだけ使う）。
 
@@ -159,7 +159,7 @@
 | 400 | `INVALID_REQUEST` | 本文の形が不正。アプリの不具合として扱う |
 | 400 | `LINK_CODE_INVALID` | コードが違う。`remainingAttempts` を表示 |
 | 400 | `CONFIRMATION_REQUIRED` | 退会の確認文字列が違う |
-| 401 | `ID_TOKEN_INVALID` | id_token の検証に失敗。`reason`: `malformed` / `unsupported-alg` / `no-matching-key` / `bad-key` / `bad-signature` / `expired` / `bad-issuer` / `bad-audience` / `bad-authorized-party` / `missing-sub` / `missing-nonce` / `nonce-mismatch` / `already-used`。ログインをやり直させる |
+| 401 | `ID_TOKEN_INVALID` | id_token の検証に失敗（署名の base64url が正規形でない書き方は `malformed`）。`reason`: `malformed` / `unsupported-alg` / `no-matching-key` / `bad-key` / `bad-signature` / `expired` / `bad-issuer` / `bad-audience` / `bad-authorized-party` / `missing-sub` / `missing-nonce` / `nonce-mismatch` / `already-used`。ログインをやり直させる |
 | 401 | `INVALID_TOKEN` | アクセストークンが不正・期限切れ・失効。リフレッシュに回る |
 | 401 | `REFRESH_TOKEN_INVALID` | `reason`: `malformed` / `unknown` / `expired` / `revoked` / `reused`。ログイン画面へ戻す |
 | 401 | `ACCOUNT_UNAVAILABLE` | 退会済みなど。ログイン画面へ戻す |

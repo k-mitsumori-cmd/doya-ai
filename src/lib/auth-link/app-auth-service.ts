@@ -1,6 +1,6 @@
 import { decideLink } from './link-decision'
 import { isApplePrivateRelay, normalizeEmail } from './email-normalize'
-import { verifyIdToken, parseBooleanClaim, type IdTokenProvider, type Jwks, type VerifiedIdentity } from './id-token'
+import { verifyIdToken, idTokenReplayKey, parseBooleanClaim, type IdTokenProvider, type Jwks, type VerifiedIdentity } from './id-token'
 import {
   decideRefresh, isSafeTokenValue, isSessionLive, issueSession, rotateSession, sha256Hex,
   generateOpaqueToken, type RandomBytes,
@@ -115,10 +115,11 @@ export async function exchangeIdToken(deps: AuthDeps, raw: unknown): Promise<Ser
   if (!verified.ok) return fail(401, 'ID_TOKEN_INVALID', { reason: verified.reason })
   const identity: VerifiedIdentity = verified.identity
 
-  // id_token は1回しか使えない。使ったトークンの SHA-256 を、期限（exp + 2分）まで控える。2回めは 401
-  const decoded = jwt.decode(idToken) as { exp?: number } | null
-  const tokenExpiry = typeof decoded?.exp === 'number' ? new Date(decoded.exp * 1000 + 120_000) : new Date(deps.now().getTime() + 2 * 3600_000)
-  if (!(await deps.repo.claimIdToken(sha256Hex(idToken), tokenExpiry))) return fail(401, 'ID_TOKEN_INVALID', { reason: 'already-used' })
+  // id_token は1回しか使えない。控える鍵は、署名を確かめたあとの claims から作る（iss・aud・sub と jti、無ければ iat・exp・nonce の SHA-256）。
+  // 文字列そのものの SHA-256 にしないのは、署名の別の書き方（base64url の余りビット）で、同じトークンを別の文字列として通されないため。期限は exp + 2分。2回めは 401
+  const claims = (jwt.decode(idToken) ?? {}) as Record<string, unknown>
+  const tokenExpiry = typeof claims.exp === 'number' ? new Date(claims.exp * 1000 + 120_000) : new Date(deps.now().getTime() + 2 * 3600_000)
+  if (!(await deps.repo.claimIdToken(idTokenReplayKey(claims), tokenExpiry))) return fail(401, 'ID_TOKEN_INVALID', { reason: 'already-used' })
 
   // 2. 結び付けの決定（Web と同じ関数）
   const existingAccount = await deps.repo.findAccount(identity.provider, identity.sub)

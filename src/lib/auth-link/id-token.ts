@@ -93,6 +93,24 @@ function nonceMatches(provider: IdTokenProvider, claim: string, raw: string): bo
   return false
 }
 
+/**
+ * 使い回しの検出に使う鍵。署名を確かめたあとの claims から作る（トークンの文字列そのものは使わない。
+ * 署名の base64url の別の書き方で、同じトークンを別の文字列として通されないようにするため）。
+ * 区切りの曖昧さ（a|bc と ab|c）を避けるため、JSON.stringify の配列を SHA-256 にする。
+ * jti があれば iss・aud・sub・jti、無ければ iss・aud・sub・iat・exp・nonce。
+ */
+export function idTokenReplayKey(claims: Record<string, unknown>): string {
+  const base = [claims.iss, claims.aud, claims.sub]
+  const material = claims.jti !== undefined ? ['jti', ...base, claims.jti] : ['claims', ...base, claims.iat ?? null, claims.exp ?? null, claims.nonce ?? null]
+  return createHash('sha256').update(JSON.stringify(material), 'utf8').digest('hex')
+}
+
+/** 3つの部分が、どれも base64url の正規形（デコードして再び符号化すると元と完全に一致する）か。末尾の余りビットやパディングの違いを許さない */
+function isCanonicalJwt(token: string): boolean {
+  const parts = token.split('.')
+  return parts.length === 3 && parts.every((p) => p.length > 0 && Buffer.from(p, 'base64url').toString('base64url') === p)
+}
+
 export function verifyIdToken(input: VerifyIdTokenInput): VerifyIdTokenResult {
   const { token, provider, jwks, audience, nonce, now } = input
   const tolerance = input.clockToleranceSec ?? 60
@@ -105,6 +123,7 @@ export function verifyIdToken(input: VerifyIdTokenInput): VerifyIdTokenResult {
   if (!decoded || typeof decoded === 'string' || !decoded.header) return fail('malformed')
   // alg を RS256 だけに固定する。none や HS256（公開鍵を共通鍵にする攻撃）は、署名の確認の前に弾く
   if (decoded.header.alg !== 'RS256') return fail('unsupported-alg')
+  if (!isCanonicalJwt(token)) return fail('malformed')
 
   const kid = decoded.header.kid
   const candidates = (jwks?.keys ?? []).filter((k) => k && k.kty === 'RSA' && (kid ? k.kid === kid : true))

@@ -42,5 +42,5 @@ test('ほかの関数はそのまま。updateSession が無い adapter は、包
 test('アプリのセッションの判定が失敗したら、例外を投げる（延ばす側に黙って倒さない）', async () => {
   const { adapter } = fake()
   const g = guardAppSessionExpiry(adapter, async () => { throw new Error('db') })
-  await assert.rejects(g.updateSession!({ sessionToken: 'x' }))
+  await assert.rejects(async () => { await g.updateSession!({ sessionToken: "x" }) })
 })
