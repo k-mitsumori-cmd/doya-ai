@@ -2,6 +2,8 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { isAppAuthEnabled } from '@/lib/auth-link/app-auth-flag'
 import { APP_REQUEST_HEADER, bearerToCookie, isAppAuthRoute } from '@/lib/auth-link/bearer-cookie'
+import { isAppRequest } from '@/lib/app-mode/detect'
+import { APP_UNAVAILABLE_PATH, classifyBlockedPath } from '@/lib/app-mode/blocked-routes'
 
 /**
  * Host ベース rewrite middleware
@@ -61,6 +63,21 @@ function matchHost(host: string, configured: string[]): boolean {
 export function middleware(req: NextRequest) {
   const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
+
+  // ===============================================
+  // アプリ表示モード（旗 APP_MODE_ENABLED が '1' のときだけ。オフなら、この中は一切動かない）
+  // アプリ（ドヤバディ）の WebView からの要求（User-Agent の DoyaBuddyApp、または Cookie doya_app=1）で、課金・契約・価格の経路を止める。
+  // 画面は /app-unavailable へ rewrite、API は 404。止める経路の一覧: src/lib/app-mode/blocked-routes.ts
+  // 下の Bearer の置き換えより前に置く（置き換えで通り抜けさせないため）。
+  // ===============================================
+  if (isAppRequest(req.headers)) {
+    const kind = classifyBlockedPath(pathname)
+    if (kind === 'api') return NextResponse.json({ code: 'NOT_FOUND' }, { status: 404 })
+    if (kind === 'page') {
+      // クエリや末尾の / を引き継がない、固定の行き先
+      return NextResponse.rewrite(new URL(APP_UNAVAILABLE_PATH, req.url))
+    }
+  }
 
   // ===============================================
   // アプリ版の認証（旗 APP_AUTH_ENABLED が '1' のときだけ。オフなら、この中は一切動かない）

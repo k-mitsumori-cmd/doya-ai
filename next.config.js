@@ -38,6 +38,8 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
       || process.env.GIT_COMMIT_SHA?.slice(0, 7)
       || 'dev',
+    // アプリ表示モードの旗（src/lib/app-mode）。ブラウザ側の判定に、ビルド時の値を渡す。'1' のときだけオン。変えたら再デプロイが要る。
+    NEXT_PUBLIC_APP_MODE_ENABLED: process.env.APP_MODE_ENABLED === '1' ? '1' : '',
   },
   // NOTE:
   // outputFileTracing を無効化すると、Vercel のServerless同梱で
