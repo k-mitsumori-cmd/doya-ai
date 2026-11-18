@@ -90,7 +90,7 @@ export async function setPushToken(deps: AuthDeps, authorization: string | null 
   if (token !== null && !isValidExpoPushToken(token)) return fail(400, 'INVALID_REQUEST')
   // その端末の行を持つセッション（いまの Bearer の Session）だけが、その端末のトークンを置ける
   const r = await deps.repo.setDevicePushToken({ id, userId: p.userId, sessionId: p.sessionId as string, token, now: deps.now() })
-  if (r === 'in-use') return fail(409, 'PUSH_TOKEN_IN_USE')
+  if (r === 'retry') return fail(409, 'RETRY')
   if (r !== 'ok') return fail(404, 'NOT_FOUND')
   return { status: 200, body: { ok: true, enabled: token !== null } }
 }

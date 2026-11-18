@@ -5,13 +5,13 @@
 
 ## 1. 何を変えるか
 
-`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（36文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
+`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（38文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
 
 | 対象 | 変更 | 既存の行への影響 |
 |---|---|---|
 | `"User"` | 列を足す: `emailNormalized`（索引のみ。`@unique` にしない）、`deletedAt`、`anonymizedAt` | 既存の行は3列とも null。動きは変わらない |
 | `"Account"` | 列を足す: `providerEmail`、`emailVerified` | 既存の行は2列とも null（不明） |
-| `"app_device"`（新規） | 端末ごとのリフレッシュトークンの表。`refreshTokenHash` が一意。`userId` の外部キーは `ON DELETE CASCADE`。RLS を有効にし、公開の役割からの権限を外す | 新しい表なので影響なし |
+| `"app_device"`（新規） | 端末ごとのリフレッシュトークンの表。`refreshTokenHash` が一意。`userId` の外部キーは `ON DELETE CASCADE`。`pushToken`（Expo のプッシュトークン。null 可。送信は未実装）の列と、生きている行（`revokedAt`・`rotatedAt` が null）の `pushToken` を一意にする部分索引 `app_device_pushToken_live_key`（同時の登録の競合を DB で守る。Prisma のスキーマには書けず、SQL だけにある）。RLS を有効にし、公開の役割からの権限を外す | 新しい表なので影響なし |
 | `"app_id_token_use"`（新規） | 使った id_token の控え（`hash` が主キー、`expiresAt`。`hash` は、署名を確かめたあとの claims から作る SHA-256。トークンの文字列そのものではない）。1回しか使えないようにするため。RLS を有効にし、公開の役割からの権限を外す。期限を過ぎた行を消す処理は、次の段 | 新しい表なので影響なし |
 | `"app_web_handoff"`（新規） | アプリのセッションから Web のセッション Cookie へ引き渡す、使い捨てのコードの表（コードは SHA-256 のハッシュだけを持つ。60秒・1回だけ）。`userId`（User）と `deviceId`（app_device）の外部キーは `ON DELETE CASCADE`。RLS を有効にし、公開の役割からの権限を外す。旗が無効のあいだは、コードからは書かれない | 新しい表なので影響なし |
 | `"auth_link_request"`（新規） | 結び付けの待ち。外部キー・RLS は上と同じ | 同上 |
@@ -34,7 +34,7 @@ schema に入れていないもの（案だけ）: ツールのメンバー表�
 
 ### 3.1 承認が要る点（三森さんが、メインで承認する）
 
-1. 本番の DB に流すこと（36文。内容は上の 1章）。
+1. 本番の DB に流すこと（38文。内容は上の 1章）。
 2. 流す時刻（利用者の少ない時間。`User` の ALTER は短時間の表の鍵を取る。`lock_timeout = 5秒` で、取れなければ全体が取り消される）。
 3. `interviewx_projects` の外部キーの付け直し（5.2）。
 4. その後に、重複を数える読み取りの SQL（3.3）を流してよいか（読み取りだけ。件数だけを返す）。
@@ -125,11 +125,11 @@ WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u.id = p."userId");
 ```bash
 # 確認だけ（接続と文の数。何も流さない）
 node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql
-# 流す（文の数は 36）
-node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=36
+# 流す（文の数は 38）
+node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=38
 ```
 
-- 「文の数」の表示が 36 でなければ、止めて報告する。
+- 「文の数」の表示が 38 でなければ、止めて報告する。
 - 流すのは、三森さんの承認のあとで、メインの操作（担当は流さない）。
 - 代わりに psql で流すときは `psql -1 -v ON_ERROR_STOP=1 -f <ファイル>` とし、`-1` を必ず付ける（この SQL には BEGIN・COMMIT を書いていない）。
 
@@ -142,6 +142,9 @@ WHERE table_name = 'User' AND column_name IN ('emailNormalized','deletedAt','ano
 -- Account の2列が入った（2行）
 SELECT column_name FROM information_schema.columns
 WHERE table_name = 'Account' AND column_name IN ('providerEmail','emailVerified');
+-- プッシュトークンの列と、部分一意索引がある（列1行、索引1行。索引の定義に WHERE が含まれる）
+SELECT column_name FROM information_schema.columns WHERE table_name = 'app_device' AND column_name = 'pushToken';
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'app_device' AND indexname = 'app_device_pushToken_live_key';
 -- 新しい表がある（4つとも NULL でない）
 SELECT to_regclass('public.app_device'), to_regclass('public.auth_link_request'), to_regclass('public.app_id_token_use'), to_regclass('public.app_web_handoff');
 -- RLS が有効（4行とも true）
@@ -162,6 +165,7 @@ SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "Account") 
 先に、足したものを読むコードが、本番に出ていないことを確かめる（出ているなら、先にコードを戻す）。
 
 ```sql
+-- （プッシュトークンだけを戻すなら、表は残して: DROP INDEX IF EXISTS "app_device_pushToken_live_key"; ALTER TABLE "app_device" DROP COLUMN IF EXISTS "pushToken";）
 DROP TABLE IF EXISTS "app_device";
 DROP TABLE IF EXISTS "app_web_handoff";
 DROP TABLE IF EXISTS "auth_link_request";

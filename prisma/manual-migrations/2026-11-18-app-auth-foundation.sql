@@ -8,7 +8,7 @@
 -- 本番への反映は、三森さんの承認のあと。コードの反映（main への取り込み）より前に流す。
 -- 流し方: ~/Code/tools/doya-migrate/apply-sql.cjs（5432 のセッション接続。~/.claude/skills/doya-db-push の 1）。
 -- 元に戻すとき（この SQL で足したものだけ消える。先に、足したものを読むコードが本番に無いことを確かめる）:
---   ALTER TABLE "app_device" DROP COLUMN IF EXISTS "pushToken";（表ごと消すなら不要）
+--   DROP INDEX IF EXISTS "app_device_pushToken_live_key"; ALTER TABLE "app_device" DROP COLUMN IF EXISTS "pushToken";（表ごと消すなら不要）
 --   DROP TABLE IF EXISTS "app_device"; DROP TABLE IF EXISTS "auth_link_request"; DROP TABLE IF EXISTS "app_id_token_use"; DROP TABLE IF EXISTS "app_web_handoff";
 --   DROP INDEX IF EXISTS "User_emailNormalized_idx";
 --   ALTER TABLE "User" DROP COLUMN IF EXISTS "emailNormalized", DROP COLUMN IF EXISTS "deletedAt", DROP COLUMN IF EXISTS "anonymizedAt";
@@ -17,7 +17,7 @@
 -- 流し方の注意: apply-sql.cjs は、文を「;」で区切り、1つのトランザクションに入れて流す（SET LOCAL も自分で付ける）。
 -- このため、この SQL には BEGIN・COMMIT・SET を書かない。DO ブロックは、$$ ではなく単一引用符の文字列（DO '...'）で書く
 -- （apply-sql.cjs は $$ の中の「;」を区切りと見なして壊すため）。psql で流すなら、必ず -1（1つのトランザクション）と ON_ERROR_STOP を付ける。
--- 区切ったあとの文の数は、apply-sql.cjs の確認だけの実行で出る（この SQL は 37 文。apply-sql.cjs と同じ区切り方で数えた値。流す前に、確認だけの実行の表示と合うか見る）。
+-- 区切ったあとの文の数は、apply-sql.cjs の確認だけの実行で出る（この SQL は 38 文。apply-sql.cjs と同じ区切り方で数えた値。流す前に、確認だけの実行の表示と合うか見る）。
 
 -- 1. User
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailNormalized" TEXT;
@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS "app_device" (
 
 -- 通知の許可をした端末のプッシュトークン（送信は未実装。設計: push-design.md）
 ALTER TABLE "app_device" ADD COLUMN IF NOT EXISTS "pushToken" TEXT;
+-- 生きている行（失効も替え済みでもない行）の pushToken は一意（同時の登録の競合を DB で守る。Prisma のスキーマには部分索引を書けないので、ここだけにある）
+CREATE UNIQUE INDEX IF NOT EXISTS "app_device_pushToken_live_key" ON "app_device"("pushToken") WHERE "pushToken" IS NOT NULL AND "revokedAt" IS NULL AND "rotatedAt" IS NULL;
 
 CREATE TABLE IF NOT EXISTS "auth_link_request" (
     "id" TEXT NOT NULL,

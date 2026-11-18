@@ -84,6 +84,7 @@ model AppDevice {
   lastUsedAt       DateTime?
   createdAt        DateTime  @default(now())
   /// Expo のプッシュトークン（ExponentPushToken[...]）。通知を許した端末だけ。ログアウト・失効・退会で消す（行ごと消える）。送信は未実装（push-design.md）
+  /// ⚠️ 生きている行（revokedAt・rotatedAt が null）の pushToken は一意。部分一意索引 app_device_pushToken_live_key は Prisma に書けないので、manual-migrations の SQL 側にだけある
   pushToken        String?
   webHandoffs      AppWebHandoff[]
 

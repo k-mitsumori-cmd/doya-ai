@@ -106,13 +106,11 @@ export class MemoryRepo implements AuthRepo {
   async setDevicePushToken(i: { id: string; userId: string; sessionId: string; token: string | null; now: Date }) {
     const d = this.devices.find((x) => x.id === i.id && x.userId === i.userId && x.sessionId === i.sessionId && this.isLive(x, i.now))
     if (!d) return 'not-found' as const
-    if (i.token) {
-      const others = this.devices.filter((o) => o !== d && o.pushToken === i.token)
-      // ほかのユーザーの、生きている端末が持っているトークンは、上書きしない
-      if (others.some((o) => o.userId !== i.userId && this.isLive(o, i.now))) return 'in-use' as const
-      for (const o of others) o.pushToken = null
-    }
+    // 同じトークンを持つほかの行は、ユーザーを問わず外す（新しい登録が優先）
+    if (i.token) for (const o of this.devices) if (o !== d && o.pushToken === i.token) o.pushToken = null
     d.pushToken = i.token
+    // 本番の部分一意索引（生きている行の pushToken は一意）を、試験用に再現する
+    if (i.token && this.devices.filter((o) => o.pushToken === i.token && !o.revokedAt && !o.rotatedAt).length > 1) throw new Error('unique violation: pushToken')
     return 'ok' as const
   }
   async createWebHandoff(i: { codeHash: string; challengeHash: string; userId: string; deviceId: string; nextPath: string; expiresAt: Date }) {
