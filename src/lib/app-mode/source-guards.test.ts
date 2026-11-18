@@ -71,3 +71,26 @@ test('枠（AppShell）: アプリ表示モードのとき、左下の「料金�
   assert.match(s, /const appMode = useAppMode\(\)/)
   assert.match(s, /\{!appMode && \(\s+<Link href="\/pricing"/)
 })
+
+test('共通レイアウト: アプリ表示モードのときだけ、上の帯・サイドバー・下のタブ・パンくず・題を隠す（それ以外は属性が付かず、何も変わらない）', () => {
+  const shell = read('src/components/shell/AppShell.tsx')
+  assert.match(shell, /data-app-mode=\{appMode \? 'true' : undefined\}/)
+  const css = read('src/components/shell/AppShell.module.css')
+  for (const part of ['topbar', 'sidebar', 'scrim', 'tabbar']) assert.match(css, new RegExp(`\\.shell\\[data-app-mode='true'\\] \\.${part}`))
+  assert.match(css, /\.shell\[data-app-mode='true'\] \{ grid-template-columns: minmax\(0, 1fr\); --shell-mobile-bottom-inset: 0px; \}/)
+  assert.match(css, /\.shell\[data-app-mode='true'\] \.main \{ padding-bottom: env\(safe-area-inset-bottom/)
+  // 隠す規則は、すべて data-app-mode の下にある（この追記より前の規則は変えていない）
+  const appPart = css.slice(css.indexOf('アプリ表示モード'))
+  assert.doesNotMatch(appPart.replace(/\.shell\[data-app-mode='true'\][^{]*[{][^}]*[}]/g, ''), /\{[^}]*display: none/)
+  const frame = read('src/components/shell/ToolFrame.tsx')
+  assert.match(frame, /data-app-mode=\{appMode \? 'true' : undefined\}/)
+  assert.match(frame, /appMode \? 'このツールの残り' : 'このツールの残りとプラン'/)
+  const fcss = read('src/components/shell/ToolFrame.module.css')
+  assert.match(fcss, /\.frame\[data-app-mode='true'\] \.crumbs \{ display: none; \}/)
+  assert.match(fcss, /\.frame\[data-app-mode='true'\] \.title \{[^}]*clip: rect\(0 0 0 0\)/) // 見えなくして読み上げには残す（display: none にしない）
+  // 見出しの折り返し: アプリ表示モードの下だけ。text-wrap の一括指定は使わない
+  const ds = read('src/components/ds/ds.module.css')
+  assert.match(ds, /:global\(\[data-app-mode='true'\]\) \.heroTitle \{ word-break: keep-all; overflow-wrap: anywhere; \}/)
+  assert.doesNotMatch(ds.slice(ds.indexOf('アプリ表示モード')), /text-wrap\s*:/)
+  assert.match(read('src/components/sidebar/SidebarUsagePanel.tsx'), /appMode \? null : <>\{summary\.planLabel\}プランのため<\/>/)
+})

@@ -36,6 +36,7 @@ async function scenario(strict,kind){
   if(n==='@/lib/shell/nav-groups')return {NAV_GROUPS_COOKIE:'synthetic-groups',serializeNavGroups:()=>''};
   if(n==='@/lib/notice/announcements')return {newToolIds:()=>new Set()};
   if(n==='@/lib/brand')return {brandName:()=> 'Synthetic'};
+  if(n==='@/lib/app-mode/client')return {useAppMode:()=>false};
   if(n==='@/components/brand/DoyaLogo')return {DoyaLogoMark:none};
   if(n==='./heading-guard')return {demoteExtraH1:()=>{}};
   if(['./ShellCompanyCard','./ShellVitals','@/components/notice/ShellNotices','@/components/notice/HandoffSuggest','@/components/support-chat/SupportChat','@/components/notice/PowerOutNotices','@/components/agent-chat/AgentChatProvider','@/components/agent-chat/AgentDock'].includes(n))return {__esModule:true,default:none};
