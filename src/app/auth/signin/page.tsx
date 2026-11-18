@@ -29,6 +29,7 @@ const errorMessages: Record<string, string> = {
   OAuthCallback: 'ログイン処理に失敗しました。',
   OAuthCreateAccount: 'アカウントの作成に失敗しました。',
   OAuthAccountNotLinked: 'このメールは別の方法で登録されています。',
+  LinkConfirmationRequired: 'このメールアドレスのアカウントがすでにあります。前にお使いのログイン方法でログインしてください。',
   Default: 'ログインに失敗しました。もう一度お試しください。',
 }
 
