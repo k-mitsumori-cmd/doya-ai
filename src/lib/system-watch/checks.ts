@@ -440,6 +440,6 @@ export function configChecks(base = siteBase()): CheckDef[] {
 }
 
 /** 有料の API を使わない確認のすべて（10分ごと）。 */
-export function freeChecks(): CheckDef[] {
-  return [...pageChecks(), ...apiChecks(), ...agentFreeChecks(), ...dbChecks(), ...cronChecks(), ...externalChecks(), ...configChecks()]
+export function freeChecks(options: { dry?: boolean } = {}): CheckDef[] {
+  return [...pageChecks(), ...apiChecks(), ...agentFreeChecks(undefined, options), ...dbChecks(), ...cronChecks(), ...externalChecks(), ...configChecks()]
 }
