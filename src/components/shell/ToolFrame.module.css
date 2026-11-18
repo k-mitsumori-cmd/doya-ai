@@ -66,3 +66,15 @@
   .head { padding: 16px 16px 0; }
   .title { font-size: 22px; }
 }
+
+/* ---- アプリ表示モード（data-app-mode は旗オンでアプリのときだけ付く。それ以外は何も変わらない） ----
+   パンくずは出さない。h1（題）はアプリの帯と重複するので、見えなくして（読み上げには残す）、その分の上の余白も詰める。 */
+.frame[data-app-mode='true'] .crumbs { display: none; }
+.frame[data-app-mode='true'] .title {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.frame[data-app-mode='true'] .titleRow { margin-top: 0; }
+@supports (word-break: auto-phrase) {
+  .frame[data-app-mode='true'] .description { word-break: auto-phrase; }
+}

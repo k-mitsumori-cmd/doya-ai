@@ -340,3 +340,13 @@
 @media (max-width: 767px) {
   .shell[data-agent-chat='true'] .account { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ---- アプリ表示モード（ドヤバディの WebView。data-app-mode は旗オンでアプリのときだけ付く。それ以外は何も変わらない） ----
+   アプリ側に「戻る＋題」の帯があるため、Web の上の帯・サイドバー・下のタブは出さず、その分の余白（下のタブの高さ）も 0 にする。
+   サイドバーと下のタブは、どの幅でも出さない。ツール内のタブ（ToolFrame の中）は残す。 */
+.shell[data-app-mode='true'] { grid-template-columns: minmax(0, 1fr); --shell-mobile-bottom-inset: 0px; }
+.shell[data-app-mode='true'] .topbar,
+.shell[data-app-mode='true'] .sidebar,
+.shell[data-app-mode='true'] .scrim,
+.shell[data-app-mode='true'] .tabbar { display: none; }
+.shell[data-app-mode='true'] .main { padding-bottom: env(safe-area-inset-bottom, 0px); }

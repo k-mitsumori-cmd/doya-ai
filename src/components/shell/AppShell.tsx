@@ -458,7 +458,7 @@ export default function AppShell({ children, userName, initialRecent, department
   return (
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
-    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
+    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined} data-app-mode={appMode ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>

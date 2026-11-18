@@ -15,6 +15,7 @@ import { ShellIcon } from './icons'
 import { ShellCompanyTag } from './ShellCompanyCard'
 import { useToolUsageBody } from './ShellUsage'
 import ToolBearFooter from './ToolBearFooter'
+import { useAppMode } from '@/lib/app-mode/client'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -43,6 +44,8 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   // タブの列が横にあふれるとき（375px など）、送れる側の端を薄くぼかし、今のタブが見える位置まで送る
   // （統括の確認 2026-10-19）
   const usage = useToolUsageBody()
+  // アプリ表示モード（ドヤバディの WebView）: パンくずと題（見えなくして読み上げには残す）を出さず、「残りとプラン」は「残り」だけにする（旗オフなら常に false）
+  const appMode = useAppMode()
   const tabsRef = useRef<HTMLElement | null>(null)
   const [more, setMore] = useState({ left: false, right: false })
   useEffect(() => {
@@ -70,7 +73,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
   }, [pathname, nav?.length])
 
   return (
-    <div className={styles.frame}>
+    <div className={styles.frame} data-app-mode={appMode ? 'true' : undefined}>
       <div className={styles.head}>
         <div className={styles.crumbRow}>
           <nav className={styles.crumbs} aria-label="パンくず">
@@ -91,7 +94,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
               {/* このツールの「作った数 / 残り」とプラン。新しい見た目では左下ではなく、ここに出す（押すと開く。開いても下の行は動かない） */}
               {usage ? (
                 <details className={styles.usage}>
-                  <summary className={styles.usageSummary}>このツールの残りとプラン</summary>
+                  <summary className={styles.usageSummary}>{appMode ? 'このツールの残り' : 'このツールの残りとプラン'}</summary>
                   <div className={styles.usageCard}>{usage}</div>
                 </details>
               ) : null}

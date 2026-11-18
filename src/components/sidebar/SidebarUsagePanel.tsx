@@ -191,7 +191,7 @@ export function SidebarUsagePanel({
         </div>
       ) : (
         <p className="text-[11px] font-bold text-white/85 leading-relaxed">
-          {summary.planLabel}プランのため<span className="text-white">上限はありません</span>
+          {appMode ? null : <>{summary.planLabel}プランのため</>}<span className="text-white">上限はありません</span>
         </p>
       )}
       {pricingHref && !appMode && (
