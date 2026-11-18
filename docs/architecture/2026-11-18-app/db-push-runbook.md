@@ -5,13 +5,14 @@
 
 ## 1. 何を変えるか
 
-`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（23文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
+`prisma/schema.prisma` と、`prisma/manual-migrations/2026-11-18-app-auth-foundation.sql`（26文）が対応している。Vercel のビルドは `prisma db push` をしないので、スキーマを変えただけでは本番の DB は変わらない。
 
 | 対象 | 変更 | 既存の行への影響 |
 |---|---|---|
 | `"User"` | 列を足す: `emailNormalized`（索引のみ。`@unique` にしない）、`deletedAt`、`anonymizedAt` | 既存の行は3列とも null。動きは変わらない |
 | `"Account"` | 列を足す: `providerEmail`、`emailVerified` | 既存の行は2列とも null（不明） |
 | `"app_device"`（新規） | 端末ごとのリフレッシュトークンの表。`refreshTokenHash` が一意。`userId` の外部キーは `ON DELETE CASCADE`。RLS を有効にし、公開の役割からの権限を外す | 新しい表なので影響なし |
+| `"app_id_token_use"`（新規） | 使った id_token の SHA-256 の控え（`hash` が主キー、`expiresAt`）。1回しか使えないようにするため。RLS を有効にし、公開の役割からの権限を外す。期限を過ぎた行を消す処理は、次の段 | 新しい表なので影響なし |
 | `"auth_link_request"`（新規） | 結び付けの待ち。外部キー・RLS は上と同じ | 同上 |
 | `"interviewx_projects"` | `userId` の外部キーを `ON DELETE CASCADE` にそろえる（いまは指定なしで、User の削除が止まる） | 外部キーを1回外して付け直す。表の行は変わらない。すでに CASCADE なら何もしない |
 
@@ -32,7 +33,7 @@ schema に入れていないもの（案だけ）: ツールのメンバー表�
 
 ### 3.1 承認が要る点（三森さんが、メインで承認する）
 
-1. 本番の DB に流すこと（23文。内容は上の 1章）。
+1. 本番の DB に流すこと（26文。内容は上の 1章）。
 2. 流す時刻（利用者の少ない時間。`User` の ALTER は短時間の表の鍵を取る。`lock_timeout = 5秒` で、取れなければ全体が取り消される）。
 3. `interviewx_projects` の外部キーの付け直し（5.2）。
 4. その後に、重複を数える読み取りの SQL（3.3）を流してよいか（読み取りだけ。件数だけを返す）。
@@ -123,11 +124,11 @@ WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u.id = p."userId");
 ```bash
 # 確認だけ（接続と文の数。何も流さない）
 node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql
-# 流す（文の数は 23）
-node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=23
+# 流す（文の数は 26）
+node ~/Code/tools/doya-migrate/apply-sql.cjs prisma/manual-migrations/2026-11-18-app-auth-foundation.sql --apply --expected=26
 ```
 
-- 「文の数」の表示が 23 でなければ、止めて報告する。
+- 「文の数」の表示が 26 でなければ、止めて報告する。
 - 流すのは、三森さんの承認のあとで、メインの操作（担当は流さない）。
 - 代わりに psql で流すときは `psql -1 -v ON_ERROR_STOP=1 -f <ファイル>` とし、`-1` を必ず付ける（この SQL には BEGIN・COMMIT を書いていない）。
 
@@ -141,9 +142,9 @@ WHERE table_name = 'User' AND column_name IN ('emailNormalized','deletedAt','ano
 SELECT column_name FROM information_schema.columns
 WHERE table_name = 'Account' AND column_name IN ('providerEmail','emailVerified');
 -- 新しい表がある（両方とも NULL でない）
-SELECT to_regclass('public.app_device'), to_regclass('public.auth_link_request');
+SELECT to_regclass('public.app_device'), to_regclass('public.auth_link_request'), to_regclass('public.app_id_token_use');
 -- RLS が有効（2行とも true）
-SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('app_device','auth_link_request');
+SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('app_device','auth_link_request','app_id_token_use');
 -- interviewx_projects の User への外部キーが CASCADE（confdeltype が 'c'）
 SELECT conname, confdeltype FROM pg_constraint
 WHERE conrelid = to_regclass('public.interviewx_projects') AND contype = 'f';
@@ -162,6 +163,7 @@ SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "Account") 
 ```sql
 DROP TABLE IF EXISTS "app_device";
 DROP TABLE IF EXISTS "auth_link_request";
+DROP TABLE IF EXISTS "app_id_token_use";
 DROP INDEX IF EXISTS "User_emailNormalized_idx";
 ALTER TABLE "User" DROP COLUMN IF EXISTS "emailNormalized", DROP COLUMN IF EXISTS "deletedAt", DROP COLUMN IF EXISTS "anonymizedAt";
 ALTER TABLE "Account" DROP COLUMN IF EXISTS "providerEmail", DROP COLUMN IF EXISTS "emailVerified";

@@ -5,6 +5,7 @@ import {
   decideRefresh, isSafeTokenValue, isSessionLive, issueSession, rotateSession, sha256Hex,
   generateOpaqueToken, type RandomBytes,
 } from './device-token'
+import jwt from 'jsonwebtoken'
 import { JwksUnavailableError } from './jwks'
 import {
   generateLinkCode, hashLinkCode, isValidCodeFormat, maskEmail, LINK_MAX_ATTEMPTS, LINK_REQUEST_TTL_MS,
@@ -100,7 +101,11 @@ export async function exchangeIdToken(deps: AuthDeps, raw: unknown): Promise<Ser
   let verified
   try {
     const run = async (forceRefresh: boolean) =>
-      verifyIdToken({ token: idToken, provider, jwks: await deps.getJwks(provider, { forceRefresh }), audience, nonce, now: deps.now() })
+      verifyIdToken({
+        token: idToken, provider, jwks: await deps.getJwks(provider, { forceRefresh }), audience, nonce, now: deps.now(),
+        // Google は azp（トークンを受け取ったクライアント）も、許可リスト（iOS のクライアント ID）と照合する
+        ...(provider === 'google' ? { authorizedParties: audience } : {}),
+      })
     verified = await run(false)
     if (!verified.ok && verified.reason === 'no-matching-key') verified = await run(true)
   } catch (e) {
@@ -110,10 +115,19 @@ export async function exchangeIdToken(deps: AuthDeps, raw: unknown): Promise<Ser
   if (!verified.ok) return fail(401, 'ID_TOKEN_INVALID', { reason: verified.reason })
   const identity: VerifiedIdentity = verified.identity
 
+  // id_token は1回しか使えない。使ったトークンの SHA-256 を、期限（exp + 2分）まで控える。2回めは 401
+  const decoded = jwt.decode(idToken) as { exp?: number } | null
+  const tokenExpiry = typeof decoded?.exp === 'number' ? new Date(decoded.exp * 1000 + 120_000) : new Date(deps.now().getTime() + 2 * 3600_000)
+  if (!(await deps.repo.claimIdToken(sha256Hex(idToken), tokenExpiry))) return fail(401, 'ID_TOKEN_INVALID', { reason: 'already-used' })
+
   // 2. 結び付けの決定（Web と同じ関数）
   const existingAccount = await deps.repo.findAccount(identity.provider, identity.sub)
   const matchable = Boolean(identity.email) && identity.emailVerified && !identity.isPrivateEmail
   const userByEmail = !existingAccount && matchable && identity.email ? await deps.repo.findUserByEmail(identity.email) : null
+  // メールが確認済みでないユーザーは、メールでは結び付けの対象にしない（先回りで作られた行へのなりすましを防ぐ）。
+  // かといって、別のユーザーとして作ることもできない（User.email が重なる）ので、安全側で 409 にして止める。
+  // 前のログイン手段での確認も、確認済みでないメールのユーザーには使えない（ログイン手段が付いていないことが多い）。問い合わせへ案内する。
+  if (userByEmail && !userByEmail.emailVerified) return fail(409, 'LINK_TARGET_UNVERIFIED')
   const decision = decideLink({
     identity: { provider: identity.provider, providerAccountId: identity.sub, email: identity.email, emailVerified: identity.emailVerified },
     existingAccount: existingAccount ? { userId: existingAccount.userId } : null,
@@ -276,7 +290,8 @@ export async function sendLinkCode(deps: AuthDeps, raw: unknown): Promise<Servic
   if (!target || target.deletedAt || !target.email || !target.email.includes('@')) return fail(422, 'NO_EMAIL')
 
   const code = generateLinkCode(deps.randomBytes)
-  await deps.repo.setLinkCode(request.id, hashLinkCode(request.id, code))
+  // 空の待ちにだけ置ける（同時に2回呼ばれても、先の1回だけが成功する）
+  if (!(await deps.repo.setLinkCodeIfEmpty(request.id, hashLinkCode(request.id, code)))) return fail(409, 'CODE_ALREADY_SENT')
   const sent = await deps.sendMail({
     to: target.email,
     subject: '【ドヤバディ】ログイン方法を追加するための確認コード',
@@ -332,8 +347,8 @@ export async function confirmLink(deps: AuthDeps, args: { authorization?: string
     // ログイン手段が、いつの間にかほかのユーザーに付いていないか
     const taken = await deps.repo.findAccount(account.provider, account.providerAccountId)
     if (taken && taken.userId !== targetUserId) return fail(409, 'IDENTITY_TAKEN')
-    if (!(await deps.repo.consumeLinkRequest(request.id, now))) return fail(409, 'LINK_REQUEST_USED')
-    if (!taken) await deps.repo.addAccount(targetUserId, account)
+    // 待ちを使用済みにすることと Account を足すことを、1つの処理で行う
+    if (!(await deps.repo.consumeLinkRequestAndAddAccount(request.id, now, targetUserId, taken ? null : account))) return fail(409, 'LINK_REQUEST_USED')
     return null
   }
 
@@ -353,11 +368,11 @@ export async function confirmLink(deps: AuthDeps, args: { authorization?: string
   const platform = typeof raw.platform === 'string' ? raw.platform : ''
   if (!PLATFORMS.has(platform)) return fail(400, 'INVALID_REQUEST')
   if (!request.codeHash) return fail(409, 'CODE_NOT_SENT')
-  if (request.attempts >= LINK_MAX_ATTEMPTS) return fail(429, 'LINK_TOO_MANY_ATTEMPTS')
+  // 照合の前に、試せる回数を原子的に1つ取る。取れなければ（上限に達している）429。同時に何本送っても、照合できるのは上限の回数まで
+  const attempt = await deps.repo.takeLinkAttempt(request.id, LINK_MAX_ATTEMPTS)
+  if (attempt === null) return fail(429, 'LINK_TOO_MANY_ATTEMPTS')
   if (hashLinkCode(request.id, raw.code) !== request.codeHash) {
-    const attempts = await deps.repo.incrementLinkAttempts(request.id)
-    if (attempts >= LINK_MAX_ATTEMPTS) return fail(429, 'LINK_TOO_MANY_ATTEMPTS')
-    return fail(400, 'LINK_CODE_INVALID', { remainingAttempts: LINK_MAX_ATTEMPTS - attempts })
+    return fail(400, 'LINK_CODE_INVALID', { remainingAttempts: LINK_MAX_ATTEMPTS - attempt })
   }
   const target = await deps.repo.getUser(targetUserId)
   if (!target || target.deletedAt) return fail(410, 'LINK_REQUEST_EXPIRED')
@@ -384,6 +399,7 @@ export async function decideWebSignIn(
   const existingAccount = await repo.findAccount(input.provider, input.providerAccountId)
   const matchable = Boolean(email) && verified && !isApplePrivateRelay(email)
   const userByEmail = !existingAccount && matchable && email ? await repo.findUserByEmail(email) : null
+  if (userByEmail && !userByEmail.emailVerified) return '/auth/signin?error=AccessDenied'
   const d = decideLink({
     identity: { provider: input.provider, providerAccountId: input.providerAccountId, email: email, emailVerified: verified },
     existingAccount,

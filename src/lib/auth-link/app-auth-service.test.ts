@@ -40,10 +40,11 @@ function makeDeps(over: Partial<AuthDeps> = {}) {
   return { deps, repo, mails, created }
 }
 
+let jtiSeq = 0 // 呼ぶたびに別のトークンにする（同じトークンの2回の使用は、別の試験で確かめる）
 const sign = (claims: Record<string, unknown>) => jwt.sign(claims, privateKey, { algorithm: 'RS256', keyid: 'k1', noTimestamp: true })
 const NONCE = 'nonce-abcdefgh'
-const google = (over: Record<string, unknown> = {}) => sign({ iss: 'https://accounts.google.com', aud: AUD_G, sub: 'g-1', exp: nowSec() + 600, nonce: NONCE, email: 'Taro@Example.com', email_verified: true, name: 'Taro', ...over })
-const apple = (over: Record<string, unknown> = {}) => sign({ iss: 'https://appleid.apple.com', aud: AUD_A, sub: 'a-1', exp: nowSec() + 600, nonce: sha(NONCE), email: 'taro@example.com', email_verified: 'true', is_private_email: 'false', ...over })
+const google = (over: Record<string, unknown> = {}) => sign({ iss: 'https://accounts.google.com', aud: AUD_G, sub: 'g-1', exp: nowSec() + 600, nonce: NONCE, email: 'Taro@Example.com', email_verified: true, name: 'Taro', jti: `j${++jtiSeq}`, ...over })
+const apple = (over: Record<string, unknown> = {}) => sign({ iss: 'https://appleid.apple.com', aud: AUD_A, sub: 'a-1', exp: nowSec() + 600, nonce: sha(NONCE), email: 'taro@example.com', email_verified: 'true', is_private_email: 'false', jti: `j${++jtiSeq}`, ...over })
 const body = (provider: 'google' | 'apple', idToken: string, extra: Record<string, unknown> = {}) => ({ provider, idToken, nonce: NONCE, platform: 'ios', deviceLabel: 'iPhone', ...extra })
 
 test('Google で初めてログイン: User と Account が1つずつでき、トークンが返る。メールは返さない', async () => {
@@ -111,9 +112,9 @@ test('Gmail のドットだけ違うメールは、自動では同じユーザ�
 test('Apple の隠しメール: 新規1人だけ。既存ユーザーには結び付かない。2回めのログインでも増えない。照合用の列は空', async () => {
   const { deps, repo } = makeDeps()
   await exchangeIdToken(deps, body('google', google()))
-  const relay = apple({ sub: 'a-relay', email: 'xyz@privaterelay.appleid.com', is_private_email: 'true' })
-  const r1 = await exchangeIdToken(deps, body('apple', relay, { givenName: '太郎', familyName: '山田' }))
-  const r2 = await exchangeIdToken(deps, body('apple', relay))
+  const relay = () => apple({ sub: 'a-relay', email: 'xyz@privaterelay.appleid.com', is_private_email: 'true' })
+  const r1 = await exchangeIdToken(deps, body('apple', relay(), { givenName: '太郎', familyName: '山田' }))
+  const r2 = await exchangeIdToken(deps, body('apple', relay()))
   assert.equal(r1.status, 200)
   assert.equal((r1.body.user as any).id, (r2.body.user as any).id)
   assert.equal(repo.users.size, 2)
@@ -305,7 +306,8 @@ test('コード: 5回まち違えると使えなくなる（正しいコード�
   await sendLinkCode(deps, { requestId })
   const right = lastCode(mails)
   const wrong = right === '000000' ? '111111' : '000000'
-  for (let i = 1; i < LINK_MAX_ATTEMPTS; i++) {
+  // 5回めまでは照合され、まち違えるたびに残りが減る（5回めは残り0）。6回めからは、正しいコードでも 429
+  for (let i = 1; i <= LINK_MAX_ATTEMPTS; i++) {
     const r = await confirmLink(deps, { body: { requestId, code: wrong, platform: 'ios' } })
     assert.deepEqual([r.status, r.body.code, r.body.remainingAttempts], [400, 'LINK_CODE_INVALID', LINK_MAX_ATTEMPTS - i])
   }
@@ -385,4 +387,76 @@ test('Web の Apple: 同じメールの既存ユーザーがいれば確認の�
   repo.accounts.push({ provider: 'apple', providerAccountId: 'a-web', providerEmail: null, emailVerified: null, userId: 'u1' })
   assert.equal(await decideWebSignIn(repo, { ...p, profile: { email: 'taro@example.com', email_verified: 'true' } }), true)
   assert.equal(await decideWebSignIn(repo, { provider: 'facebook', providerAccountId: 'x', profile: null }), '/auth/signin?error=AccessDenied')
+})
+
+
+// ---- 指摘への対応（独立の監査・自動レビュー） ----
+test('確認コードの回数制限: 数百本を同時に送っても、照合できるのは5回まで。そのあとは正しいコードでも 429', async () => {
+  const { deps, repo, mails, requestId } = await pending()
+  await sendLinkCode(deps, { requestId })
+  const right = lastCode(mails)
+  const wrong = right === '000000' ? '111111' : '000000'
+  const results = await Promise.all(Array.from({ length: 400 }, () => confirmLink(deps, { body: { requestId, code: wrong, platform: 'ios' } })))
+  assert.equal(results.filter((r) => r.status === 400).length, LINK_MAX_ATTEMPTS)
+  assert.equal(results.filter((r) => r.status === 429).length, 400 - LINK_MAX_ATTEMPTS)
+  assert.equal(repo.links.get(requestId)!.attempts, LINK_MAX_ATTEMPTS)
+  assert.equal((await confirmLink(deps, { body: { requestId, code: right, platform: 'ios' } })).status, 429)
+  assert.equal(repo.accounts.filter((a) => a.provider === 'apple').length, 0)
+})
+
+test('確認コードの回数制限: 正しいコードを含む同時の送信でも、Account が足されるのは1回だけ', async () => {
+  const { deps, repo, mails, requestId } = await pending()
+  await sendLinkCode(deps, { requestId })
+  const right = lastCode(mails)
+  const rs = await Promise.all(Array.from({ length: 20 }, () => confirmLink(deps, { body: { requestId, code: right, platform: 'ios' } })))
+  assert.equal(rs.filter((r) => r.status === 200).length, 1)
+  assert.equal(repo.accounts.filter((a) => a.provider === 'apple').length, 1)
+})
+
+test('同時に2回 send-code を呼んでも、送られるのは1回だけ', async () => {
+  const { deps, mails, requestId } = await pending()
+  const rs = await Promise.all([sendLinkCode(deps, { requestId }), sendLinkCode(deps, { requestId }), sendLinkCode(deps, { requestId })])
+  assert.equal(rs.filter((r) => r.status === 200).length, 1)
+  assert.equal(mails.length, 1)
+})
+
+test('メールが確認済みでない既存ユーザーとは、メールでは結び付けない。別のユーザーも作らず、コードも出さない（409 LINK_TARGET_UNVERIFIED）', async () => {
+  const { deps, repo } = makeDeps()
+  repo.addUser({ id: 'seeded', email: 'taro@example.com', emailNormalized: 'taro@example.com', emailVerifiedForLink: false })
+  const r = await exchangeIdToken(deps, body('google', google()))
+  assert.deepEqual([r.status, r.body.code], [409, 'LINK_TARGET_UNVERIFIED'])
+  assert.equal(repo.users.size, 1)
+  assert.equal(repo.links.size, 0)
+  assert.equal(repo.accounts.length, 0)
+  assert.equal(repo.sessions.length, 0)
+  // Web の Apple も同じ（確認の画面ではなく、拒否）
+  assert.equal(await decideWebSignIn(repo, { provider: 'apple', providerAccountId: 'a-x', profile: { email: 'taro@example.com', email_verified: 'true' } }), '/auth/signin?error=AccessDenied')
+})
+
+test('同じ id_token の2回めの使用は 401（already-used）。ユーザーは増えず、最初の1回は成功する', async () => {
+  const { deps, repo } = makeDeps()
+  const tok = google()
+  const a = await exchangeIdToken(deps, body('google', tok))
+  const b = await exchangeIdToken(deps, body('google', tok))
+  assert.equal(a.status, 200)
+  assert.deepEqual([b.status, b.body.code, b.body.reason], [401, 'ID_TOKEN_INVALID', 'already-used'])
+  assert.equal(repo.users.size, 1)
+  assert.equal(repo.devices.length, 1)
+  // 同時の2回でも1回だけ成功
+  const t2 = google({ sub: 'g-race', email: 'race@example.com' })
+  const rs = await Promise.all([exchangeIdToken(deps, body('google', t2)), exchangeIdToken(deps, body('google', t2))])
+  assert.equal(rs.filter((r) => r.status === 200).length, 1)
+  // 確認の手順になった id_token も、使用済みになる
+  const g2 = google({ sub: 'g-3', email: 'g3@example.com' }); await exchangeIdToken(deps, body('google', g2))
+  const ap = apple({ sub: 'a-3', email: 'g3@example.com' })
+  assert.equal((await exchangeIdToken(deps, body('apple', ap))).body.code, 'LINK_CONFIRMATION_REQUIRED')
+  assert.equal((await exchangeIdToken(deps, body('apple', ap))).body.reason, 'already-used')
+})
+
+test('Google の azp: 許可リストに無い azp は 401（bad-authorized-party）。azp が無いトークン・リスト内の azp は通る', async () => {
+  const { deps } = makeDeps()
+  const bad = await exchangeIdToken(deps, body('google', google({ azp: 'web-client-id' })))
+  assert.deepEqual([bad.status, bad.body.reason], [401, 'bad-authorized-party'])
+  assert.equal((await exchangeIdToken(deps, body('google', google({ sub: 'g-ok', email: 'ok1@example.com', azp: AUD_G })))).status, 200)
+  assert.equal((await exchangeIdToken(deps, body('google', google({ sub: 'g-ok2', email: 'ok2@example.com' })))).status, 200)
 })

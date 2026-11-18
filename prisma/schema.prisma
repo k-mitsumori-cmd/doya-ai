@@ -116,6 +116,15 @@ model AccountLinkRequest {
   @@map("auth_link_request")
 }
 
+/// 使った id_token の控え（1回しか使えないようにする）。hash は id_token の SHA-256（16進）。expiresAt は id_token の期限 + 2分。期限を過ぎた行は、あとで消す（次の段）
+model AppIdTokenUse {
+  hash      String   @id
+  expiresAt DateTime
+
+  @@index([expiresAt])
+  @@map("app_id_token_use")
+}
+
 // ============================================
 // ユーザー管理（統一アカウント）
 // ============================================

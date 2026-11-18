@@ -59,8 +59,12 @@ export class UniqueViolationError extends Error {
 
 export interface AuthRepo {
   findAccount(provider: string, providerAccountId: string): Promise<{ userId: string } | null>
-  /** 正規化したメールで引く。emailNormalized がまだ埋まっていない既存の行は、User.email の大文字小文字を無視した一致でも見つける */
-  findUserByEmail(emailNormalized: string): Promise<{ id: string } | null>
+  /**
+   * 正規化したメールで引く。emailNormalized がまだ埋まっていない既存の行は、lower(User.email) の一致でも見つける。
+   * emailVerified は、そのユーザーのメールが確認済みか（User.emailVerified がある、provider が google の Account がある（Google は確認済みのメールだけを返す）、
+   * または Account.emailVerified が true）。確認済みでないメールのユーザーは、メールでは結び付けの対象にしない。
+   */
+  findUserByEmail(emailNormalized: string): Promise<{ id: string; emailVerified: boolean } | null>
   getUser(id: string): Promise<UserRecord | null>
   /** User と Account を1つの処理で作る。User.email が重なったら UniqueViolationError */
   createUserWithAccount(input: {
@@ -100,8 +104,20 @@ export interface AuthRepo {
   findLiveLinkRequest(provider: string, providerAccountId: string, userId: string, now: Date): Promise<LinkRequestRecord | null>
   createLinkRequest(input: { id: string; userId: string; provider: string; providerAccountId: string; providerEmail: string | null; expiresAt: Date }): Promise<void>
   setLinkCode(id: string, codeHash: string | null): Promise<void>
-  /** 試した回数を1つ増やし、増やしたあとの値を返す */
-  incrementLinkAttempts(id: string): Promise<number>
+  /**
+   * 照合の前に、試せる回数を1つ取る（原子的。同時に何本来ても、上限を超えて取れない）。
+   * 条件つきの更新（attempts < max かつ未使用）が成功したら、取ったあとの回数を返す。取れなければ null（429 にする）。
+   */
+  takeLinkAttempt(id: string, max: number): Promise<number | null>
+  /** 使った id_token のハッシュを控える。すでに控えてあれば false（2回めの使用）。期限を過ぎた行は、あとで消す（次の段） */
+  claimIdToken(hash: string, expiresAt: Date): Promise<boolean>
   /** まだ使われていない待ちだけを使用済みにする。使えたら true（同時の2回目は false） */
   consumeLinkRequest(id: string, now: Date): Promise<boolean>
+  /**
+   * 待ちを使用済みにすることと、Account を足すことを、1つの処理で行う（途中で止まっても、片方だけが残らない）。
+   * 待ちがすでに使われていれば何も足さず false。account が null のときは、使用済みにするだけ（すでに付いているとき）。
+   */
+  consumeLinkRequestAndAddAccount(id: string, now: Date, userId: string, account: NewAccount | null): Promise<boolean>
+  /** 確認コードを置く。codeHash が空の待ちにだけ置ける（先に取った1回だけ成功。同時の2回目は false） */
+  setLinkCodeIfEmpty(id: string, codeHash: string): Promise<boolean>
 }

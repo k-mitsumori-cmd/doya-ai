@@ -2,7 +2,7 @@ import type { AuthRepo, DeviceRecord, LinkRequestRecord, NewAccount, NewDevice, 
 import { UniqueViolationError } from '../repo'
 
 /** 試験用のメモリの repo。本物の DB には接続しない。 */
-export type MemUser = UserRecord & { emailNormalized: string | null }
+export type MemUser = UserRecord & { emailNormalized: string | null; emailVerifiedForLink?: boolean }
 export type MemAccount = NewAccount & { userId: string }
 export type MemSession = { id: string; sessionToken: string; userId: string; expires: Date }
 
@@ -28,7 +28,7 @@ export class MemoryRepo implements AuthRepo {
   }
   async findUserByEmail(n: string) {
     const hit = [...this.users.values()].find((u) => u.emailNormalized === n || (u.email ?? '').toLowerCase() === n)
-    return hit ? { id: hit.id } : null
+    return hit ? { id: hit.id, emailVerified: hit.emailVerifiedForLink !== false } : null
   }
   async getUser(id: string) { return this.users.get(id) ?? null }
   async createUserWithAccount(input: Parameters<AuthRepo['createUserWithAccount']>[0]) {
@@ -87,7 +87,32 @@ export class MemoryRepo implements AuthRepo {
     this.links.set(i.id, { ...i, codeHash: null, attempts: 0, consumedAt: null, createdAt: new Date() })
   }
   async setLinkCode(id: string, codeHash: string | null) { this.links.get(id)!.codeHash = codeHash }
-  async incrementLinkAttempts(id: string) { const l = this.links.get(id)!; l.attempts += 1; return l.attempts }
+  // 取得は1つの同期の区間で行う（確認と加算の間に await を入れない）。同時に何本来ても、上限を超えて取れない
+  async takeLinkAttempt(id: string, max: number) {
+    const l = this.links.get(id)
+    if (!l || l.consumedAt || l.attempts >= max) return null
+    l.attempts += 1
+    return l.attempts
+  }
+  usedIdTokens = new Set<string>()
+  async claimIdToken(hash: string) {
+    if (this.usedIdTokens.has(hash)) return false
+    this.usedIdTokens.add(hash)
+    return true
+  }
+  async setLinkCodeIfEmpty(id: string, codeHash: string) {
+    const l = this.links.get(id)
+    if (!l || l.codeHash) return false
+    l.codeHash = codeHash
+    return true
+  }
+  async consumeLinkRequestAndAddAccount(id: string, now: Date, userId: string, account: NewAccount | null) {
+    const l = this.links.get(id)
+    if (!l || l.consumedAt) return false
+    l.consumedAt = now
+    if (account) this.accounts.push({ ...account, userId })
+    return true
+  }
   async consumeLinkRequest(id: string, now: Date) {
     const l = this.links.get(id)
     if (!l || l.consumedAt) return false

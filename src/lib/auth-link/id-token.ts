@@ -28,6 +28,8 @@ export type VerifyIdTokenInput = {
    */
   nonce: string
   now: Date
+  /** Google の azp（authorized party）の許可リスト。トークンに azp があり、リストにも値があるとき、一致を求める */
+  authorizedParties?: string[]
   /** 時計のずれの許容（秒）。既定は 60 */
   clockToleranceSec?: number
 }
@@ -45,6 +47,7 @@ export type IdTokenFailure =
   | 'missing-sub'
   | 'missing-nonce'
   | 'nonce-mismatch'
+  | 'bad-authorized-party'
 
 export type VerifiedIdentity = {
   provider: IdTokenProvider
@@ -142,6 +145,11 @@ export function verifyIdToken(input: VerifyIdTokenInput): VerifyIdTokenResult {
 
   if (typeof claims.exp !== 'number') return fail('expired')
   if (typeof claims.sub !== 'string' || !claims.sub) return fail('missing-sub')
+
+  const azp = (claims as Record<string, unknown>).azp
+  if (input.authorizedParties && input.authorizedParties.length > 0 && azp !== undefined) {
+    if (typeof azp !== 'string' || !input.authorizedParties.includes(azp)) return fail('bad-authorized-party')
+  }
 
   const claimNonce = (claims as Record<string, unknown>).nonce
   if (typeof claimNonce !== 'string' || !claimNonce) return fail('missing-nonce')

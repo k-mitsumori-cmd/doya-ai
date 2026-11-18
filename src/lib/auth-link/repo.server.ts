@@ -22,10 +22,23 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
       return prisma.account.findUnique({ where: { provider_providerAccountId: { provider, providerAccountId } }, select: { userId: true } })
     },
     async findUserByEmail(emailNormalized) {
-      return prisma.user.findFirst({
-        where: { deletedAt: null, OR: [{ emailNormalized }, { email: { equals: emailNormalized, mode: 'insensitive' } }] },
-        select: { id: true },
-      })
+      // emailNormalized があればそれで、まだ埋まっていない既存の行は lower(email) の一致で引く（ILIKE ではないので _ や % が一致に化けない）
+      const rows = await prisma.$queryRaw<Array<{ id: string; emailVerified: Date | null }>>`
+        SELECT id, "emailVerified" FROM "User"
+        WHERE "deletedAt" IS NULL AND ("emailNormalized" = ${emailNormalized} OR ("emailNormalized" IS NULL AND lower(email) = ${emailNormalized}))
+        ORDER BY "createdAt" ASC LIMIT 1`
+      const u = rows[0]
+      if (!u) return null
+      let verified = u.emailVerified !== null
+      if (!verified) {
+        // provider が google の Account（Google は確認済みのメールだけを返す。既存の行は emailVerified が null）か、確認済みと明示された Account
+        const acc = await prisma.account.findFirst({
+          where: { userId: u.id, OR: [{ provider: 'google', NOT: { emailVerified: false } }, { emailVerified: true }] },
+          select: { id: true },
+        })
+        verified = Boolean(acc)
+      }
+      return { id: u.id, emailVerified: verified }
     },
     async getUser(id) {
       return prisma.user.findUnique({ where: { id }, select: { id: true, name: true, image: true, email: true, plan: true, deletedAt: true } })
@@ -114,9 +127,33 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
     async setLinkCode(id, codeHash) {
       await prisma.accountLinkRequest.update({ where: { id }, data: { codeHash } })
     },
-    async incrementLinkAttempts(id) {
-      const r = await prisma.accountLinkRequest.update({ where: { id }, data: { attempts: { increment: 1 } }, select: { attempts: true } })
-      return r.attempts
+    async setLinkCodeIfEmpty(id, codeHash) {
+      const r = await prisma.accountLinkRequest.updateMany({ where: { id, codeHash: null, consumedAt: null }, data: { codeHash } })
+      return r.count === 1
+    },
+    async takeLinkAttempt(id, max) {
+      // 条件つきの1回の更新（attempts < max かつ未使用）。同時に来ても、上限を超えては増えない
+      const r = await prisma.accountLinkRequest.updateMany({ where: { id, consumedAt: null, attempts: { lt: max } }, data: { attempts: { increment: 1 } } })
+      if (r.count !== 1) return null
+      const row = await prisma.accountLinkRequest.findUnique({ where: { id }, select: { attempts: true } })
+      return row?.attempts ?? max
+    },
+    async claimIdToken(hash, expiresAt) {
+      try {
+        await prisma.appIdTokenUse.create({ data: { hash, expiresAt } })
+        return true
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return false
+        throw e
+      }
+    },
+    async consumeLinkRequestAndAddAccount(id, now, userId, a) {
+      return prisma.$transaction(async (tx) => {
+        const r = await tx.accountLinkRequest.updateMany({ where: { id, consumedAt: null }, data: { consumedAt: now } })
+        if (r.count !== 1) return false
+        if (a) await tx.account.create({ data: { userId, type: 'oidc', provider: a.provider, providerAccountId: a.providerAccountId, providerEmail: a.providerEmail, emailVerified: a.emailVerified } })
+        return true
+      })
     },
     async consumeLinkRequest(id, now) {
       const r = await prisma.accountLinkRequest.updateMany({ where: { id, consumedAt: null }, data: { consumedAt: now } })
