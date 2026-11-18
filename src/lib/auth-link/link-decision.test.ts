@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { decideLink, type LinkInput } from './link-decision'
 
-const base = (over: Partial<LinkInput> & { identity?: Partial<LinkInput['identity']> } = {}): LinkInput => ({
+const base = (over: Partial<Omit<LinkInput, 'identity'>> & { identity?: Partial<LinkInput['identity']> } = {}): LinkInput => ({
   identity: { provider: 'apple', providerAccountId: 'apple-sub-1', email: 'taro@example.com', emailVerified: true, ...over.identity },
   existingAccount: over.existingAccount ?? null,
   userByEmail: over.userByEmail ?? null,

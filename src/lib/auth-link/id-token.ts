@@ -119,7 +119,7 @@ export function verifyIdToken(input: VerifyIdTokenInput): VerifyIdTokenResult {
   try {
     const verified = jwt.verify(token, key, {
       algorithms: ['RS256'],
-      issuer: ISSUERS[provider],
+      issuer: ISSUERS[provider] as [string, ...string[]],
       audience: audiences as [string, ...string[]],
       clockTimestamp: Math.floor(now.getTime() / 1000),
       clockTolerance: tolerance,
