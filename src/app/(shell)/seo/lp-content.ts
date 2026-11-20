@@ -6,9 +6,8 @@ import type { LpKitContent } from '@/components/lp-kit/types'
 import { CTA, FAQ, STEPS } from './lp-data'
 
 const SVC = getServiceById('seo')!
-const FREE_LIMIT = SVC.pricing.free.limit // 例: 記事3本/月まで
-const FREE_N = FREE_LIMIT.match(/\d+/)?.[0]
-const FREE_PHRASE = FREE_N ? `月${FREE_N}本` : FREE_LIMIT
+// 無料の本数は書かない。新しい料金（ドヤパワー）の正本に「月◯本」が無いため。services.ts の free.limit（記事3本/月）は旧い単位で、料金の旗が変わると食い違う。
+const FREE_NOTE = '無料で試せます。クレジットカードの登録は不要です。'
 
 /** 書き出しの形式。実際の書き出し画面（articles/[id]/export）の形式に合わせる（lp-data.ts の FAQ には JSON とあるが、書き出し画面には無い。要確認） */
 export const EXPORT_FORMATS = ['HTML', 'Markdown', 'note', 'テキスト']
@@ -29,9 +28,11 @@ export const SEO_LP_CONTENT: LpKitContent = {
     sub: 'キーワードと参考URLを入れると、検索意図に沿った構成を作り、章ごとに前後のつながりを確かめながら書き上げて、公開前に点検します。',
     ctaLabel: '無料で記事を作る',
     subCtaLabel: '操作の流れを見る',
-    note: `無料プランで${FREE_PHRASE}まで。クレジットカードの登録は不要です。`,
+    note: FREE_NOTE,
     image: { src: '/renewal/cinematic/seo-20260910-v1.webp', alt: 'ドヤくんが階段の上で記事づくりの道具を使っているイラスト', width: 1672, height: 941 },
-    facts: ['クレジットカード登録は不要', `無料で${FREE_PHRASE}まで`, `${EXPORT_FORMATS.length}形式で書き出し`],
+    bear: { src: '/renewal/bear-hero.webp', alt: 'ノートパソコンを持って手をあげているドヤくん' },
+    chips: ['検索意図を整理', '章ごとに構成', '公開前に点検'],
+    facts: ['クレジットカード登録は不要', '無料で試せます', `${EXPORT_FORMATS.length}形式で書き出し`],
   },
   stage: {
     heading: { phrases: ['記事が', 'できるまでの', '流れを、', '画面で', '見る。'] },
@@ -49,9 +50,9 @@ export const SEO_LP_CONTENT: LpKitContent = {
   },
   stats: {
     items: [
-      { value: Number(FREE_N ?? 3), unit: '本 / 月', label: '無料プランで作れる記事' },
-      { value: EXPORT_FORMATS.length, unit: '形式', label: '書き出しの形式' },
-      { value: STEPS.length, unit: 'ステップ', label: '使う手順の数' },
+      { value: STEPS.length, unit: 'ステップ', label: 'キーワードから公開前の点検まで', desc: '入力、章ごとの執筆、点検の順に進みます。' },
+      { value: 2, unit: '重の点検', label: '公開前に、ずれと薄い箇所を確認', desc: '生成のあとに二重のチェックを行い、事実の食い違いや薄い箇所を直します。' },
+      { value: EXPORT_FORMATS.length, unit: '形式', label: 'そのまま貼れる形で書き出し', desc: 'HTML・Markdown・note・テキストから選べます。' },
     ],
     marqueeLabel: '書き出しと、いっしょに作れるもの',
     marquee: [...EXPORT_FORMATS, '図解', 'アイキャッチ', 'リンク切れの確認'],
@@ -65,7 +66,7 @@ export const SEO_LP_CONTENT: LpKitContent = {
       { title: '図解', keyword: 'AI活用 導入ステップ', note: '本文に合わせた図解の画像を作れます。' },
       { title: 'アイキャッチ', keyword: 'BtoB マーケティング AI活用', note: '記事に添えるアイキャッチ画像も作れます。' },
       { title: '書き出した HTML', keyword: 'BtoB マーケティング AI活用', note: 'HTML、Markdown、note、テキストで書き出せます。' },
-      { title: '無料でできる範囲', keyword: '無料プランの内容', note: `${FREE_LIMIT}。クレジットカードの登録は不要です。` },
+      { title: '無料でできる範囲', keyword: '無料プランの内容', note: FREE_NOTE },
     ],
   },
   features: {
@@ -94,7 +95,7 @@ export const SEO_LP_CONTENT: LpKitContent = {
   faq: {
     heading: { phrases: ['よくある', '質問'] },
     items: [
-      { q: FAQ[0].q, a: `無料プランは${FREE_LIMIT}ご利用いただけます。有料プランの内容と料金は、料金ページでご確認ください。1つの契約で全サービスのプロプランが使えます。` },
+      { q: FAQ[0].q, a: '無料プランから試せます。クレジットカードの登録は不要です。有料プランの内容と料金は、料金ページでご確認ください。' },
       FAQ[1],
       { q: 'LLMO（AI検索）を意識した作りですか？', a: FAQ[2].a },
       { q: FAQ[3].q, a: '本文はエディタで編集でき、HTML・Markdown・note・テキストで書き出せます。note に貼り付けやすい形式にも対応しています。' },

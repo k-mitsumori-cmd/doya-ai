@@ -16,6 +16,8 @@ export type PhraseSpec = {
 export type IconKey = 'search' | 'list' | 'check' | 'pen' | 'file' | 'shield' | 'link' | 'layers'
 export type BearItem = 'none' | 'pen' | 'doc' | 'lens'
 
+export type HeroVariant = 'a' | 'a2' | 'b' | 'c'
+
 export type DemoTab = { id: string; label: string; from: number }
 
 export type LpKitContent = {
@@ -32,6 +34,9 @@ export type LpKitContent = {
     facts: string[]
     /** 案B: 右に置く既存の絵（縦横比を指定して、読み込み時にずれないようにする） */
     image?: { src: string; alt: string; width: number; height: number }
+    /** 案A+ / 案C: ドヤくんの絵（背景が透明の画像）と、案Cの浮かぶ札 */
+    bear?: { src: string; alt: string }
+    chips?: string[]
   }
   stage: {
     heading: PhraseSpec
@@ -45,7 +50,7 @@ export type LpKitContent = {
     caption: string
   }
   stats: {
-    items: { value: number; unit: string; label: string }[]
+    items: { value: number; unit: string; label: string; desc?: string }[]
     marqueeLabel: string
     marquee: string[]
   }

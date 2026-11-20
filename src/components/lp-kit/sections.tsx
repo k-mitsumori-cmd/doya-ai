@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Check, ChevronDown, FileText, Layers, Link2, ListTree, PenLine, Search, ShieldCheck } from 'lucide-react'
-import type { BearItem, IconKey, LpKitContent, LpKitVisuals } from './types'
+import type { BearItem, HeroVariant, IconKey, LpKitContent, LpKitVisuals } from './types'
 import { cx, useInView, useMotion } from './hooks'
 import { PhraseHeading } from './Phrases'
 import { ClickSpark, CountUp, Magnet, Marquee, Reveal, ScrollColorText, SpotlightCard, Tilt } from './motion'
@@ -54,7 +54,7 @@ export function Header({ c }: { c: LpKitContent }) {
       <div className="lpk-wrap lpk-header-in">
         <a className="lpk-logo" href="#top" aria-label={`${c.serviceName} のトップへ`}>
           <span className="lpk-logo-mark" aria-hidden="true" />
-          <span>ドヤAI</span>
+          <span>ドヤバディ</span>
           <b>{c.serviceName}</b>
         </a>
         <nav className="lpk-nav" aria-label="ヘッダー">
@@ -68,9 +68,10 @@ export function Header({ c }: { c: LpKitContent }) {
 }
 
 /* ---------------- 段1 ヒーロー ---------------- */
-export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; variant?: 'a' | 'b' }) {
+export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; variant?: HeroVariant }) {
   const h = c.hero
-  const split = (variant === 'a' && !!v.heroA) || (variant === 'b' && !!h.image)
+  const withA = (variant === 'a' || variant === 'a2') && !!v.heroA
+  const split = withA || (variant === 'b' && !!h.image) || (variant === 'c' && !!h.bear)
   return (
     <section className={cx('lpk-hero', split && 'split')} id="top">
       <div className="lpk-wrap lpk-hero-in">
@@ -80,10 +81,18 @@ export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; vari
         </div>
         {split && (
           <div
-            className="lpk-hero-vis lpk-up"
+            className={cx('lpk-hero-vis lpk-up', variant === 'a2' && 'plus', variant === 'c' && 'art')}
             style={{ ['--d' as string]: '280ms', ['--ar' as string]: variant === 'b' && h.image ? `${h.image.width} / ${h.image.height}` : '16 / 10' }}
           >
-            {variant === 'a' ? (
+            {variant === 'a2' && h.bear ? (
+              <>
+                <div className="lpk-hero-frame">{v.heroA}</div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="lpk-hero-bear" src={h.bear.src} alt={h.bear.alt} width={800} height={800} decoding="async" />
+              </>
+            ) : variant === 'c' && h.bear ? (
+              <HeroArt bear={h.bear} chips={h.chips ?? []} />
+            ) : variant === 'a' ? (
               v.heroA
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
@@ -121,6 +130,22 @@ export function Hero({ c, v, variant }: { c: LpKitContent; v: LpKitVisuals; vari
   )
 }
 
+/** 案C: 絵が主役の最初の画面。ドヤくんの周りに、記事ができる流れの札が浮かぶ */
+function HeroArt({ bear, chips }: { bear: { src: string; alt: string }; chips: string[] }) {
+  return (
+    <div className="lpk-art">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className="lpk-art-bear" src={bear.src} alt={bear.alt} width={800} height={800} decoding="async" fetchPriority="high" />
+      {chips.map((t, i) => (
+        <span key={t} className={`lpk-art-chip c${i}`} aria-hidden="true">
+          <Check size={14} />
+          {t}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 /* ---------------- 段2 実演の舞台 ---------------- */
 export function StageSection({ c, v }: { c: LpKitContent; v: LpKitVisuals }) {
   const s = c.stage
@@ -152,7 +177,10 @@ export function StatsSection({ c }: { c: LpKitContent }) {
                 <CountUp value={it.value} />
                 <span className="lpk-stat-unit">{it.unit}</span>
               </p>
-              <p className="lpk-stat-label">{it.label}</p>
+              <div className="lpk-stat-text">
+                <p className="lpk-stat-label">{it.label}</p>
+                {it.desc && <p className="lpk-stat-desc">{it.desc}</p>}
+              </div>
             </Reveal>
           ))}
         </ul>

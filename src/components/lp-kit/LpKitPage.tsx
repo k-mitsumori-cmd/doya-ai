@@ -1,7 +1,7 @@
 'use client'
 // ドヤAI LP 共通の型（9段）を組み立てる。サービスごとの設定（content）と画面の再現（visuals）を渡す。
 import { useState, type CSSProperties } from 'react'
-import type { LpKitContent, LpKitVisuals } from './types'
+import type { HeroVariant, LpKitContent, LpKitVisuals } from './types'
 import { MotionContext, cx, useMotionState } from './hooks'
 import { FaqSection, FeaturesSection, FinalCta, Footer, Header, Hero, ShowcaseSection, StageSection, StatementSection, StatsSection, StepsSection } from './sections'
 import './lp-kit.css'
@@ -10,7 +10,7 @@ import './lp-kit.css'
 // （ページ全体を包む div に付ける。className が固定の要素なので、React が上書きしない）
 const JS_FLAG = `document.currentScript.parentElement.classList.add('lpk-js')`
 
-export function LpKitPage({ content, visuals, accent = '#ffd400', heroVariant }: { content: LpKitContent; visuals: LpKitVisuals; accent?: string; heroVariant?: 'a' | 'b' }) {
+export function LpKitPage({ content, visuals, accent = '#ffd400', heroVariant }: { content: LpKitContent; visuals: LpKitVisuals; accent?: string; heroVariant?: HeroVariant }) {
   const [still, setStill] = useState(false)
   const motion = useMotionState(still)
   return (
