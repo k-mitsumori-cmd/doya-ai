@@ -20,10 +20,16 @@ const prisma = {
     groupBy: async () => [{ status: 'pending', _count: { _all: rows.length } }],
   },
 }
+function assertPrivate(response) {
+  assert.equal(response.headers.get('cache-control'), 'private, no-store')
+  assert.match(response.headers.get('vary') || '', /(?:^|,\s*)cookie(?:,|$)/i)
+}
+
+let authenticated = true
 const route = load('src/app/api/kintai/requests/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/kintai/access': { getKintaiContext: async () => ({ employeeId: 'viewer', organizationId: 'org', role: 'hr_admin' }), hasMinRole: () => true },
+  '@/lib/kintai/access': { getKintaiContext: async () => authenticated ? ({ employeeId: 'viewer', userId: 'user-1', organizationId: 'org', role: 'hr_admin' }) : null, hasMinRole: () => true },
   '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
   '@/lib/kintai/manager-admission': { lockCurrentKintaiActor: async () => 'hr_admin' },
 });
@@ -40,6 +46,7 @@ const route = load('src/app/api/kintai/requests/route.ts', {
       if (cursor) url.searchParams.set('cursor', cursor)
       const response = await route.GET(new Request(url))
       assert.equal(response.status, 200)
+      assertPrivate(response)
       const page = await response.json()
       expectedTotal ??= page.total
       result = appendKintaiRequestPage(result, page, expectedTotal)
@@ -53,7 +60,22 @@ const route = load('src/app/api/kintai/requests/route.ts', {
     for (const cursor of ['foreign-id', 'bad!', '']) {
       const response = await route.GET(new Request(`http://offline.invalid/api/kintai/requests?cursor=${encodeURIComponent(cursor)}`))
       assert.equal(response.status, 400)
+      assertPrivate(response)
     }
+  })
+  await check('request authorization errors and scope lookup are never cached', async () => {
+    const url = 'http://offline.invalid/api/kintai/requests'
+    const scopeRequest = () => new Request(url, { method: 'POST', body: JSON.stringify({ onceAction: 'scope' }) })
+    authenticated = false
+    for (const response of [await route.GET(new Request(url)), await route.POST(scopeRequest())]) {
+      assert.equal(response.status, 401)
+      assertPrivate(response)
+    }
+    authenticated = true
+    const response = await route.POST(scopeRequest())
+    assert.equal(response.status, 200)
+    assertPrivate(response)
+    assert.match((await response.json()).scope, /^[a-f0-9]{64}$/)
   })
   await check('a failed or inconsistent continuation never resolves as complete', async () => {
     const firstRows = Array.from({ length: 100 }, (_, i) => ({ id: `request-${i}` }))

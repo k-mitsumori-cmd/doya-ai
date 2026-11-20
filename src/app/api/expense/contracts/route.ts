@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createOnce, isOnceResolve, onceOperationId, resolveOnce, type OnceScope } from '@/lib/submit-once'
+import { assertOnceScope, createOnce, isOnceResolve, isOnceScopeRequest, onceOperationId, onceScopeKey, resolveOnce, type OnceScope } from '@/lib/submit-once'
 import { audit, ExpenseHttpError, readJson, withExpense } from '@/lib/expense/access'
 import { CATEGORIES } from '@/lib/expense/constants'
 import { contractDto } from '@/lib/expense/dto'
@@ -46,6 +46,8 @@ export async function POST(req: NextRequest) {
     const body = await readJson(req)
     const fail = (status: number, message: string) => new ExpenseHttpError(status, message)
     const once: OnceScope = { family: 'expense-contract', organizationId: ctx.organizationId, actorId: ctx.userId, operationId: onceOperationId(body, fail), fail }
+    if (isOnceScopeRequest(body)) return NextResponse.json({ scope: onceScopeKey(once) }, { headers: { 'Cache-Control': 'private, no-store' } })
+    assertOnceScope(body, once)
     const find = (db: Prisma.TransactionClient) => (id: string) => db.expenseContract.findFirst({ where: { id, organizationId: ctx.organizationId }, select: { id: true } })
     // 通信に失敗した送信が保存されたかを確かめる（登録はしない）
     if (isOnceResolve(body)) return NextResponse.json({ once: await prisma.$transaction((tx) => resolveOnce(tx, once, find(tx))) })

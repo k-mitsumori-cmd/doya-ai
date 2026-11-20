@@ -11,6 +11,7 @@ import { DEFAULT_CONTRACT_NO_HEAD } from '@/lib/income/contract-number'
 import { addMonthsYm, daysInMonth, formatYmd, isYmd, parseYmd, todayJst } from '@/lib/income/dates'
 import { buildSchedule } from '@/lib/income/schedule'
 import { submitOnce, type OnceResolutionState } from '@/lib/submit-once-client'
+import { useOnceFormScope } from '@/lib/use-once-form-scope'
 import {
   BILLING_CYCLE_LABEL, CONTRACT_STATUS_LABEL, CONTRACT_STATUS_ORDER, CONTRACT_TYPE_LABEL, ISSUE_TIMING_LABEL, PRORATE_LABEL,
   Button, Card, CheckRow, emptyLine, ErrorText, Field, inputCls, LineItemsEditor, linesToPayload, errMsg, fetchJson, periodText, s, safeTotals, toast,
@@ -73,6 +74,7 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
   const [newClientName, setNewClientName] = useState('')
   const [clientsLoaded, setClientsLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
+  const readScope = useOnceFormScope(() => fetchJson<{ scope: string }>('/api/income/contracts', { method: 'POST', body: { onceAction: 'scope' } }).then((r) => r.scope), !initial)
   const saveLock = useRef(createSaveLock()).current
   const [error, setError] = useState<string | null>(null)
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -175,8 +177,9 @@ export default function ContractForm({ initial, defaultClientId, onSaved }: { in
       const d = await submitOnce({
         scope: 'income-contract',
         input: body,
-        send: (operationId) => fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body: { ...body, operationId } }),
-        resolve: (operationId) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/contracts', { method: 'POST', body: { operationId, onceAction: 'resolve' } }).then((r) => r.once.state),
+        readScope,
+        send: (operationId, operationScope) => fetchJson<{ id: string }>('/api/income/contracts', { method: 'POST', body: { ...body, operationId, operationScope } }),
+        resolve: (operationId, operationScope) => fetchJson<{ once: { state: OnceResolutionState } }>('/api/income/contracts', { method: 'POST', body: { operationId, operationScope, onceAction: 'resolve' } }).then((r) => r.once.state),
       })
       saveLock.close()
       markClean()

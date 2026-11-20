@@ -8,6 +8,8 @@ import { getDomainWithoutSuffix } from 'tldts'
 import { domainToUnicode } from 'node:url'
 import { geminiGenerateJson } from '@seo/lib/gemini'
 import { safeFetchText } from '@/lib/net/safe-fetch'
+import { profileToPromptBlock, UNKNOWN, type ServiceProfile } from '@/lib/aio/service-profile'
+import type { PageSignals } from '@/lib/aio/site-reader'
 
 // The shared fetcher pins the validated IP across each hop and bounds the
 // decompressed HTML before we inspect its title.
@@ -64,10 +66,11 @@ function decodeEntities(s: string): string {
  * 3) Geminiで「サフィックス等を除いた短いサービス名」に整形
  * 失敗時は全てフォールバック値に落ちる（quick-start を止めない）。
  */
-export async function deriveBrandFromUrl(url: string): Promise<{ brandName: string; siteTitle?: string }> {
+export async function deriveBrandFromUrl(url: string, topPage?: Pick<PageSignals, 'siteName' | 'title'> | null): Promise<{ brandName: string; siteTitle?: string }> {
   const fallback = domainToBrandName(url)
   let title = ''
-  try {
+  if (topPage) title = decodeEntities(topPage.siteName || topPage.title || '')
+  else try {
     // SSRF対策済みの安全フェッチ（内部/プライベート宛先・非http(s)・危険なリダイレクトを拒否）
     const html = await safeFetchHtml(url)
     const og = html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i)
@@ -112,36 +115,48 @@ function fallbackPrompts(brandName: string): string[] {
   ]
 }
 
-/**
- * サービス名＋URLから、AI可視性を測るための監視プロンプトとカテゴリを生成する。
- * - prompts: 一般ユーザーがAIに尋ねそうな「このサービスが登場しうる質問」。固有ブランド名は含めず汎用的に。
- * - category: 推定カテゴリ（例: マーケティングAI SaaS）。
- */
-export async function suggestBrandSetup(input: { brandName: string; url?: string | null }): Promise<BrandSetupSuggestion> {
-  const brandName = (input.brandName || '').trim()
-  const url = (input.url || '').trim()
-  if (!brandName) return { category: null, aliases: [], competitors: [], prompts: [] }
-
-  const prompt = `あなたはAEO（AI可視性最適化）の専門家です。あるサービスについて、生成AI（ChatGPT等）での露出を測定するための情報を作ります。
+export function buildSuggestPrompt(input: { brandName: string; url: string; profile: ServiceProfile | null; siteContext: string | null }): string {
+  const { brandName, url, profile, siteContext } = input
+  return `あなたはAEO（AI可視性最適化）の専門家です。あるサービスについて、生成AI（ChatGPT等）での露出を測定するための情報を作ります。
 
 # 対象サービス
 名称: ${brandName}
 URL: ${url || '(未入力)'}
 
-# やること
-1. このサービスのカテゴリを推定する（例:「マーケティングAI SaaS」「会計クラウド」など簡潔に）。
-2. このサービス名の表記ゆれ・別名(aliases)を挙げる（カタカナ⇔英語表記、略称、スペースや記号の有無の違いなど）。無ければ空配列。
-3. 同じカテゴリの主要な競合サービス名(competitors)を5〜8個、実在の固有名で挙げる（Share of Voice比較の対象になる。対象サービス自身は含めない）。
-4. 一般ユーザーが生成AIに尋ねたときに、このサービスが“おすすめ候補として登場しうる”自然な日本語の質問を8つ作る。
+# 読み取ったサービスの内容（これが唯一の事実の根拠）
+${profile ? profileToPromptBlock(profile) : '(読み取れていません)'}
+${siteContext ? `\n# サイトから読み取った文章（抜粋）\n${siteContext.slice(0, 4000)}\n` : ''}
+# 最重要ルール
+- サービス名・URLの文字や語感から、サービスの内容を推測してはいけない。業種・対象の客・用途は、上の「読み取ったサービスの内容」と「読み取った文章」に書かれたことだけを使う。
+- 「${UNKNOWN}」の項目は、質問や競合の根拠にしない。
+- 読み取った内容が、営業・CRM・SaaS など別の分野に見えても、書かれていなければ使わない。
 
-# 質問の作り方（重要）
-- 8問は**それぞれ異なる切り口**にする（用途・対象者・課題・予算・地域・比較軸・購入検討段階など）。似たような質問を並べない。広くカバーする。
-- 例の切り口: 「初心者向け」「法人向け」「特定職種/業種向け」「無料・安いもの」「比較・ランキング」「特定の悩みの解決」「導入事例」「他社からの乗り換え」など、対象サービスの幅に合わせて分散させる。
-- 質問文には固有のブランド名・企業名（対象サービス名も他社名も）を含めない。カテゴリの一般的な相談にする。
+# やること
+1. このサービスのカテゴリを、読み取った業種から簡潔に答える（例:「人材紹介会社向けの面談設定代行」）。業種が「${UNKNOWN}」なら null。
+2. このサービス名の表記ゆれ・別名(aliases)を挙げる（カタカナ⇔英語表記、略称、スペースや記号の有無の違いなど）。無ければ空配列。
+3. 競合サービス名(competitors)を、読み取った業種・競合の種類に合う実在の固有名だけで挙げる（最大8個）。確信できる物だけにし、無理に埋めない。業種が「${UNKNOWN}」なら空配列。対象サービス自身は含めない。
+4. 読み取った対象の客が、生成AIに尋ねそうな自然な日本語の質問を8つ作る。
+
+# 質問の作り方
+- 8問は**それぞれ異なる切り口**にする（課題・対象者・業種・予算・比較軸・検討段階など）。似た質問を並べない。
+- 質問文には固有のブランド名・企業名（対象サービス名も他社名も）を含めない。
+- 質問は、読み取った「何のサービスか」「誰向けか」の範囲に収める。別の分野の質問を作らない。
 - 「おすすめは？」「比較したい」など、検索代わりにAIへ尋ねる体裁にする。
 
 # 出力（JSONのみ）
-{"category": string, "aliases": string[], "competitors": string[], "prompts": string[8]}`
+{"category": string|null, "aliases": string[], "competitors": string[], "prompts": string[8]}`
+}
+
+/**
+ * サービス名＋URLから、AI可視性を測るための監視プロンプトとカテゴリを生成する。
+ * - prompts: 一般ユーザーがAIに尋ねそうな「このサービスが登場しうる質問」。固有ブランド名は含めず汎用的に。
+ * - category: 推定カテゴリ（例: マーケティングAI SaaS）。
+ */
+export async function suggestBrandSetup(input: { brandName: string; url?: string | null; profile?: ServiceProfile | null; siteContext?: string | null }): Promise<BrandSetupSuggestion> {
+  const brandName = (input.brandName || '').trim()
+  const url = (input.url || '').trim()
+  if (!brandName) return { category: null, aliases: [], competitors: [], prompts: [] }
+  const prompt = buildSuggestPrompt({ brandName, url, profile: input.profile ?? null, siteContext: input.siteContext ?? null })
 
   try {
     const r = await geminiGenerateJson<{ category?: string; aliases?: string[]; competitors?: string[]; prompts?: string[] }>({ prompt } as any)
@@ -154,13 +169,16 @@ URL: ${url || '(未入力)'}
     const competitors = Array.isArray(r?.competitors)
       ? r!.competitors!.filter((s) => typeof s === 'string' && s.trim() && s.trim() !== brandName).map((s) => s.trim()).slice(0, 8)
       : []
+    // 読み取った内容がある場合、名前だけの汎用質問に黙って切り替えない（誤った質問を作らず、失敗として扱う）
+    if (!prompts.length && input.profile) throw new Error('prompt generation returned no prompts')
     return {
       category: (typeof r?.category === 'string' && r.category.trim()) ? r.category.trim().slice(0, 120) : null,
       aliases,
       competitors,
       prompts: prompts.length ? prompts : fallbackPrompts(brandName),
     }
-  } catch {
+  } catch (error) {
+    if (input.profile) throw error
     return { category: null, aliases: [], competitors: [], prompts: fallbackPrompts(brandName) }
   }
 }

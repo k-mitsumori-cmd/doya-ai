@@ -366,7 +366,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
         setExtractionIntent(null); setIntentReady(true); toast.success('前の操作を終了しました', { id: operation.tid }); return
       }
       if (data.state === 'failed' && ['no_hits', 'api_error', 'collection_timeout'].includes(data.code)) {
-        setErrorMsg(data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。' : data.code === 'collection_timeout' ? '企業データの取得が時間内に完了しませんでした。時間をおいてお試しください。' : '企業データAPIから応答がありませんでした。時間をおいてお試しください。')
+        setErrorMsg(data.code === 'no_hits' ? '該当する企業が見つかりませんでした。検索条件を緩めてお試しください。' : data.code === 'collection_timeout' ? '企業データの取得が時間内に完了しませんでした。時間をおいてお試しください。' : '企業データを取得できなかったため、該当する企業があるか確認できませんでした。時間をおいてお試しください。')
       }
       const quota = result.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data.code)
       if (quota) {

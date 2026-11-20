@@ -9,6 +9,8 @@ const ts = createRequire(repo + '/package.json')('typescript');
 const source = fs.readFileSync(repo + '/src/lib/doyalist/collect/index.ts', 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 let now = 0;
+let corporateFails = false;
+let gbizStatus = 200;
 const calls = [];
 const moduleExports = {};
 vm.runInNewContext(compiled, {
@@ -18,11 +20,12 @@ vm.runInNewContext(compiled, {
   require(name) {
     if (name === './corporate-number') return { async searchCorporateNumber(params) {
       calls.push(['corporate', params.timeoutMs]);
+      if (corporateFails) throw new Error('Synthetic provider unavailable');
       now += 60;
       return [{ name: 'Example', corporateNumber: '1234567890123' }];
     } };
     if (name === './gbizinfo') return {
-      async searchGbizInfo() { calls.push(['gbiz']); return { companies: [], status: 200 }; },
+      async searchGbizInfo() { calls.push(['gbiz']); return { companies: [], status: gbizStatus }; },
       async getGbizCompanyDetailsBatch() { calls.push(['details']); return new Map(); },
     };
     if (name === './prefecture-codes') return { AREA_TO_PREFECTURES: {}, PREFECTURE_TO_CODE: {} };
@@ -41,5 +44,22 @@ vm.runInNewContext(compiled, {
   assert.equal(result.apiOk, true);
   assert.equal(result.budgetExhausted, true);
   assert.equal(JSON.stringify(calls), JSON.stringify([['corporate', 50]]));
+  assert.equal(result.providerFailed, false);
   console.log('PASS Doyalist collection preserves partial results and skips calls after budget');
+
+  const options = { criteria: { keywords: ['first'] }, maxResults: 1, enrich: false };
+  corporateFails = true;
+  const unavailable = await moduleExports.collectCompaniesDetailed(options);
+  assert.equal(unavailable.apiOk, true);
+  assert.equal(unavailable.zeroHits, true);
+  assert.equal(unavailable.providerFailed, true);
+  gbizStatus = 503;
+  const failed = await moduleExports.collectCompaniesDetailed(options);
+  assert.equal(failed.apiOk, false);
+  assert.equal(failed.providerFailed, true);
+  corporateFails = false;
+  const partial = await moduleExports.collectCompaniesDetailed(options);
+  assert.equal(partial.companies.length, 1);
+  assert.equal(partial.providerFailed, true);
+  console.log('PASS Doyalist collection distinguishes provider failure from empty results');
 })().catch(error => { console.error(error); process.exitCode = 1; });

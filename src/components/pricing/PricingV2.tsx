@@ -265,7 +265,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           </details>
           <details>
             <summary>人数はどう数えますか</summary>
-            <p>ドヤAIを使う会社のメンバーの人数です。申し込みのときに人数を選び、あとから増やせます。増やした分は、次の請求日までの日割りで計算します。人数を減らしたときの返金はありません。</p>
+            <p>会社でドヤAIを操作するメンバーが対象です。個別ツールだけを操作するメンバーも1人につき1席を使います。閲覧専用ゲストは購入席を消費しません。カード払いのチーム契約では、オーナーが増席を確定すると、次の請求日までの差額を日割りで請求します。招待や参加だけで自動的に増席・請求されることはありません。人数を減らしたときの返金はありません。</p>
           </details>
           <details>
             <summary>{FREE_MAX_MEMBERS}人以下の会社でもチームを申し込めますか</summary>
@@ -277,7 +277,7 @@ export default function PricingV2({ view, canceled, inShell = false, serverSigne
           </details>
           <details>
             <summary>解約はいつでもできますか</summary>
-            <p>はい。契約の管理画面から手続きできます。月払いはその月の終わりまで、年払いはその年の終わりまで使えます。</p>
+            <p>はい。契約の管理画面から手続きできます。月払い・年払いとも、解約後は現在の請求期間の終了日まで使えます。</p>
           </details>
         </div>
       </section>

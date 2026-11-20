@@ -125,11 +125,19 @@ function fixture(service, { failMember = false, conflictOnce = false, existingSl
           aioOrganization: { create: async ({ data }) => { sequence.push('create'); return { id: 'org', ...data }; } },
           aioMember: { create: async () => ({}) },
           aioBrandProfile: { create: async ({ data }) => { saved.profiles.push(data); } },
+          systemSetting: { upsert: async () => ({}) },
           aioPrompt: { createMany: async ({ data }) => { saved.prompts.push(...data); } },
         });
         return { state: 'completed', organizationId: org.id, slug: org.slug };
       },
     },
+    '@/lib/aio/site-analysis': {
+      analyzeSite: async () => ({ read: { ok: true, context: 'synthetic site text', pages: [], bodyChars: 500, totalChars: 500, sources: [], pagesRead: 0 }, profile: { summary: 'synthetic service summary for the test', audience: '不明', industry: '不明', competitorKind: '不明', evidence: {}, userProvided: false }, usable: true }),
+      buildSiteReadRecord: () => ({}),
+      siteReadKey: (id) => 'aio-site-read:v1:' + id,
+    },
+    '@/lib/aio/site-reader': { readSiteForAio: async () => ({ ok: true, context: 'synthetic site text', pages: [] }), UNREADABLE_MESSAGE: 'x', unreadableDetail: () => 'x' },
+    '@/lib/aio/service-profile': { profileFromUser: () => null },
     '@/lib/aio/suggest': {
       normalizeUrl: (value) => typeof value === 'string' && value.startsWith('https://') ? value : null,
       deriveBrandFromUrl: async () => { sequence.push('derive'); return { brandName: 'Acme' }; },

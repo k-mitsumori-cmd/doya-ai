@@ -41,6 +41,8 @@ export interface CollectResult {
   zeroHits: boolean
   /** Some provider calls were skipped after the request time budget expired. */
   budgetExhausted: boolean
+  /** At least one attempted search provider could not complete. */
+  providerFailed: boolean
 }
 
 export async function collectCompanies(options: CollectOptions): Promise<CollectedCompany[]> {
@@ -65,6 +67,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
 
   const allCompanies: CollectedCompany[] = []
   let anyApiSuccess = false
+  let providerFailed = false
   let budgetExhausted = false
   const deadline = Date.now() + Math.max(0, budgetMs)
   const remainingMs = () => Math.max(0, deadline - Date.now())
@@ -110,6 +113,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
             })
           }
         } catch {
+          providerFailed = true
           console.error('[collect] Corporate number API error')
         }
       }
@@ -167,6 +171,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
             })
 
             if (status === 200 || status === 404) anyApiSuccess = true
+            else providerFailed = true
             if (companies.length === 0) break
 
             for (const c of companies) {
@@ -189,6 +194,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
             // limit=1000 だとレスポンスが重いので少し長めに待つ
             if (remainingMs() > 150) await new Promise((r) => setTimeout(r, 150))
           } catch {
+            providerFailed = true
             console.error('[collect] gBizINFO API error (page', page, ', pref', pref, ')')
             break
           }
@@ -249,6 +255,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
     apiOk: anyApiSuccess,
     zeroHits: deduplicated.length === 0,
     budgetExhausted,
+    providerFailed,
   }
 }
 

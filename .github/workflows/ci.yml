@@ -43,10 +43,28 @@ jobs:
       - name: Health-check report tests (offline)
         run: npm run test:health-check
 
-      - name: Install PostgreSQL for isolated operation regression
+      - name: Ensure PostgreSQL and PDF regression dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql poppler-utils
+          has_postgres() {
+            local bin
+            for bin in /usr/lib/postgresql/*/bin; do
+              if [[ -x "$bin/initdb" && -x "$bin/pg_ctl" && -x "$bin/createdb" && -x "$bin/psql" ]]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+          has_poppler() {
+            command -v pdfinfo >/dev/null && command -v pdftotext >/dev/null && command -v pdffonts >/dev/null
+          }
+          packages=()
+          has_postgres || packages+=(postgresql)
+          has_poppler || packages+=(poppler-utils)
+          if (( ${#packages[@]} )); then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends "${packages[@]}"
+          fi
+          has_postgres && has_poppler
 
       - name: Native PDF and image dependencies (synthetic input, no providers)
         run: npx tsx --test scripts/regression/native-pdf-image.test.ts

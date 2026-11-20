@@ -11,7 +11,7 @@
 // ⚠️ 必ず userId で絞る。他人のサイト・案は null を返す（存在するかどうかも漏らさない）。
 import type { PrismaClient } from '@prisma/client'
 import type { SiteProfile } from '@/lib/asklink/types'
-import { ctr } from './schema'
+import { ctr, jstDay } from './schema'
 import { embedCode, toPopupDto, toSiteDto, type PopupDto, type SiteDto } from './dto'
 import { emptyTotals, sinceDay, sumTotals, ymd, type DailyPoint, type StatTotals } from './stats'
 
@@ -24,7 +24,7 @@ export async function totalsByPopup(db: PopupDb, popupIds: string[], days: numbe
   if (popupIds.length === 0) return out
   const rows = await db.popupStat.groupBy({
     by: ['popupId'],
-    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days, now) } },
+    where: { popupId: { in: popupIds }, day: { gte: sinceDay(days, now), lte: jstDay(now) } },
     _sum: { impressions: true, clicks: true, closes: true },
   })
   for (const r of rows) {
@@ -127,7 +127,7 @@ export async function getPopupDaily(db: PopupDb, userId: string, popupId: string
   if (!popup) return null
   const since = sinceDay(days, now)
   const rows = await db.popupStat.findMany({
-    where: { popupId: popup.id, day: { gte: since } },
+    where: { popupId: popup.id, day: { gte: since, lte: jstDay(now) } },
     select: { day: true, target: true, impressions: true, clicks: true, closes: true },
   })
   const map = new Map<string, DailyPoint>()

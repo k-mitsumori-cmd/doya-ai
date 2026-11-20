@@ -15,7 +15,7 @@
  * コピーして使う（決まりの文書: docs/slack-standard.md）。コピー先では下の版を書き換えない。
  */
 
-export const SLACK_NOTIFY_VERSION = '1.2.1'
+export const SLACK_NOTIFY_VERSION = '1.3.0'
 
 export type SlackKind = 'error' | 'billing' | 'usage' | 'inquiry' | 'report'
 export type SlackSeverity = 'urgent' | 'action' | 'info'
@@ -318,6 +318,40 @@ export function redactSecrets(input: string): string {
     .replace(/\b((?:access_?token|refresh_?token|token|secret|password|passwd|api[_-]?key|apikey|client_secret)\s*[=:]\s*)("?)[^\s,;&`"'<>]+\2/gi, '$1[非表示]')
     .replace(/(https?:\/\/[^\s<>|`"'?#]+)[?#][^\s<>|`"']*/gi, '$1?[非表示]')
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, (m) => maskEmail(m))
+}
+
+/**
+ * 利用者の文章から、人や会社を特定できる語を決まった印に置きかえる（1.3.0 で追加）。
+ * 置きかえるもの: メールアドレス、URL、電話番号、@ハンドル、会社名（株式会社など）、敬称つきの名前。
+ * 見つけた語は広めに伏せる（前の文字まで巻き込むことがある）。ひらがなだけの名前は、
+ * 文の先頭か区切りの直後にあり、さん・ちゃんが続く場合だけ伏せる。取りこぼしゼロは保証しない。
+ * 切る前に呼ぶこと（切ったあとだと、語の途中で切れて印が付かない）。
+ */
+export function maskPersonalText(input: string | null | undefined): string {
+  // メールは redactSecrets が先頭2文字を残す形にしてしまうので、その前に印へ置きかえる。
+  const t = redactSecrets((input ?? '').replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[メール]'))
+  return t
+    .replace(/(?:https?:\/\/|www\.)[^\s<>"'）)」]+/gi, '[URL]')
+    .replace(/\[Webhook 非表示\]/g, '[URL]')
+    .replace(/(?:\+\s?81[-\s]?|\b0)\d[\d\-\s()（）]{7,14}\d/g, (m) => {
+      const digits = m.replace(/\D/g, '').length
+      return digits >= 10 && digits <= 13 ? '[電話]' : m
+    })
+    .replace(/[@＠][A-Za-z0-9_.]{2,30}/g, '[ハンドル]')
+    .replace(/(?:株式会社|有限会社|合同会社|合資会社|合名会社|一般社団法人|一般財団法人|医療法人|社会福祉法人|（株）|\(株\))[^\s、。，,.!！?？「」『』（）()]{0,20}/g, '[会社名]')
+    .replace(/[^\s、。，,.!！?？「」『』（）()]{1,20}(?:株式会社|有限会社|合同会社)/g, '[会社名]')
+    .replace(/[A-Za-z0-9&.\- ]{1,30}\b(?:Inc|Corp|Co|Ltd|LLC|GmbH)\b\.?(?:,? ?(?:Ltd|Inc)\.?)?/g, '[会社名]')
+    .replace(/[\p{Script=Han}\p{Script=Katakana}ー々A-Za-z]{1,10}(?:さん|様|さま|氏|くん|君|ちゃん|殿|部長|課長|社長|係長|先輩|先生)/gu, '[氏名]')
+    .replace(/(^|[\s、。「『（(])[\p{Script=Hiragana}]{2,5}(?:さん|ちゃん)/gu, '$1[氏名]')
+}
+
+/** 抜粋（既定80文字）を伏せ字つきで返す。伏せてから切り、改行は空白にまとめ、エスケープ済みで返す。 */
+export function excerptMasked(text: string | null | undefined, max = 80): string {
+  const raw = (text ?? '').replace(/\s+/g, ' ').trim()
+  if (!raw) return '（未記入）'
+  const masked = Array.from(maskPersonalText(raw))
+  const cut = masked.length > max ? `${masked.slice(0, max).join('')}…（全${Array.from(raw).length}文字）` : masked.join('')
+  return escapeSlackText(cut)
 }
 
 /** 「N人目」の表記。数えられなかったときは null を渡す。 */
