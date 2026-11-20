@@ -234,7 +234,7 @@ function FreeRangeCard() {
       <rect width="320" height="200" fill="#f5f9ff" />
       <g fontFamily="Inter, 'Noto Sans JP', sans-serif" fontWeight="700">
         <text x="24" y="38" fontSize="12" fill="#475569">無料プラン</text>
-        {[0, 1, 2].map((i) => (
+        {[0].map((i) => (
           <g key={i} transform={`translate(${24 + i * 56},50)`}>
             <rect width="46" height="58" rx="8" fill="#fff" stroke="#0066ff" strokeWidth="2" />
             <rect x="8" y="10" width="30" height="5" rx="2.5" fill="#0066ff" />
@@ -243,8 +243,7 @@ function FreeRangeCard() {
             <rect x="8" y="38" width="28" height="3" rx="1.5" fill="#d6e4ff" />
           </g>
         ))}
-        <text x="200" y="88" fontSize="40" fill="#0066ff" fontWeight="800">3</text>
-        <text x="228" y="88" fontSize="14" fill="#0a1f44">本 / 月</text>
+        <text x="90" y="86" fontSize="22" fill="#0066ff" fontWeight="800">まず無料で試せる</text>
         <g fontSize="12" fill="#0a1f44">
           {['構成の作成', '章ごとの執筆と点検', '書き出し'].map((x, i) => (
             <g key={x} transform={`translate(24,${132 + i * 22})`}>
