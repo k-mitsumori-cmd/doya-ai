@@ -138,16 +138,22 @@ export function safeRuntimeSource(stack: string | undefined): string {
   return 'サーバー処理（詳細はログ）';
 }
 
-/** Node.js deprecations are logged for maintenance, without paging operators. */
-function isDeprecationWarning(args: unknown[]): boolean {
+/**
+ * Node.js deprecation and experimental-feature warnings are logged for maintenance, without paging operators.
+ * 2026-11-22: Node 24 の ExperimentalWarning が、新しい実行環境が立ち上がるたびに1回 console.error に出て、
+ * 処理は成功しているのに「要対応のエラー」として通知されていた（persona-purge の定期処理で 2時間おきに通知）。
+ * 警告の本文はこれまでどおりログに残し、通知だけ止める。
+ */
+const NODE_PROCESS_WARNING_NAMES = ['DeprecationWarning', 'ExperimentalWarning'];
+function isNodeProcessWarning(args: unknown[]): boolean {
   // Do not hide a separate error attached to a warning message.
   if (args.length !== 1) return false;
   const warning = args[0];
   if (warning instanceof Error) {
-    try { return warning.name === 'DeprecationWarning'; } catch { return false; }
+    try { return NODE_PROCESS_WARNING_NAMES.includes(warning.name); } catch { return false; }
   }
   return typeof warning === 'string'
-    && /^(?:\(node:\d+\)\s+)?(?:\[DEP\d+\]\s+)?DeprecationWarning:/.test(warning);
+    && /^(?:\(node:\d+\)\s+)?(?:\[[A-Z0-9_-]+\]\s+)?(?:DeprecationWarning|ExperimentalWarning):/.test(warning);
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
@@ -251,7 +257,7 @@ export function installRuntimeAlerts(): void {
   installed = true;
   console.error = (...args: unknown[]) => {
     originalError(...args);
-    if (sending.getStore() || isEmptyConsoleCall(args) || isDeprecationWarning(args)) return;
+    if (sending.getStore() || isEmptyConsoleCall(args) || isNodeProcessWarning(args)) return;
     // Capture our own call site; the original error may contain private text.
     const stack = new Error().stack;
     const source = safeRuntimeSource(stack);
