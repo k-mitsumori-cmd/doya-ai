@@ -157,7 +157,7 @@ function isNodeProcessWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[]; warningKind?: string | null } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[]; warningKind?: string | null; clientArea?: string | null; clientReason?: string | null } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -199,6 +199,9 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const stackLineCount = Number.isSafeInteger(options.stackLineCount) ? Math.max(0, Math.min(20, options.stackLineCount!)) : 0;
       const stackTraceLimit = Number.isSafeInteger(options.stackTraceLimit) ? Math.max(0, Math.min(100, options.stackTraceLimit!)) : -1;
       const firstArgLength = ['non-string', 'empty', '1-32', '33-128', '129-512', '513+'].includes(options.firstArgLength ?? '') ? options.firstArgLength : 'unknown';
+      // 端末の報告の画面と種類（2026-11-22）：呼び出し側で決まった一覧に照らした値を、ここでも形だけ確かめる
+      const clientArea = options.clientReported && typeof options.clientArea === 'string' && /^[a-z0-9-]{1,32}$/.test(options.clientArea) ? options.clientArea : null;
+      const clientReason = options.clientReported && typeof options.clientReason === 'string' && /^[A-Za-z-]{1,40}$/.test(options.clientReason) ? options.clientReason : null;
       // 種類は決まった名前だけを通す（中身は持たない）
       const kind = (WARNING_KINDS as readonly string[]).includes(options.warningKind ?? '') ? options.warningKind as WarningKind : null;
       const frameKinds = (options.frameKinds ?? []).filter(kind =>
@@ -208,6 +211,8 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       console.warn('[runtime-alert] delivery', {
         incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, firstArgLength, family, stackState, frameKinds,
         ...(kind ? { warningKind: kind } : {}),
+        ...(clientArea ? { clientArea } : {}),
+        ...(clientReason ? { clientReason } : {}),
         stackLineCount, stackHasLocation: options.stackHasLocation === true,
         stackExternalLocation: options.stackExternalLocation === true,
         stackScriptLocation: options.stackScriptLocation === true,
@@ -225,6 +230,8 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           '環境：本番',
           `発生箇所：${key}`,
           ...(kind ? [`種類：${kind}（既知の警告の形。中身は送っていません）`] : []),
+          ...(clientArea ? [`画面：${clientArea === 'top' ? 'トップページ' : clientArea === 'other' ? 'その他' : '/' + clientArea}`] : []),
+          ...(clientReason ? [`失敗の種類：${clientReason}（種類の名前だけ。本文は送っていません）`] : []),
           `発生日時：${new Date(now).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
           `照合ID：${incidentId}`,
           `照合指紋：${signature}`,

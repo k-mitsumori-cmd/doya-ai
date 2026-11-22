@@ -20,6 +20,7 @@ function pass(name){results.push({name,pass:true});}
 let ipQuota='allowed';const ipQuotaCalls=[];const dailyQuotaMock={clientIp:()=>'203.0.113.7',quotaSubject:v=>'subject-'+v,consumeDailyQuota:async(scope,subject,limit)=>{ipQuotaCalls.push({scope,subject,limit});return ipQuota;}};
 const responseMock={NextResponse:{json:(body,options)=>({body,status:options?.status??200,headers:options?.headers})}};
 const json=load('src/lib/operational-json.ts').exports;
+const clientContext=load('src/lib/client-error-context.ts',{'./services':{SERVICES:[{href:'/banner'},{href:'/seo'},{href:'/aio'}]}}).exports;
 function req(body,headers={}){const r=new Request('https://doya.test/api/operational-error',{method:'POST',headers,body});r.nextUrl=new URL(r.url);return r;}
 async function main(){
   for(const [name,raw,status] of [['null','null',400],['array','[]',400],['primitive','1',400],['invalid','{',400],['ascii-limit','x'.repeat(1025),413],['byte-limit',JSON.stringify({x:'あ'.repeat(400)}),413]]){
@@ -53,11 +54,11 @@ async function main(){
   let failCalls=0;
   const broken=load('src/lib/operational-error-limit.ts',{'./prisma':{prisma:{$queryRaw:async()=>{failCalls++;throw Error('private-canary');}}}}).exports;
   assert.equal(await broken.claimClientErrorReport('browser','javascript'),'unavailable');assert.equal(await broken.claimClientErrorReport('browser','render'),'unavailable');assert.equal(failCalls,1);pass('DB outage fails closed with local backoff');
-  const preview=load('src/app/api/operational-error/route.ts',{'next/server':responseMock,'@/lib/operational-json':json,'@/lib/server-daily-quota':dailyQuotaMock,'@/lib/operational-error-limit':{claimClientErrorReport:async()=>{throw Error('preview DB write');}},'@/lib/runtime-alert':{reportRuntimeFailure:async()=>{throw Error('preview send');}}},{VERCEL_ENV:'preview'}).exports;
+  const preview=load('src/app/api/operational-error/route.ts',{'next/server':responseMock,'@/lib/operational-json':json,'@/lib/server-daily-quota':dailyQuotaMock,'@/lib/client-error-context':clientContext,'@/lib/operational-error-limit':{claimClientErrorReport:async()=>{throw Error('preview DB write');}},'@/lib/runtime-alert':{reportRuntimeFailure:async()=>{throw Error('preview send');}}},{VERCEL_ENV:'preview'}).exports;
   assert.equal((await preview.POST(req('{"kind":"render"}',{origin:'https://doya.test'}))).status,200);pass('preview neither sends nor consumes production DB budget');
   const sent=[];let admission='allowed',intakeCalls=0;
   const route=load('src/app/api/operational-error/route.ts',{
-    'next/server':responseMock,'@/lib/operational-json':json,'@/lib/server-daily-quota':dailyQuotaMock,
+    'next/server':responseMock,'@/lib/operational-json':json,'@/lib/server-daily-quota':dailyQuotaMock,'@/lib/client-error-context':clientContext,
     '@/lib/operational-error-limit':{claimClientErrorReport:async(p,k)=>{intakeCalls++;sent.push({budget:p,kind:k});return admission;}},
     '@/lib/runtime-alert':{reportRuntimeFailure:async(...x)=>sent.push({report:x})},
     '@/lib/heisha-runtime-alert':{reportHeishaFailure:async(...x)=>sent.push({heisha:x})}
@@ -72,6 +73,47 @@ async function main(){
     assert.equal((await route.POST(req(body,headers))).status,status);pass(name);
   }
   assert.equal(intakeCalls,3);assert(!JSON.stringify(sent).includes('canary'));assert(sent.some(x=>x.report?.[1]?.clientReported));pass('only validated fixed labels reach low-trust reporting');
+  // 2026-11-22: 端末の報告に足す画面と種類は、決まった一覧の名前だけ。本文・URL の全体・一覧に無い値は 'other' か送らない。
+  {
+    const lastReport=()=>sent.filter(x=>x.report).at(-1).report[1];
+    for(const[name,body,area,reason]of[
+      ['known area and reason','{"kind":"promise","area":"banner","reason":"TypeError"}','banner','TypeError'],
+      ['top page','{"kind":"promise","area":"top","reason":"AbortError"}','top','AbortError'],
+      ['unknown area becomes other','{"kind":"promise","area":"private-canary","reason":"Error"}','other','Error'],
+      ['path text becomes other','{"kind":"promise","area":"banner/dashboard?email=private-canary@example.com","reason":"Error"}','other','Error'],
+      ['unknown reason becomes other','{"kind":"promise","area":"seo","reason":"private-canary"}','seo','other'],
+      ['object values become other','{"kind":"promise","area":{"x":"private-canary"},"reason":["private-canary"]}','other','other'],
+      ['missing values stay absent','{"kind":"promise"}',null,null],
+    ]){
+      admission='allowed';ipQuota='allowed';
+      const r=await route.POST(req(body,{origin:'https://doya.test'}));assert.equal(r.status,200,name);
+      const o=lastReport();assert.equal(o.clientArea,area,name);assert.equal(o.clientReason,reason,name);
+      assert(!JSON.stringify(o).includes('private-canary'),name);pass(name);
+    }
+    admission='allowed';
+    await route.POST(req('{"kind":"promise","area":"banner","reason":"TypeError"}',{'x-client-error-token':'test-native'}));
+    assert.equal(lastReport().clientArea,null);pass('native reports never carry a browser area');
+    assert.equal(clientContext.normalizeClientErrorArea('x'.repeat(41)),'other');assert.equal(clientContext.normalizeClientErrorArea('BANNER'),'other');
+    assert.equal(clientContext.normalizeClientErrorReason('TypeError'),'TypeError');assert.equal(clientContext.normalizeClientErrorReason(undefined),null);
+    pass('area and reason normalizers accept only fixed names');
+  }
+  {
+    // runtime-alert: 名前だけが通知と診断の行に出る。形の合わない値は出さない。端末の報告でなければ出さない。
+    for(const[name,opts,expectArea,expectReason]of[
+      ['client area and reason are shown',{clientReported:true,clientArea:'banner',clientReason:'TypeError'},'/banner','TypeError'],
+      ['top area label',{clientReported:true,clientArea:'top',clientReason:'non-error'},'トップページ','non-error'],
+      ['malformed values are dropped',{clientReported:true,clientArea:'private canary/x',clientReason:'private canary: message'},null,null],
+      ['server failures ignore client fields',{clientArea:'banner',clientReason:'TypeError'},null,null],
+    ]){
+      const notifications=[],diagnostics=[];
+      const runtime=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:()=>{}},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'},'./runtime-alert-limit':{claimRuntimeAlert:async()=>({state:'allowed'}),releaseRuntimeAlertClaim:async()=>{}}},{VERCEL_ENV:'production'},{console:{error(){},warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{notifications.push(o.body);return {ok:true};}});
+      await runtime.exports.reportRuntimeFailure('ブラウザー：非同期処理の未処理エラー',opts);
+      const text=JSON.parse(notifications[0]).text;const d=diagnostics[0][1];
+      if(expectArea){assert(text.includes('画面：'+expectArea),name);}else{assert(!text.includes('画面：'),name);assert.equal(d.clientArea,undefined,name);}
+      if(expectReason){assert(text.includes('失敗の種類：'+expectReason),name);assert.equal(d.clientReason,expectReason,name);}else{assert(!text.includes('失敗の種類：'),name);assert.equal(d.clientReason,undefined,name);}
+      assert(!notifications[0].includes('private canary'),name);pass(name);
+    }
+  }
   admission='limited';assert.equal((await route.POST(req('{"kind":"render"}',{origin:'https://doya.test'}))).status,429);pass('shared limit returns 429');
   admission='unavailable';assert.equal((await route.POST(req('{"kind":"render"}',{origin:'https://doya.test'}))).status,503);pass('unavailable limiter returns 503');
   admission='allowed';ipQuota='limited';{const before=intakeCalls;const r=await route.POST(req('{"kind":"render"}',{origin:'https://doya.test'}));assert.equal(r.status,429);assert.equal(intakeCalls,before);assert.equal(ipQuotaCalls.at(-1).scope,'client-error-ip');}pass('per-IP daily limit returns 429 before the shared budget (spoofed Origin cannot drain it)');
