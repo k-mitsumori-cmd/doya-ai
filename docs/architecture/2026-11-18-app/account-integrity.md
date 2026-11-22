@@ -266,7 +266,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS account_company_members_active_user
   2. 生きている契約を探して止める。管理者の削除と同じ関数（`findActiveLikeSubscriptions` と `isDoyaSubscriptionOwnedByUser`、`admin/users/route.ts:310-334`）を使い、所有を確かめられなければ退会を止めて、問い合わせへ案内する。
   3. 会社の持ち主で、ほかに参加中のメンバーがいるなら、先に持ち主を替えるか、メンバーを外すことを求める（会社が `onDelete: Cascade` で消えるため）。
   4. Apple のログイン手段があれば、Apple の連携の取り消しの API を呼ぶ（推測。Sign in with Apple の決まり）。
-  5. ユーザーは物理削除ではなく匿名化をすすめる。`email`・`name`・`image` を消し、`deletedAt` を入れ、`Account`・`Session`・`AppDeviceToken` を消す。作ったデータは、決めた期間のあとで消す。
+  5. ユーザーは物理削除ではなく匿名化をすすめる。`email`・`name`・`image` を消し、`deletedAt` を入れ、`Account`・`Session`・`AppDeviceToken` を消す。作ったデータは、退会から90日のあとで消す（2026-11-22 決定。設計は data-retention-90d.md）。
   6. 案5の受け取りの記録（初月無料、「最初の100」）は消さない。メールのハッシュとログイン手段の `sub` のハッシュで残す。
 - 物理削除にするなら、少なくとも案5の記録を先に書いてから消す。
 
@@ -496,7 +496,7 @@ Q3. 同じメールの既存のユーザーがいるときの結び付け
 - C. 結び付けない（別のユーザーのまま）
 
 Q4. 退会のときのユーザーの扱い
-- A. 匿名化して残し、作ったデータは決めた期間のあとで消す（おすすめ）
+- A. 匿名化して残し、作ったデータは退会から90日のあとで消す（2026-11-22 に三森さんが決定）
 - B. すぐに物理削除（受け取りの記録だけ先に残す）
 
 Q5. 契約の持ち主

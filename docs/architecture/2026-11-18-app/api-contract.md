@@ -170,7 +170,7 @@
 { "confirm": "DELETE" }
 ```
 
-- 成功（`200`）: `{ "deleted": true }`。ログイン手段・セッション・端末のトークン・結び付けの待ちが消え、ユーザーは匿名化される（メール・名前・画像が消える）。作ったデータは、決めた期間のあとで消す（期間は決定待ち）。アプリは、Keychain のトークンを消してログイン画面へ戻す。
+- 成功（`200`）: `{ "deleted": true }`。ログイン手段・セッション・端末のトークン・結び付けの待ちが消え、ユーザーは匿名化される（メール・名前・画像が消える）。作ったデータは、退会から90日のあとで消す（2026-11-22 決定。消す処理は未実装で、設計は data-retention-90d.md）。アプリは、Keychain のトークンを消してログイン画面へ戻す。
 - `400 CONFIRMATION_REQUIRED`: `confirm` が `DELETE` でない。
 - `409 ACTIVE_SUBSCRIPTION`: 有料の契約が有効。有効とは、`User.plan` が有料、`User.stripeSubscriptionId` がある、`Subscription` 表に有効な行がある（このリポジトリには、この表に書き込むコードが無く、実質の判定は `plan` と `stripeSubscriptionId`）、ミツボシ ナグサメの有料の契約が有効、のどれか。`message` に、先に Web で解約するよう書いてある。この API は、契約を解約しない。解約済みでも `stripeSubscriptionId` が残っていると止まる（安全側。問い合わせへ案内する）。
 - `409 COMPANY_HAS_MEMBERS`: 自分が持ち主の会社に、ほかの参加中のメンバーがいる。
@@ -179,7 +179,7 @@
   - `User` の行（匿名化済み。メール・名前・画像は消える。`plan`、`stripeCustomerId`、`stripeSubscriptionId` などの課金の控えは残る）
   - 自分が持ち主の会社の行（会社名、サイト、業種、ロゴ。`AccountCompany.userId` は必須で外せず、匿名化したユーザーを指したまま残る）と、ドヤパワーの台帳
   - ツールの組織のメンバー表（kintai、sfa、shodan、aio、mensetsu、quote、aishodan、income、expense）の、メールの控え
-  - 作ったデータ（生成物、プロジェクトなど）。決めた期間のあとで消す（期間は決定待ち）
+  - 作ったデータ（生成物、プロジェクトなど）。退会から90日のあとで消す（2026-11-22 決定。消す処理は未実装）
   - 「最初の100」「初月無料」の受け取りの記録（メールのハッシュ。二重付与を防ぐため）
 - 未実装: Apple の連携の取り消し（Sign in with Apple の token revoke）。Apple の refresh_token をまだ保存していないため。次の段の項目。
 
