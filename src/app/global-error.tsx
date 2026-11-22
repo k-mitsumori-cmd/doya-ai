@@ -16,7 +16,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    reportBrowserError('render')
+    reportBrowserError('render', error)
   }, [error])
 
   return (

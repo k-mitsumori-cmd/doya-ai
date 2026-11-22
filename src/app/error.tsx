@@ -15,7 +15,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
-    reportBrowserError('render')
+    reportBrowserError('render', error)
     // 本番環境ではエラーを外部サービスに送信することも可能
     console.error('Application error:')
   }, [error])
