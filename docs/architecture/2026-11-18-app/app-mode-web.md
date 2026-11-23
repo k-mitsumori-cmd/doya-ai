@@ -152,7 +152,7 @@ middleware での位置: Bearer の置き換えより前に置いた。置き換
 
 ## 6. 試験
 
-`npm run test:app-mode`（`tsx --test`。25 件）。`npm run test:app-auth`（160 件）とは別に両方通す。
+`npm run test:app-mode`（`tsx --test`。38 件）。`npm run test:app-auth`（160 件）とは別に両方通す。
 
 | ファイル | 件数 | 確かめること |
 |---|---|---|
@@ -195,3 +195,65 @@ middleware での位置: Bearer の置き換えより前に置いた。置き換
 - 4.1 と 4.2 は、CSS とソースの条件の試験だけで確かめた。実機の WebView で、帯を隠したあとの空白・位置ずれ、見出しの折り返しの結果は、見ていない。
 - `word-break: keep-all` は、日本語の読点の直後での折り返しを許すかが、ブラウザで違う。「キーワードから、」のあとで折り返すかは、実機で確かめる必要がある。
 - 上の帯のドヤパワーの残り（`ShellPowerMeter` の `topbar`）も、帯ごと隠れる。残りの表示は「このツールの残り」の中だけになる。
+
+## 11. 課金導線の整理（共通の部品に寄せた分。2026-11-23）
+
+方針: Web のブラウザ（旗オフ、またはアプリでない要求）では、DOM も見た目も動きも変えない。変わるのは、旗オンで、かつアプリ表示モードのときだけである。判定は `useAppMode`（1か所）で、次の共通の部品を通す。
+
+| 共通の部品 | 場所 | 役割 |
+|---|---|---|
+| `HideInAppMode` | `src/components/app-mode/` | アプリ表示モードのときだけ、子を描画しない。料金・プランへのリンクを包む（DOM を足さない） |
+| `navForMode(items, appMode)` | `src/lib/app-mode/nav.ts` | 止める経路（3 章の一覧）へのナビ項目を除く。アプリ表示モードでなければ、同じ配列を返す |
+| `mapLimitMessage(text, appMode)` | `src/lib/app-mode/limit-message.ts` | API が返した上限・契約の文（「プロプラン契約が必要です」など）を、アプリ表示モードのときだけ「上限に達しました。」に差し替える。料金・プラン・契約・アップグレード・初月無料・購入などの語を含む文だけが対象 |
+| ds の `Button` | `src/components/ds/index.tsx` | 止める経路へのボタン（「料金プランを見る」など）を、アプリ表示モードのときだけ出さない。ds の `Button` を使う全ツール（quote・mensetsu・shanai・aio など）に効く |
+| ds の `ErrorNotice` | `src/components/ds/feedback.tsx` | 料金・プランの語を含む文（「料金プランを見直すと…」）を、アプリ表示モードのときだけ中立の文にする |
+| `PhraseText` | `src/components/app-mode/` | 折り返し（11.2） |
+
+### 11.1 直した所
+
+- 旧レイアウトの左サイドバー 11 本（`DashboardSidebar`・`CopySidebar`・`AdSimSidebar`・`DoyaSlideSidebar`・`MovieSidebar`・`VoiceSidebar`・`InterviewXSidebar`・`ShindanSidebar`・`LpSidebar`・`TenkaiSidebar`・`AdBannerSidebar`）。「料金プラン」のナビ項目と、「プロにアップグレード」「プロプラン ¥9,980/月」の枠を出さない。`DashboardSidebar` のツアーの「プランをアップグレード」の手順も除いた。`OpeningAppLayout` の「料金」のナビも除いた。
+  - これらは AppShell を通らない旧レイアウト（`CopyAppLayout`・`AdSimAppLayout`・`DoyaSlideLayout`・`MovieLayout`・`VoiceLayout`・`InterviewXLayout`・`ShindanAppLayout`・`LpAppLayout`・`TenkaiLayout`・`AdBannerAppLayout`）が出す。AppShell のサイドバーはアプリ表示モードで隠れるが、これらは隠れないため、実害が出る側である。
+- `SeoShellFrame`（記事作成の帯）の「現在のプラン：…」のリンクと、料金のナビ。
+- ツール本体の「料金プランを見る」「プラン・料金を確認する」のリンク約 40 か所（`<Link>`・`<a>` の `/…/pricing` を `HideInAppMode` で包んだ）。banner（url・guide）、seo（articles・create・images・swipe・template）、interview（projects の edit・transcribe・一覧・generate・materials・recipes・skills）、voice（new・record・speakers・settings・edit）、adsim、cunning、hr（evaluations・CsvImportModal・HrShellFrame）、aio、doyalist、persona、adimage、tenkai/settings、`not-found`。
+- `mensetsu/Tool.tsx` のプロプランへのリンクと、API が返した上限の文。`persona/PersonaBannerGenerator.tsx` の「プロプランで利用できます」の文。
+- `NewDoyaSlideWizard` の「プランを見る」。`HandoffSuggest`（スライドの上限のトースト）の「プランを見る」の行動。`ShellNotices` の「ドヤパワー残りわずか」の知らせ（プランへの導線を含む）。
+- `InterviewUpsellModal`・`InterviewUpgradeCelebration`・`hr/UpgradeBanner`・`tenkai/PricingTable`・`FreeHourPopup`（無料キャンペーンの知らせ）は、アプリ表示モードで何も描画しない。
+- `kantan/dashboard/text` の「プラン・料金」のナビ。
+
+### 11.2 折り返し（説明文・空状態の文）
+
+375px で、ツール画面の説明「キーワードから、検索とAIに強い長文の記／事を作ります。」と、空の状態の文「…キーワードを入／れて…」が、言葉の途中で折り返す。原因は、`word-break: auto-phrase` が WKWebView（Safari）に無いことと、文に `<wbr>` が無いことである。
+
+- `PhraseText` が、アプリ表示モードのときだけ、文字列の文を `Intl.Segmenter`（Safari 14.1 以降）で文節に分け、短いひらがなの語（助詞・語尾）を前の語にくっつけて、文節のあいだに `<wbr>` を入れる（`src/lib/app-mode/phrase.ts`。試験 4 件）。
+- CSS は `data-app-mode` の下だけに、`word-break: keep-all; overflow-wrap: anywhere` を書いた（見出し・説明文・空状態の題と文。`ds.module.css`・`ToolFrame.module.css`）。`text-wrap` の一括指定は使っていない。
+- 適用先: `ToolHero` の見出しと説明、`EmptyState` の題と文、`ToolFrame` の説明。
+- 確かめたこと: 375px 幅の Chrome（Playwright で、同じ CSS と `<wbr>` を置いた静的な HTML）で、上の 2 文と「キーワードを入れると、AIが検索の意図を調べて…」の改行が、「記事を／作ります。」「記事を／作りましょう。」「意図を／調べて、…」になり、言葉の途中で切れないこと。WebKit（WKWebView）では測っていない。
+- 主なツール 10 本の最初の画面での測定は、できていない（12 章）。
+
+### 11.3 止め漏れの検査
+
+`src/lib/app-mode/coverage.test.ts`（`test:app-mode` に含む）が、「アップグレード」「プロプラン」「料金プラン」「/…/pricing」「/…/billing」「初月無料」「追加購入」「api/stripe/checkout」を含む `src/` のファイル（`src/lib`・`src/app/api`・`src/app/admin` を除く）を走査し、`@/lib/app-mode`・`@/components/app-mode`・`@/components/ds` のどれも import していないものが、理由つきの許可リストに無ければ失敗する。許可リストの個別の項目は、直したら外す（古い項目が残っても失敗する）。
+
+注意: ds を import しているだけで「対応済み」と数える。ds の `Button`・`ErrorNotice` を通らない生の `<Link>`・文が同じファイルに残っていても、この検査では見つからない。
+
+### 11.4 まだ残る導線（許可リストの「未対応」）
+
+| ファイル | 内容 | 直し方の案 |
+|---|---|---|
+| `(shell)/banner/dashboard/chat/page.tsx` | テキストの上限の導線の状態（`setTextLimitAction`）。画面に出る文は ErrorNotice 経由なら差し替わるが、未確認 | 画面の出し方を確かめ、リンクを `HideInAppMode` で包む |
+| `(shell)/home/agent.ts` | ホームの案内の文言 | 文言を `mapLimitMessage` に通すか、アプリ表示モードでは出さない |
+| `(shell)/interview/settings/page.tsx` | プラン管理の画面 | 止める経路に足す、または画面内で隠す |
+| `(shell)/seo/settings/page.tsx` | 「料金プランを確認・変更する」 | 同上 |
+| `(shell)/promane/[workspaceSlug]/help/page.tsx` | FAQ の「有料プランの料金…」の文 | 文を差し替える |
+| `app/movie/templates/page.tsx` | PRO のテンプレートのカードが `/movie/pricing` へ行く（カード全体がリンク） | アプリ表示モードでは PRO の札と行き先を外す |
+| `app/opening/guide/page.tsx` | 文中の「プロプラン」 | 文を差し替える |
+| `components/banner/BannerTemplateGallery.tsx` | プランの札「プロプラン(PRO)」 | 札の名前を中立にする |
+| `components/opening/AnimationCard.tsx` | 「プロプランでアンロック」 | 文を差し替える |
+| ds を import しているファイル（interview/Tool、quote/Tool、doyalist/Tool、aio、banner/dashboard など） | ds の `Button`・`ErrorNotice` を通らない生のリンク・文が残る可能性 | 各画面を実機の WebView で見て、漏れを足す。`window.location.href = '/seo/pricing'` のように、クリックで遷移するだけの処理（`seo/swipe`・`seo/create`）は、リンクの文字だけ隠して遷移の処理は残っている |
+| API が返す文（`lib/*/limits.ts`・`access.ts`） | サーバー側の文言そのもの | 画面側で `mapLimitMessage` を通す。通していない箇所が残る |
+
+## 12. この回に確かめていないこと（正直に）
+
+- Playwright での、実際の画面（記事作成・バナー・インタビュー・営業管理・商談準備・AI商談・勤怠・面接官・見積もり・AIO の 10 本）の 375px の折り返しの測定と、Web のブラウザ（通常の User-Agent）とアプリ表示モードでの、サイドバー・上限の案内の有無の撮影（3 本の 375px・1280px）は、できていない。理由: 手元の開発サーバーには、Prisma の生成済みクライアントが要るが、作業用のフォルダ（wtmode）が一晩で中身ごと消えて作り直しになり、`prisma generate` の実行が許可されなかった。本体の `node_modules` には、アプリ認証のモデル（`AppDevice` など）を含まない古いクライアントしか無く、使えない。
+- そのため、「Web のブラウザで変わっていない」ことは、次の 3 つで確かめた。(1) 判定の純粋関数の試験（旗オフ・UA なしで常に false）。(2) ソースの条件の試験（`HideInAppMode`・`navForMode`・`mapLimitMessage` が、アプリ表示モードでなければ、子・配列・文をそのまま返す）。(3) 既存の検証スクリプト（実際の部品を、模擬の `useAppMode: () => false` で描画するもの）が、約 250 本のうち、環境の都合で動かないもの（Prisma のクライアントが要る `*-postgres`・`hr-*` など）を除いて通ること。実際のブラウザの画面での確認は、まだ無い。
+- 折り返しの測定は、Chrome の静的な HTML だけで、WKWebView では測っていない。
