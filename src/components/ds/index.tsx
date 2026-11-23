@@ -13,6 +13,7 @@ import type { EmptyStateKind } from '@/components/EmptyState'
 import styles from './ds.module.css'
 import { useAppMode } from '@/lib/app-mode/client'
 import { classifyBlockedPath } from '@/lib/app-mode/blocked-routes'
+import PhraseText from '@/components/app-mode/PhraseText'
 
 import { CountUp } from './motion'
 export { default as tokens } from './tokens.module.css'
@@ -126,8 +127,8 @@ export function EmptyState({ kind = 'zero', title, description, action, art }: {
       ) : (
         <DoyaKun pose={kun.pose} act={kun.act} size={150} />
       )}
-      <p className={styles.emptyTitle}>{title}</p>
-      {description ? <p className={styles.emptyText}>{description}</p> : null}
+      <p className={styles.emptyTitle}><PhraseText>{title}</PhraseText></p>
+      {description ? <p className={styles.emptyText}><PhraseText>{description}</PhraseText></p> : null}
       {action ? <div className={styles.emptyAction}>{action}</div> : null}
     </div>
   )
@@ -190,8 +191,8 @@ export function ToolHero({ title, lead, action, art, artAlt = '', tool }: {
   return (
     <section className={styles.hero}>
       <div className={styles.heroText}>
-        <h2 className={styles.heroTitle}>{title}</h2>
-        {lead ? <p className={styles.heroLead}>{lead}</p> : null}
+        <h2 className={styles.heroTitle}><PhraseText>{title}</PhraseText></h2>
+        {lead ? <p className={styles.heroLead}><PhraseText>{lead}</PhraseText></p> : null}
         {action ? <div className={styles.heroAction}>{action}</div> : null}
       </div>
       {/* eslint-disable-next-line @next/next/no-img-element */}

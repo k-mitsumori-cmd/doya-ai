@@ -75,6 +75,7 @@
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 .frame[data-app-mode='true'] .titleRow { margin-top: 0; }
+.frame[data-app-mode='true'] .description { word-break: keep-all; overflow-wrap: anywhere; }
 @supports (word-break: auto-phrase) {
   .frame[data-app-mode='true'] .description { word-break: auto-phrase; }
 }

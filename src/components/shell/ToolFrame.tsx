@@ -16,6 +16,7 @@ import { ShellCompanyTag } from './ShellCompanyCard'
 import { useToolUsageBody } from './ShellUsage'
 import ToolBearFooter from './ToolBearFooter'
 import { useAppMode } from '@/lib/app-mode/client'
+import PhraseText from '@/components/app-mode/PhraseText'
 import styles from './ToolFrame.module.css'
 
 export default function ToolFrame({ serviceId, title, description, action, nav, aside, switcher, children }: {
@@ -87,7 +88,7 @@ export default function ToolFrame({ serviceId, title, description, action, nav, 
         <div className={styles.titleRow}>
           <div className={styles.titleBox}>
             <h1 className={styles.title} data-shell-title>{title ?? name}</h1>
-            {lead ? <p className={styles.description}>{lead}</p> : null}
+            {lead ? <p className={styles.description}><PhraseText>{lead}</PhraseText></p> : null}
           </div>
           {action || (usage) ? (
             <div className={styles.action}>

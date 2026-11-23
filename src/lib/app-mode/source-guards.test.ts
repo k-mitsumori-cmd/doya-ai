@@ -90,7 +90,7 @@ test('共通レイアウト: アプリ表示モードのときだけ、上の帯
   assert.match(fcss, /\.frame\[data-app-mode='true'\] \.title \{[^}]*clip: rect\(0 0 0 0\)/) // 見えなくして読み上げには残す（display: none にしない）
   // 見出しの折り返し: アプリ表示モードの下だけ。text-wrap の一括指定は使わない
   const ds = read('src/components/ds/ds.module.css')
-  assert.match(ds, /:global\(\[data-app-mode='true'\]\) \.heroTitle \{ word-break: keep-all; overflow-wrap: anywhere; \}/)
+  assert.match(ds, /:global\(\[data-app-mode='true'\]\) \.heroTitle,\n:global\(\[data-app-mode='true'\]\) \.heroLead,\n:global\(\[data-app-mode='true'\]\) \.emptyTitle,\n:global\(\[data-app-mode='true'\]\) \.emptyText \{ word-break: keep-all; overflow-wrap: anywhere; \}/)
   assert.doesNotMatch(ds.slice(ds.indexOf('アプリ表示モード')), /text-wrap\s*:/)
   assert.match(read('src/components/sidebar/SidebarUsagePanel.tsx'), /appMode \? null : <>\{summary\.planLabel\}プランのため<\/>/)
 })
@@ -121,4 +121,15 @@ test('旧サイドバー11本: アプリ表示モードのとき、料金のナ�
   for (const f of ['CopySidebar', 'AdSimSidebar', 'LpSidebar', 'movie/MovieSidebar', 'voice/VoiceSidebar', 'interviewx/InterviewXSidebar', 'adbanner/AdBannerSidebar', 'doyaslide/DoyaSlideSidebar']) {
     assert.match(read(`src/components/${f}.tsx`), /navForMode\(/, f)
   }
+})
+
+test('折り返し: 説明文・空状態の文は PhraseText を通し、CSS は data-app-mode の下だけ（Web のブラウザでは DOM も CSS も変わらない）', () => {
+  const idx = read('src/components/ds/index.tsx')
+  for (const re of [/<p className=\{styles\.heroLead\}><PhraseText>/, /<h2 className=\{styles\.heroTitle\}><PhraseText>/, /<p className=\{styles\.emptyText\}><PhraseText>/]) assert.match(idx, re)
+  assert.match(read('src/components/shell/ToolFrame.tsx'), /<p className=\{styles\.description\}><PhraseText>/)
+  const pt = read('src/components/app-mode/PhraseText.tsx')
+  assert.match(pt, /if \(!appMode \|\| typeof children !== 'string'\) return <>\{children\}<\/>/)
+  const ds = read('src/components/ds/ds.module.css')
+  assert.match(ds, /:global\(\[data-app-mode='true'\]\) \.emptyText \{ word-break: keep-all; overflow-wrap: anywhere; \}/)
+  assert.match(read('src/components/shell/ToolFrame.module.css'), /\.frame\[data-app-mode='true'\] \.description \{ word-break: keep-all; overflow-wrap: anywhere; \}/)
 })
