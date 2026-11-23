@@ -53,6 +53,8 @@ function render(file, user, isMobile) {
     '@/components/sidebar': sidebar,
     '@/components/ToolSwitcherMenu': { ToolSwitcherMenu: empty },
     '@/lib/plan-utils': planUtils,
+    '@/lib/app-mode/client': { useAppMode: () => false },
+    '@/lib/app-mode/nav': { navForMode: (items) => items },
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, React, require: (name) => {
