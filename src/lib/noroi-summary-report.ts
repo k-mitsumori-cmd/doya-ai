@@ -19,8 +19,8 @@ import {
 // ============================================
 // 呪い日記 週次／月次まとめレポート（Slack）
 //
-// - 週次: 毎週月曜の朝に「先週(月〜日)」分
-// - 月次: 毎月1日の朝に「先月」分
+// - 週次: 毎週火曜の未明に「先週(月〜日)」分
+// - 月次: 毎月6日の未明に「先月」分
 //
 // 内容: App Storeの売上（週次/月次レポート）＋ Supabase期間集計
 //   （アクティブ人数/新規/日記/ガチャ/課金）＋ 現在のストア評価
@@ -59,15 +59,13 @@ function computePeriod(period: 'weekly' | 'monthly'): {
     lastMonday.setUTCDate(thisMonday.getUTCDate() - 7)
     const lastSunday = new Date(thisMonday)
     lastSunday.setUTCDate(thisMonday.getUTCDate() - 1)
-    const prevSunday = new Date(lastSunday)
-    prevSunday.setUTCDate(lastSunday.getUTCDate() - 7)
     return {
       startDay: ymd(lastMonday),
       endDayExclusive: ymd(thisMonday),
       label: `${ymd(lastMonday)}〜${ymd(lastSunday)}`,
       salesFrequency: 'WEEKLY',
-      // Apple週次は週末日(日曜)キー。取得できない時は前の日曜も試す
-      salesReportDates: [ymd(lastSunday), ymd(prevSunday)],
+      // Apple週次は週末日(日曜)キー。別の週を取得すると期間表示と売上が食い違う
+      salesReportDates: [ymd(lastSunday)],
     }
   }
   // monthly

@@ -98,11 +98,11 @@
     },
     {
       "path": "/api/cron/noroi-weekly-summary",
-      "schedule": "20 1 * * 1"
+      "schedule": "20 18 * * 1"
     },
     {
       "path": "/api/cron/noroi-monthly-summary",
-      "schedule": "25 1 1 * *"
+      "schedule": "25 18 5 * *"
     },
     {
       "path": "/api/cron/health-alert",
