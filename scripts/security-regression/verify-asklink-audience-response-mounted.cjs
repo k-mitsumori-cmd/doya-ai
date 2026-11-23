@@ -10,7 +10,7 @@ function sourcePath(rel){const candidate=process.env.DOYA_TEST_BASELINE&&path.jo
 function loadTsx(rel,mocks){const exports={},source=fs.readFileSync(sourcePath(rel),'utf8');vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:name=>{if(['react','react/jsx-runtime'].includes(name))return req(name);if(name==='lucide-react')return icon;if(name in mocks)return mocks[name];throw Error('Unexpected dependency '+name)},fetch:fetchMock,window,document,navigator,Event:window.Event,URL,Blob,setTimeout,clearTimeout,console},{filename:rel});return exports}
 const Result=loadTsx('src/components/asklink/RunResult.tsx',{'@/lib/asklink/link':builder,'./errors':errors,'./AskLinkErrorNotice':notice})
 const queue=load('src/components/asklink/useBannerQueue.ts',{react:React},{window,Event:window.Event,fetch:fetchMock})
-const Feedback=loadTsx('src/components/ds/feedback.tsx',{'./motion':{usePrefersReducedMotion:()=>false},'./feedback.module.css':{__esModule:true,default:new Proxy({},{get:(_,key)=>'audit-'+String(key)})}})
+const Feedback=loadTsx('src/components/ds/feedback.tsx',{'@/lib/app-mode/client':{useAppMode:()=>false},'@/lib/app-mode/limit-message':{mapLimitMessage:m=>m},'./motion':{usePrefersReducedMotion:()=>false},'./feedback.module.css':{__esModule:true,default:new Proxy({},{get:(_,key)=>'audit-'+String(key)})}})
 const Tool=loadTsx('src/app/(shell)/asklink/Tool.tsx',{
  'next/link':{__esModule:true,default:({children,href,...props})=>React.createElement('a',{href,...props},children)},
  'next/image':{__esModule:true,default:({priority,...props})=>React.createElement('img',props)},

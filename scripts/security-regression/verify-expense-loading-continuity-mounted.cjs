@@ -35,7 +35,7 @@ function load(file,mocks={}){
  return exports;
 }
 function defer(kind,url,init){let resolve;const promise=new Promise(r=>resolve=r);requests.push({kind,url,init,at:now,resolve,settled:false});return promise}
-const ds=load('src/components/ds/index.tsx',{'@/components/shell/icons':fallback,'./motion':fallback,'./feedback':fallback,'./kun':fallback,'./dialog':fallback,'./next-step':fallback});
+const ds=load('src/components/ds/index.tsx',{'@/components/shell/icons':fallback,'@/lib/app-mode/client':{useAppMode:()=>false},'@/lib/app-mode/blocked-routes':{classifyBlockedPath:()=>'none'},'./motion':fallback,'./feedback':fallback,'./kun':fallback,'./dialog':fallback,'./next-step':fallback});
 // Unrelated decorative components mocked; actual Card/Skeleton and Expense Loading are mounted unchanged.
 const ui=load('src/components/expense/ui.tsx',{'@/components/ds':{...ds,Button,EmptyState:Empty},'@/components/ds/dialog':fallback,'@/lib/expense/constants':{ROLE_RANK:{member:1,manager:2,admin:3,owner:4},SCHEDULE_STATUS_LABEL:{}}});
 const api=load('src/components/expense/api.ts',{'@/lib/org-client-response':{requestOrgJson:(_tool,url,_org,init)=>defer('query',url,init)}});
