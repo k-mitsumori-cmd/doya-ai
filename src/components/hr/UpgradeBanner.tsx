@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import type { ComponentProps } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 
@@ -15,7 +17,7 @@ interface UpgradeBannerProps {
   threshold?: number
 }
 
-export default function UpgradeBanner({
+function UpgradeBannerImpl({
   used,
   limit,
   label,
@@ -103,4 +105,10 @@ export default function UpgradeBanner({
       </motion.div>}
     </AnimatePresence>
   )
+}
+
+/** アプリ表示モード（ドヤバディの WebView）では、料金・アップグレードの案内なので何も描画しない（旗オフ・アプリでないときは今までと同じ） */
+export default function UpgradeBanner(props: ComponentProps<typeof UpgradeBannerImpl>) {
+  const appMode = useAppMode()
+  return appMode ? null : <UpgradeBannerImpl {...props} />
 }

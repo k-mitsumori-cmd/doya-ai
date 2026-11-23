@@ -1,6 +1,7 @@
 'use client'
 
 import { createCunningRecordingClient, CunningRecordingError } from '@/lib/cunning/recording-client'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { createFinalAudioRetry } from '@/lib/cunning/final-audio-retry'
 import { createPendingWork } from '@/lib/cunning/pending-work'
 import { createAudioWindowClient, type AudioWindowHandle } from '@/lib/cunning/audio-window-client'
@@ -1162,12 +1163,12 @@ const SILENCE_PEAK = 8
       </div>}
       {transcriptionIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p>{transcriptionIssue.message}</p>
-        {transcriptionIssue.limit && <a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a>}
+        {transcriptionIssue.limit && <HideInAppMode><a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a></HideInAppMode>}
       </div>}
       {allowanceState !== 'ready' && <div role={allowanceState === 'loading' ? 'status' : 'alert'} className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
         {allowanceState === 'loading' && <p>利用可能な時間を確認しています。</p>}
         {allowanceState === 'error' && <><p>利用状況を確認できないため、録音を開始できません。</p><button type="button" onClick={() => setAllowanceRetry((n) => n + 1)} className="mt-2 font-bold underline">再試行する</button></>}
-        {allowanceState === 'limit' && <><p>今月の利用時間の上限に達しました。</p><a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a></>}
+        {allowanceState === 'limit' && <><p>今月の利用時間の上限に達しました。</p><HideInAppMode><a href={allowanceUpgradeAvailable === false ? SUPPORT_CONTACT_URL : '/cunning/pricing'} className="font-bold underline">{allowanceUpgradeAvailable === false ? '追加の利用枠を相談する' : 'プランと利用上限を確認する'}</a></HideInAppMode></>}
       </div>}
       {sessionState !== 'ready' && <div role="status" className="mb-4 rounded-xl border border-slate-200 p-4 text-sm">
         {sessionState === 'loading' && 'セッションを確認しています。'}

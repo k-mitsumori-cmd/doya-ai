@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
@@ -348,7 +349,7 @@ export default function EditProjectPage() {
         {!isPro && allSpeakers.length > freeSpeakers.length && (
           <p className="text-xs text-slate-400 mt-3">
             +{allSpeakers.length - freeSpeakers.length}種のキャラクターは
-            <Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline ml-0.5">Proプラン</Link>
+            <HideInAppMode><Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline ml-0.5">Proプラン</Link></HideInAppMode>
             で利用可能
           </p>
         )}

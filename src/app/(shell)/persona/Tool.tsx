@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import { personaBrowserStorage } from '@/lib/persona/browser-storage'
 import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/persona/history-records'
@@ -980,7 +981,7 @@ function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; p
           <div role="alert" className="mb-6 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900">
             <p className="font-bold">{quotaNotice === 'text' ? '本日のペルソナ生成・文章変更の枠に達しました。' : '本日の追加画像・再生成の枠に達しました。'}</p>
             <p className="mt-1">枠は毎日0時（日本時間）にリセットされます。{quotaAction === 'pricing' ? '追加で使う場合はプランをご確認ください。' : quotaAction === 'contact' ? '追加の利用枠をご希望の場合はご相談ください。' : ''}</p>
-            {quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline underline-offset-2">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
+            {quotaAction && <HideInAppMode><a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline underline-offset-2">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></HideInAppMode>}
             {quotaAction === 'pricing' && <TrialNote className="mt-2" />}
           </div>
         )}

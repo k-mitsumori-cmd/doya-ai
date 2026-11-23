@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { mapLimitMessage } from '@/lib/app-mode/limit-message'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { readPersonaImageResponse, validPersonaImageResponse, personaImageError, PersonaImageResponseError } from '@/lib/persona/image-response'
 import { PERSONA_BANNER_SIZES } from '@/lib/persona/banner-size'
 import { TrialNote } from '@/components/TrialCallout'
@@ -15,6 +18,8 @@ type Props = {
 }
 
 export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases, initialImage, onUsageChanged }: Props) {
+  // アプリ表示モード（ドヤバディの WebView）では、プラン・契約の語を含む文を、中立の文に差し替える（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
   const [catchphrase, setCatchphrase] = useState(catchphrases[0] || '')
   const [serviceName, setServiceName] = useState('')
   const [sizeKey, setSizeKey] = useState('google-responsive')
@@ -73,8 +78,8 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
     <h2 className="text-lg font-bold text-gray-900">ペルソナ向けバナー画像</h2>
     <p className="mt-1 text-sm text-gray-600">生成・再生成ごとに、追加画像枠を1枚使います。画像はこのペルソナの履歴に保存されます。</p>
     {!isPaid ? <div className="mt-4 rounded-lg bg-brand-50 p-4 text-sm text-brand-900">
-      <p>バナー画像生成はプロプランで利用できます。</p>
-      <a href="/persona/pricing" className="mt-2 inline-block font-bold text-brand-600 underline">プランを確認する</a>
+      <p>{appMode ? 'この機能はアプリではご利用になれません。' : 'バナー画像生成はプロプランで利用できます。'}</p>
+      <HideInAppMode><a href="/persona/pricing" className="mt-2 inline-block font-bold text-brand-600 underline">プランを確認する</a></HideInAppMode>
       <TrialNote className="mt-2" />
     </div> : !projectId ? <p className="mt-4 text-sm text-gray-600">サーバーに保存したペルソナを開くと、バナー画像を生成できます。</p> : <>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -94,8 +99,8 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
         {loading ? '生成中です…' : image ? 'バナーを再生成（追加枠1枚）' : 'バナーを生成（追加枠1枚）'}
       </button>
       {error && <div role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-        <p>{error}</p>
-        {(errorCode === 'DAILY_LIMIT_REACHED' || errorCode === 'PRO_REQUIRED') && quotaAction && <a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold underline">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a>}
+        <p>{mapLimitMessage(error, appMode)}</p>
+        {(errorCode === 'DAILY_LIMIT_REACHED' || errorCode === 'PRO_REQUIRED') && quotaAction && <HideInAppMode><a href={quotaAction === 'contact' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="mt-2 inline-block font-bold underline">{quotaAction === 'contact' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></HideInAppMode>}
       </div>}
     </>}
     {image && <div className="mt-5">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { readAioDashboard } from '@/lib/aio/dashboard'
@@ -214,9 +215,9 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
           追加枠について相談する
         </a>
       ) : scanLimitAction === 'upgrade' ? (
-        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
+        <HideInAppMode><Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-brand-600 px-4 py-2 text-xs font-black text-white hover:bg-brand-700">
           料金プランを確認する
-        </Link>
+        </Link></HideInAppMode>
       ) : null}
     </div>
   ) : null
@@ -483,13 +484,13 @@ function ProGate({ locked, orgSlug, children, note }: { locked: boolean; orgSlug
     <div className="relative">
       <div className="blur-[6px] pointer-events-none select-none" aria-hidden>{children}</div>
       <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/30">
-        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`}
+        <HideInAppMode><Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`}
           className="flex flex-col items-center gap-2 text-center px-6 py-5 rounded-2xl bg-white/95 border border-brand-100 shadow-lg shadow-brand-400/10 hover:-translate-y-0.5 transition-all">
           <span className="material-symbols-outlined text-brand-500 text-[28px]">lock</span>
           <span className="font-black text-slate-900 text-sm">ここから先はプロプランで閲覧できます</span>
           <span className="text-xs font-bold text-slate-500">{note || 'SoV・引用元・改善アクションなど、AEO改善に効く詳細データが解放されます'}</span>
           <span className="mt-1 inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-500 to-brand-700 text-white font-black text-sm">プロプランを見る{sym('arrow_forward', 16)}</span>
-        </Link>
+        </Link></HideInAppMode>
       </div>
     </div>
   )

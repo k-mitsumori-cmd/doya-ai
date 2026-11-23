@@ -6,7 +6,7 @@
 export const APP_NEUTRAL_LIMIT_MESSAGE = '上限に達しました。'
 export const APP_NEUTRAL_UNAVAILABLE_MESSAGE = 'この機能はアプリではご利用になれません。'
 
-const BILLING_WORDS = /アップグレード|プロプラン|ライトプラン|プラン|料金|契約|初月無料|無料トライアル|追加購入|購入|お支払い|課金|サブスク|PRO|LIGHT|課金/
+const BILLING_WORDS = /アップグレード|プラン|料金|契約|初月無料|無料トライアル|追加購入|購入|お支払い|課金|サブスク/
 
 export function mapLimitMessage(message: string | null | undefined, appMode: boolean, fallback: string = APP_NEUTRAL_LIMIT_MESSAGE): string {
   const text = message ?? ''

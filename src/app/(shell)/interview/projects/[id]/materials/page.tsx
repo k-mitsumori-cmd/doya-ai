@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { readInterviewCreationResponse, InterviewCreationResponseError } from '@/lib/interview/creation-response'
@@ -1218,12 +1219,12 @@ export default function MaterialsPage() {
                       もう一度
                     </button>}
                     {info.limitReached && info.limitAction && (
-                      <a
+                      <HideInAppMode><a
                         href={info.limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
                         className="flex items-center gap-1 px-3 py-1.5 bg-[#0066ff] text-white rounded-lg text-xs font-medium hover:bg-[#0047d6] transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                       >
                         {info.limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
-                      </a>
+                      </a></HideInAppMode>
                     )}
                   </div>
                 )}

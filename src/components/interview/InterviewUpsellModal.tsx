@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { ComponentProps } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { INTERVIEW_PRICING } from '@/lib/pricing'
@@ -67,7 +69,7 @@ const FREE_FEATURES = [
   { icon: 'title', text: 'タイトル提案', highlight: false },
 ]
 
-export default function InterviewUpsellModal({
+function InterviewUpsellModalImpl({
   isOpen,
   onClose,
   limitType,
@@ -307,4 +309,10 @@ export default function InterviewUpsellModal({
       </motion.div>
     </AnimatePresence>
   )
+}
+
+/** アプリ表示モード（ドヤバディの WebView）では、料金・アップグレードの案内なので何も描画しない（旗オフ・アプリでないときは今までと同じ） */
+export default function InterviewUpsellModal(props: ComponentProps<typeof InterviewUpsellModalImpl>) {
+  const appMode = useAppMode()
+  return appMode ? null : <InterviewUpsellModalImpl {...props} />
 }

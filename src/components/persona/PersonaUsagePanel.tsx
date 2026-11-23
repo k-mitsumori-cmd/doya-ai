@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import { readBillingResponse } from '@/lib/billing-response-client'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
@@ -99,7 +100,7 @@ export default function PersonaUsagePanel({ refreshKey }: { refreshKey: string }
         <UsageMeter label="追加画像・再生成" remaining={usage.extraImages.remaining} limit={usage.extraImages.limit} unit="枚" reserved={usage.extraImages.reserved} />
       </div>
       <p className="mt-4 text-xs font-bold leading-relaxed text-slate-600">付属画像は最大16枚までペルソナ1件に含まれ、追加枠を消費しません。利用枠は毎日0時（日本時間）に戻ります。</p>
-      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3 font-bold">本日の利用枠が上限に達しました。<a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-black text-[#0066ff] underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></p>}
+      {(usage.text.remaining === 0 || usage.extraImages.remaining === 0) && <p className="mt-3 font-bold">本日の利用枠が上限に達しました。<HideInAppMode><a href={usage.planLabel === 'PRO' ? SUPPORT_CONTACT_URL : '/persona/pricing'} className="ml-2 font-black text-[#0066ff] underline">{usage.planLabel === 'PRO' ? '追加の利用枠を相談する' : 'プランと利用枠を確認する'}</a></HideInAppMode></p>}
     </> : <p className="mt-3 font-bold text-slate-600" role="status">{failed ? '利用状況を取得できませんでした。残り枠は未確認です。' : '利用状況を確認しています。'}{failed && <button type="button" onClick={() => setRetry(value => value + 1)} className="ml-2 font-black text-[#0066ff] underline">再取得する</button>}</p>}
   </section>
 }

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -32,11 +33,11 @@ export default async function SeoImageDetailPage(props: { params: Promise<{ id: 
                   ログインする
                 </span>
               </Link>
-              <Link href="/seo/pricing" className="inline-flex">
+              <HideInAppMode><Link href="/seo/pricing" className="inline-flex">
                 <span className="h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-900 font-black text-sm inline-flex items-center hover:bg-gray-50">
                   料金プランを見る
                 </span>
-              </Link>
+              </Link></HideInAppMode>
             </div>
           </div>
         </div>

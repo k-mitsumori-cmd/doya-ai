@@ -1,6 +1,7 @@
 'use client'
 
 import { seoLimitActionFromResponse, type SeoLimitAction } from '@/lib/seo-limit-action'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -1035,7 +1036,7 @@ export default function SwipeArticlePage() {
                   })}
                   {/* プランアップグレード誘導 */}
                   {userPlan !== 'ENTERPRISE' && (
-                    <Link href="/seo/pricing" className="block">
+                    <HideInAppMode><Link href="/seo/pricing" className="block">
                       <div className="p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer">
                         <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
                           <Lock className="w-3.5 h-3.5" />
@@ -1043,7 +1044,7 @@ export default function SwipeArticlePage() {
                         </div>
                         <p className="text-[10px] text-gray-400 mt-0.5">プランをアップグレード</p>
                       </div>
-                    </Link>
+                    </Link></HideInAppMode>
                   )}
                 </div>
               </div>

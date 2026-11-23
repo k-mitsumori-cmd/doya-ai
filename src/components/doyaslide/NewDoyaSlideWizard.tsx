@@ -3,6 +3,7 @@
 // ドヤスライド 新規作成ウィザード（本体）。
 // /doyaslide（ホーム）と /doyaslide/new（旧URLのエイリアス）の両方からこのコンポーネントを描画する。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -917,7 +918,7 @@ export default function NewDoyaSlideWizard() {
             <span>{projectLimitMessage}</span>
             <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => void refreshUsage().catch(() => toast.error('利用状況を更新できませんでした'))} className="rounded-full border border-amber-400 px-3 py-1.5 text-xs font-black">利用状況を更新</button>
-              {projectUpgradeUrl && <Link href={projectUpgradeUrl} target="_blank" rel="noopener noreferrer" className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white">プランを見る</Link>}
+              {projectUpgradeUrl && <HideInAppMode><Link href={projectUpgradeUrl} target="_blank" rel="noopener noreferrer" className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white">プランを見る</Link></HideInAppMode>}
             </div>
           </div>
         )}

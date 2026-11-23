@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
@@ -745,9 +746,9 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   />
                   <div className="flex flex-wrap items-center gap-2">
                     {quotaAction ? (
-                      <Link href={quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
+                      <HideInAppMode><Link href={quotaAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
                         {quotaAction === 'pricing' ? '料金プランを見る' : '追加枠を相談する'}
-                      </Link>
+                      </Link></HideInAppMode>
                     ) : errorMsg === DOYALIST_COLLECTION_UNKNOWN ? (
                       <Link href="/doyalist/history" className={`inline-flex min-h-11 items-center rounded-xl border border-[#0066ff]/40 px-5 text-sm font-bold text-[#0066ff] hover:bg-blue-50${focusRing}`}>保存済みの履歴を見る</Link>
                     ) : null}

@@ -8,6 +8,7 @@
 // ⚠️ NoticeProvider の中だけで動く（旗が off なら ShellGate がこの部品を置かない）。
 // ⚠️ 出す・出さないの決まり（順番・作業中・once）は queue.ts。ここは「何を足すか」だけ。
 import { usePathname } from 'next/navigation'
+import { isAppModeClient } from '@/lib/app-mode/client'
 import { useContext, useEffect, useRef } from 'react'
 import { ALL_SHELL_TOOLS, type ShellTool } from '@/components/shell/tools'
 import { ShellPowerContext } from '@/components/shell/power'
@@ -139,7 +140,7 @@ export default function ShellNotices() {
     if (!enabled || remaining == null || !limit || remaining / limit > 0.2) return
     // 新料金の旗が on（upsell が読める）なら、PowerOutNotices が powerOutView で出すので、ここは出さない
     let live = true
-    void loadUpsellInfo().then((info) => { if (live && !info) push({
+    void loadUpsellInfo().then((info) => { if (live && !info && !isAppModeClient()) push({
       id: `power-low:${monthKey(new Date())}`, kind: 'hint', tone: 'warn', once: true, pose: 'focus', eyebrow: 'ドヤパワー',
       title: `ドヤパワーの残りが ${remaining.toLocaleString('ja-JP')} になりました`,
       body: `上限 ${limit.toLocaleString('ja-JP')} の2割を切りました。毎朝、少しずつ戻ります。足りないときは、プランで増やせます。`,

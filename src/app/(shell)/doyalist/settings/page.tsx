@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
@@ -263,13 +264,13 @@ export default function SettingsPage() {
               />
             </div>
 
-            <Link
+            <HideInAppMode><Link
               href="/doyalist/pricing"
               className={`mt-5${tap}${focusRing} w-full inline-flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all`}
             >
               <Sym name="arrow_upward" className="text-base" />
               プランをアップグレード
-            </Link>
+            </Link></HideInAppMode>
             </>
             )}
           </Card>

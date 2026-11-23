@@ -94,3 +94,31 @@ test('共通レイアウト: アプリ表示モードのときだけ、上の帯
   assert.doesNotMatch(ds.slice(ds.indexOf('アプリ表示モード')), /text-wrap\s*:/)
   assert.match(read('src/components/sidebar/SidebarUsagePanel.tsx'), /appMode \? null : <>\{summary\.planLabel\}プランのため<\/>/)
 })
+
+test('共通の画面部品: アプリ表示モードのとき、ds の Button は止める経路へのリンクを出さず、ErrorNotice は料金の語を含む文を差し替える', () => {
+  const idx = read('src/components/ds/index.tsx')
+  assert.match(idx, /if \(appMode && props\.href !== undefined && classifyBlockedPath\(props\.href\) !== 'none'\) return null/)
+  const fb = read('src/components/ds/feedback.tsx')
+  assert.match(fb, /what = mapLimitMessage\(what, appMode\)/)
+  assert.match(fb, /how = how === undefined \? undefined : mapLimitMessage\(how, appMode, ''\)/)
+})
+
+test('旧サイドバー11本: アプリ表示モードのとき、料金のナビとプラン・アップグレードの枠を出さない', () => {
+  const guards: Array<[string, RegExp]> = [
+    ['src/components/CopySidebar.tsx', /\{!appMode && sessionReady/],
+    ['src/components/AdSimSidebar.tsx', /\{!appMode && \(isMobile/],
+    ['src/components/LpSidebar.tsx', /\{!appMode && sessionReady/],
+    ['src/components/ShindanSidebar.tsx', /\{!appMode && sessionReady/],
+    ['src/components/doyaslide/DoyaSlideSidebar.tsx', /\{!appMode && sessionReady/],
+    ['src/components/movie/MovieSidebar.tsx', /\{!appMode && showLabel/],
+    ['src/components/voice/VoiceSidebar.tsx', /\{!appMode && showLabel/],
+    ['src/components/interviewx/InterviewXSidebar.tsx', /if \(appMode \|\| !showLabel/],
+    ['src/components/adbanner/AdBannerSidebar.tsx', /\{!appMode && sessionReady/],
+    ['src/components/DashboardSidebar.tsx', /if \(appMode \|\| !showLabel\) return null/],
+    ['src/components/tenkai/TenkaiSidebar.tsx', /<HideInAppMode>/],
+  ]
+  for (const [file, re] of guards) assert.match(read(file), re, file)
+  for (const f of ['CopySidebar', 'AdSimSidebar', 'LpSidebar', 'movie/MovieSidebar', 'voice/VoiceSidebar', 'interviewx/InterviewXSidebar', 'adbanner/AdBannerSidebar', 'doyaslide/DoyaSlideSidebar']) {
+    assert.match(read(`src/components/${f}.tsx`), /navForMode\(/, f)
+  }
+})

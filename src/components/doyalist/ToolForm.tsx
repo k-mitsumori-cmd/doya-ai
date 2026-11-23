@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
@@ -163,9 +164,9 @@ function ScopedToolForm({ type, title, subtitle, emoji }: Props) {
     <div className="space-y-2">
       <ErrorNotice what={limitMessage} how={limitAction === 'contact' ? '追加の枠は、お問い合わせからご相談ください。' : '来月まで待つか、料金プランを見直すと続けて作れます。'} />
       {limitAction && (
-        <Link href={limitAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
+        <HideInAppMode><Link href={limitAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className={`inline-flex min-h-11 items-center rounded-xl bg-[#0066ff] px-5 text-sm font-bold text-white hover:bg-[#0052cc]${focusRing}`}>
           {limitAction === 'pricing' ? '料金プランを見る' : '追加枠を相談する'}
-        </Link>
+        </Link></HideInAppMode>
       )}
     </div>
   ) : loginRequired ? (

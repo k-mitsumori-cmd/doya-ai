@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -443,6 +445,8 @@ const REFINEMENT_SUGGESTIONS = [
 ]
 
 export default function TemplateDetailPage() {
+  // アプリ表示モード（ドヤバディの WebView）では、プラン・料金のナビを出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
   const params = useParams()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -767,7 +771,7 @@ ${inputMessage}
           <div className="mt-6">
             <p className="px-3 text-xs text-white/50 uppercase tracking-wider mb-2">データベース</p>
             <ul className="space-y-1">
-              {SIDEBAR_DATA_MENU.map((item) => (
+              {navForMode(SIDEBAR_DATA_MENU, appMode).map((item) => (
                 <li key={item.id}>
                   <Link
                     href={item.href}

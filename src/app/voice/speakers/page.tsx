@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import { Play, Pause, Star, AlertCircle, Loader2, Lock, Crown } from 'lucide-react'
 import { getAllSpeakers, type VoiceSpeaker } from '@/lib/voice/speakers'
@@ -114,13 +115,13 @@ export default function SpeakersPage() {
           <p className="text-lg text-slate-500">12種類の魅力的なAIキャラクターから用途に合わせて選べます</p>
         </div>
         {!isPro && (
-          <Link
+          <HideInAppMode><Link
             href="/voice/pricing"
             className="flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 font-bold text-white shadow-lg shadow-violet-600/20 hover:scale-[1.02] transition-transform whitespace-nowrap"
           >
             <Crown className="w-4 h-4" />
             Proプランにアップグレード
-          </Link>
+          </Link></HideInAppMode>
         )}
       </div>
 
@@ -293,12 +294,12 @@ export default function SpeakersPage() {
                         >
                           試聴
                         </button>
-                        <Link
+                        <HideInAppMode><Link
                           href="/voice/pricing"
                           className="flex flex-[2] items-center justify-center gap-1 rounded-xl bg-slate-200 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-300 transition-colors"
                         >
                           アップグレード
-                        </Link>
+                        </Link></HideInAppMode>
                       </>
                     ) : (
                       <>

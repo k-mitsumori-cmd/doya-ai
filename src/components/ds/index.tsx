@@ -11,6 +11,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ShellIcon, type ShellIconName } from '@/components/shell/icons'
 import type { EmptyStateKind } from '@/components/EmptyState'
 import styles from './ds.module.css'
+import { useAppMode } from '@/lib/app-mode/client'
+import { classifyBlockedPath } from '@/lib/app-mode/blocked-routes'
 
 import { CountUp } from './motion'
 export { default as tokens } from './tokens.module.css'
@@ -84,6 +86,9 @@ export function Button(props: ButtonBase & (
   | { href?: undefined; onClick?: () => void; type?: 'button' | 'submit'; disabled?: boolean }
 )) {
   const { children, variant = 'primary', size = 'md', icon } = props
+  // アプリ表示モード（ドヤバディの WebView）では、料金・契約・購入の経路へのボタン（「料金プランを見る」など）を出さない。旗オフ・アプリでないときは今までと同じ
+  const appMode = useAppMode()
+  if (appMode && props.href !== undefined && classifyBlockedPath(props.href) !== 'none') return null
   const inner = <>{icon ? <ShellIcon name={icon} size={size === 'sm' ? 15 : 17} /> : null}{children}</>
   if (props.href !== undefined) {
     // API 経由のリダイレクト（決済ポータル等）は通常のリンクで開く
