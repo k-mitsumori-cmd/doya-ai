@@ -30,6 +30,21 @@ export function createPrismaDeleteRepo(prisma: PrismaClient): DeleteRepo {
           where: { userId },
           data: { status: 'removed', removedAt: now, email: anonymizedEmail(userId), inviteToken: null },
         })
+        // ツール別のメンバー表（userId は文字列の列。外部キーが無い表も、Cascade でも User の行は残るので）を無効にする。物理削除はしない。
+        // 90日後の削除は別設計（data-retention-90d.md）。ここは、退会した人が組織のメンバー一覧や権限判定に ACTIVE のまま残らないようにするだけ。
+        const off = { status: 'INACTIVE' }
+        const notOff = { userId, NOT: { status: 'INACTIVE' } }
+        await tx.hrOrganizationMember.updateMany({ where: notOff, data: off })
+        await tx.kintaiMember.updateMany({ where: notOff, data: off })
+        await tx.sfaMember.updateMany({ where: notOff, data: off })
+        await tx.shodanMember.updateMany({ where: notOff, data: off })
+        await tx.aioMember.updateMany({ where: notOff, data: off })
+        await tx.mensetsuMember.updateMany({ where: notOff, data: off })
+        await tx.quoteMember.updateMany({ where: notOff, data: off })
+        await tx.aishodanMember.updateMany({ where: notOff, data: off })
+        await tx.incomeMember.updateMany({ where: notOff, data: off })
+        await tx.expenseMember.updateMany({ where: notOff, data: off })
+        await tx.promaneMember.updateMany({ where: { userId, isActive: true }, data: { isActive: false } })
         await tx.user.update({
           where: { id: userId },
           data: { email: anonymizedEmail(userId), name: null, image: null, emailNormalized: null, emailVerified: null, deletedAt: now, anonymizedAt: now },

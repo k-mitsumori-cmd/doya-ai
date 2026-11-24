@@ -85,3 +85,40 @@ test('匿名化の中身（偽の Prisma で、呼ばれた操作を確かめる
   assert.equal(names.includes('user.delete'), false)
   assert.equal(names.includes('accountCompany.delete'), false)
 })
+
+test('匿名化: ツール別のメンバー表（外部キーの無い userId 列を含む）を、表ごとに無効にする。物理削除はしない', async () => {
+  const { createPrismaDeleteRepo } = await import('./account-delete.server')
+  const calls: Array<[string, any]> = []
+  const tx = new Proxy({}, {
+    get: (_t, model: string) => new Proxy({}, {
+      get: (_m, op: string) => async (arg: any) => { calls.push([`${model}.${op}`, arg]); return model === 'accountCompany' ? { id: 'c1' } : { count: 1 } },
+    }),
+  })
+  const prisma = { $transaction: async (fn: (t: unknown) => Promise<void>) => fn(tx) } as any
+  await createPrismaDeleteRepo(prisma).anonymize('u1', now)
+  const tables = ['hrOrganizationMember', 'kintaiMember', 'sfaMember', 'shodanMember', 'aioMember', 'mensetsuMember', 'quoteMember', 'aishodanMember', 'incomeMember', 'expenseMember']
+  for (const t of tables) {
+    const c = calls.find((x) => x[0] === `${t}.updateMany`)
+    assert.ok(c, t)
+    assert.deepEqual(c![1], { where: { userId: 'u1', NOT: { status: 'INACTIVE' } }, data: { status: 'INACTIVE' } }, t)
+    assert.equal(calls.some((x) => x[0] === `${t}.delete` || x[0] === `${t}.deleteMany`), false, `${t} は消さない`)
+  }
+  const pm = calls.find((x) => x[0] === 'promaneMember.updateMany')!
+  assert.deepEqual(pm[1], { where: { userId: 'u1', isActive: true }, data: { isActive: false } })
+  // 同じトランザクションの中で、User の匿名化より前に行う（途中で失敗したら全部戻る）
+  const names = calls.map((x) => x[0])
+  assert.ok(names.indexOf('expenseMember.updateMany') < names.indexOf('user.update'))
+})
+
+test('匿名化: メンバー表の更新が1つ失敗したら、匿名化も完了しない（トランザクションごと失敗）', async () => {
+  const { createPrismaDeleteRepo } = await import('./account-delete.server')
+  const calls: string[] = []
+  const tx = new Proxy({}, {
+    get: (_t, model: string) => new Proxy({}, {
+      get: (_m, op: string) => async () => { calls.push(`${model}.${op}`); if (model === 'aioMember') throw new Error('boom'); return { count: 0 } },
+    }),
+  })
+  const prisma = { $transaction: async (fn: (t: unknown) => Promise<void>) => fn(tx) } as any
+  await assert.rejects(createPrismaDeleteRepo(prisma).anonymize('u1', now))
+  assert.equal(calls.includes('user.update'), false)
+})
