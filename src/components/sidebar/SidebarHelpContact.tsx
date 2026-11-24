@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { usePathname } from 'next/navigation'
 import {
   X,
@@ -17,6 +18,12 @@ interface SidebarHelpContactProps {
   showLabel: boolean
   isCollapsed: boolean
   isMobile?: boolean
+  /**
+   * 開くための部品を、置く側の見た目で描くとき（共通の枠の左のメニューなど）。
+   * 渡さないときは、これまでのカードの形のボタンを出す。
+   * 2026-11-24: 10/19 の新しい見た目で古いサイドバーが出なくなり、ログイン後の画面から入口が消えていた。
+   */
+  trigger?: (open: () => void) => ReactNode
 }
 
 type Category = 'improvement' | 'feature' | 'bug' | 'other'
@@ -28,9 +35,12 @@ const CATEGORIES: { id: Category; label: string; icon: typeof Lightbulb; color: 
   { id: 'other', label: 'その他', icon: Sparkles, color: 'text-purple-600' },
 ]
 
-export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContactProps) {
+export function SidebarHelpContact({ showLabel, isCollapsed, trigger }: SidebarHelpContactProps) {
   const pathname = usePathname()
   const [showModal, setShowModal] = useState(false)
+  // 窓は body の直下に出す（左のメニューが動きの指定を持つと、fixed の窓がメニューの中に閉じこめられるため）
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const [category, setCategory] = useState<Category>('feature')
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
@@ -73,7 +83,8 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
 
   return (
     <>
-      {/* お問い合わせ・改善依頼ボタン（明暗どちらのサイドバーでも視認できる独立カード） */}
+      {trigger ? trigger(() => setShowModal(true)) : (
+      /* お問い合わせ・改善依頼ボタン（明暗どちらのサイドバーでも視認できる独立カード） */
       <div className={`${isCollapsed ? 'px-2' : 'px-3'} pb-2`}>
         <button
           onClick={() => setShowModal(true)}
@@ -96,10 +107,11 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
           )}
         </button>
       </div>
+      )}
 
       {/* モーダル */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {showModal && mounted && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="お問い合わせ・改善依頼">
           <div className="absolute inset-0 bg-black/50" onClick={close} />
           <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6 max-h-[90dvh] overflow-y-auto">
             <button
@@ -142,7 +154,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
             ) : (
               <>
                 <div className="flex items-center gap-3 mb-1">
-                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
                     <MessageSquarePlus className="w-6 h-6 text-[#0066ff]" />
                   </div>
                   <div>
@@ -166,8 +178,8 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                         type="button"
                         className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-colors ${
                           selected
-                            ? 'border-[#0066ff] bg-purple-50 ring-1 ring-[#0066ff]'
-                            : 'border-gray-200 hover:border-purple-200 hover:bg-purple-50/50'
+                            ? 'border-[#0066ff] bg-blue-50 ring-1 ring-[#0066ff]'
+                            : 'border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
                         }`}
                       >
                         <Icon className={`w-4 h-4 flex-shrink-0 ${c.color}`} />
@@ -195,7 +207,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                   onClick={submit}
                   disabled={!message.trim() || status === 'sending'}
                   type="button"
-                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#0066ff] text-white text-sm font-black shadow-lg shadow-purple-500/25 hover:bg-[#0052cc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#0066ff] text-white text-sm font-black shadow-lg shadow-blue-500/25 hover:bg-[#0052cc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {status === 'sending' ? (
                     <>
@@ -209,7 +221,8 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
