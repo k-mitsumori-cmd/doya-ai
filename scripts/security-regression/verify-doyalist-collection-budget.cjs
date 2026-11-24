@@ -12,10 +12,12 @@ let now = 0;
 let corporateFails = false;
 let gbizStatus = 200;
 const calls = [];
+const providerEnv = { CORPORATE_NUMBER_API_KEY: 'synthetic-fixture-only' };
 const moduleExports = {};
 vm.runInNewContext(compiled, {
   exports: moduleExports,
   Date: { now: () => now },
+  process: { env: providerEnv },
   console: { log() {}, error() {} },
   require(name) {
     if (name === './corporate-number') return { async searchCorporateNumber(params) {
@@ -62,4 +64,13 @@ vm.runInNewContext(compiled, {
   assert.equal(partial.companies.length, 1);
   assert.equal(partial.providerFailed, true);
   console.log('PASS Doyalist collection distinguishes provider failure from empty results');
+
+  delete providerEnv.CORPORATE_NUMBER_API_KEY;
+  gbizStatus = 404;
+  const before = calls.length;
+  const fallback = await moduleExports.collectCompaniesDetailed({ criteria: { keywords: ['first'] }, maxResults: 1, enrich: false });
+  assert.equal(calls.slice(before).some(([source]) => source === 'corporate'), false);
+  assert.equal(fallback.providerFailed, false);
+  assert.equal(fallback.apiOk, true);
+  console.log('PASS Doyalist skips unconfigured corporate provider and uses gBizINFO');
 })().catch(error => { console.error(error); process.exitCode = 1; });
