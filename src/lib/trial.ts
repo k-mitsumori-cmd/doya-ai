@@ -13,6 +13,7 @@
 // ============================================
 import { stripe } from '@/lib/stripe'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { isApplePrivateRelay } from '@/lib/auth-link/email-normalize'
 
 /** 判定に必要な DB の列。checkout と trial-eligibility は同じ select を使う。 */
 export const TRIAL_USER_SELECT = {
@@ -53,17 +54,30 @@ export async function isTrialEligible(params: {
   // DB の契約状態。呼び出し側が渡し忘れないよう、キーは必須にする（ユーザー行が無いときは undefined）。
   plan: string | null | undefined
   servicePlans: ReadonlyArray<string | null | undefined> | null | undefined
+  /**
+   * 同じ人が持つ別の User（正規化メールが同じ行）のメール。Stripe の履歴もこのメールで横断する。
+   * 呼び出し側は src/lib/trial-siblings.server.ts の findTrialSiblings() で取る。
+   */
+  siblingEmails?: ReadonlyArray<string | null | undefined> | null
 }): Promise<boolean> {
   if (hasPaidPlanInDb(params)) return false
+  // Apple の「メールを隠す」の人は、中継のメールでは過去の契約と突き合わせられない（本人の本当のメールで契約済みかもしれない）。
+  // 迷うときは付与しない（fail-closed）。同じ人の別の User のメールが中継のものでも同じ。
+  if (isApplePrivateRelay(params.email)) return false
+  if ((params.siblingEmails || []).some(e => isApplePrivateRelay(e))) return false
   const customerIds = new Set<string>()
   const expectedEmail = params.email?.trim().toLowerCase() || ''
-  if (params.email) {
+  const lookupEmails = new Set<string>()
+  if (params.email) lookupEmails.add(params.email)
+  for (const e of params.siblingEmails || []) if (e && e.trim()) lookupEmails.add(e)
+  for (const lookup of lookupEmails) {
+    const want = lookup.trim().toLowerCase()
     let cursor: string | undefined
     const seen = new Set<string>()
     while (true) {
-      const customers = await stripe.customers.list({ email: params.email, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      const customers = await stripe.customers.list({ email: lookup, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
       for (const c of customers.data) {
-        if (c.email?.trim().toLowerCase() === expectedEmail) customerIds.add(c.id)
+        if (c.email?.trim().toLowerCase() === want) customerIds.add(c.id)
       }
       if (!customers.has_more) break
       const next = customers.data[customers.data.length - 1]?.id

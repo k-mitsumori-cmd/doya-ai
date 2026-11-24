@@ -7,6 +7,7 @@
 // ⚠️ 受け取りの記録と台帳への付与は、台帳の1つのトランザクションの中で行う（GrantOptions.inTransaction）。
 //    片方だけが残ることはない。ユーザーとメールの一意の制約で、同時の2回目も止まる。
 import { prisma } from '@/lib/prisma'
+import { normalizeEmail } from '@/lib/auth-link/email-normalize'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
 import { decideStarter, starterEmailHash, STARTER_POWER, STARTER_SOURCE_KEY, type StarterDecision } from './starter'
@@ -35,8 +36,11 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
     const email = user?.email ?? null
     const google = await prisma.account.findFirst({ where: { userId, provider: 'google' }, select: { id: true } })
     const emailHash = email ? starterEmailHash(email) : null
+    // 同じ人の別の User（正規化メールが同じ行。Apple 先行のアプリ登録など）が受け取っていても、二重に付けない
+    const n = normalizeEmail(email)
+    const siblings = n ? await prisma.user.findMany({ where: { emailNormalized: n, id: { not: userId } }, select: { id: true }, take: 20 }) : []
     const claim = await prisma.doyaPowerStarterClaim.findFirst({
-      where: { OR: [{ userId }, ...(emailHash ? [{ emailHash }] : [])] },
+      where: { OR: [{ userId }, ...(emailHash ? [{ emailHash }] : []), ...(siblings.length ? [{ userId: { in: siblings.map((x) => x.id) } }] : [])] },
       select: { id: true },
     })
     const decision = decideStarter({

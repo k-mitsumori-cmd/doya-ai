@@ -8,6 +8,7 @@
 // - 同じ人には二度付けない。ユーザー単位でも、メール単位でも1回（会社の作り直し・退会して作り直しでも付けない）。
 // - メールはそのまま残さず、小文字にそろえた形の SHA-256 だけを記録する（doya_power_starter_claims）。
 import { createHash } from 'node:crypto'
+import { isApplePrivateRelay } from '../auth-link/email-normalize'
 
 // 量とようこその知らせの文は、画面からも読めるよう starter-welcome.ts（node: を使わない）に置き、ここから出し直す
 export { STARTER_POWER, STARTER_WELCOME } from './starter-welcome'
@@ -22,7 +23,7 @@ export function starterEmailHash(email: string): string {
 
 export type StarterDecision =
   | { ok: true }
-  | { ok: false; reason: 'flag_off' | 'no_company' | 'not_owner' | 'not_verified' | 'no_email' | 'already_claimed' }
+  | { ok: false; reason: 'flag_off' | 'no_company' | 'not_owner' | 'not_verified' | 'no_email' | 'private_relay' | 'already_claimed' }
 
 /** はじめの付与を付けてよいか */
 export function decideStarter(input: {
@@ -33,13 +34,15 @@ export function decideStarter(input: {
   email: string | null | undefined
   /** Google のログインがあるか、メールの確認が済んでいるか */
   verified: boolean
-  /** このユーザーか、このメールで、もう受け取っているか */
+  /** このユーザーか、このメールか、同じ人の別の User（正規化メールが同じ行）で、もう受け取っているか */
   claimed: boolean
 }): StarterDecision {
   if (!input.ledgerAllowed || !input.tablesAllowed) return { ok: false, reason: 'flag_off' }
   if (!input.hasCompany) return { ok: false, reason: 'no_company' }
   if (!input.isOwner) return { ok: false, reason: 'not_owner' }
   if (!input.email || !input.email.includes('@')) return { ok: false, reason: 'no_email' }
+  // Apple の「メールを隠す」のメールは、過去の受け取り（本当のメールの要約）と突き合わせられない。迷うときは付けない（fail-closed）
+  if (isApplePrivateRelay(input.email)) return { ok: false, reason: 'private_relay' }
   if (!input.verified) return { ok: false, reason: 'not_verified' }
   if (input.claimed) return { ok: false, reason: 'already_claimed' }
   return { ok: true }
