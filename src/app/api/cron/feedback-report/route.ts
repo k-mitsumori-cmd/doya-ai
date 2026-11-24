@@ -52,9 +52,10 @@ export async function GET(request: NextRequest) {
     ])
     // 2026-11-24: サポートチャット（旗 SUPPORT_CHAT_ROLLOUT）の受付は、別の表（support_ticket）に入る。
     // ここを数えないと、チャットで届いていても「届いていません」と知らせてしまう。表が無いときは 0 件として扱う。
+    //    ⚠️ 呼び出しそのものが同期で投げても（表やモデルが無いとき）、ここで受け止めてレポートを止めない
     const [ticketCount, lastTicket] = await Promise.all([
-      prisma.supportTicket.count({ where: period }).catch(() => 0),
-      prisma.supportTicket.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
+      Promise.resolve().then(() => prisma.supportTicket.count({ where: period })).catch(() => 0),
+      Promise.resolve().then(() => prisma.supportTicket.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } })).catch(() => null),
     ])
     const lastAt = [lastOne?.createdAt, lastTicket?.createdAt]
       .filter((d): d is Date => d instanceof Date)
