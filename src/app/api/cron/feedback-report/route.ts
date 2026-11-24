@@ -50,18 +50,28 @@ export async function GET(request: NextRequest) {
         select: { createdAt: true },
       }),
     ])
+    // 2026-11-24: サポートチャット（旗 SUPPORT_CHAT_ROLLOUT）の受付は、別の表（support_ticket）に入る。
+    // ここを数えないと、チャットで届いていても「届いていません」と知らせてしまう。表が無いときは 0 件として扱う。
+    const [ticketCount, lastTicket] = await Promise.all([
+      prisma.supportTicket.count({ where: period }).catch(() => 0),
+      prisma.supportTicket.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } }).catch(() => null),
+    ])
+    const lastAt = [lastOne?.createdAt, lastTicket?.createdAt]
+      .filter((d): d is Date => d instanceof Date)
+      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null
 
     const jstDateTime = (d: Date) => d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    const daysSinceLast = lastOne
-      ? Math.floor((Date.now() - lastOne.createdAt.getTime()) / 86400_000)
+    const daysSinceLast = lastAt
+      ? Math.floor((Date.now() - lastAt.getTime()) / 86400_000)
       : null
 
     const lines: string[] = []
     lines.push(`*お問い合わせ受信レポート（直近${days}日） ${jstDateTime(new Date())}*`)
     lines.push('')
     lines.push(`*受信件数: ${received}件*（累計 ${total}件）`)
+    if (ticketCount > 0) lines.push(`・サポートチャットの受付: ${ticketCount}件`)
 
-    if (received > 0) {
+    if (received > 0 || ticketCount > 0) {
       lines.push('')
       lines.push('*サービス別*')
       for (const row of [...byService].sort((a, b) => b._count._all - a._count._all)) {
@@ -76,11 +86,11 @@ export async function GET(request: NextRequest) {
     } else {
       lines.push('・この期間の受信はありません。')
       lines.push(
-        lastOne
-          ? `・最後に受信したのは ${jstDateTime(lastOne.createdAt)}（${daysSinceLast}日前）です。`
+        lastAt
+          ? `・最後に受信したのは ${jstDateTime(lastAt)}（${daysSinceLast}日前）です。`
           : '・これまで一度も受信がありません。'
       )
-      lines.push('・フォームが壊れていないか、サイドバーの「お問い合わせ・改善依頼」から1件テスト送信して確認できます。')
+      lines.push('・画面にお問い合わせの入口が出ているかと、受け口（/api/feedback）に送信が来ているかを確かめてください。')
     }
 
     await postPlainToSlack(lines.join('\n'), { app: 'ドヤAI', kind: 'report', severity: 'info' })
@@ -91,14 +101,14 @@ export async function GET(request: NextRequest) {
       await notifyAlert({
         level: 'warn',
         title: `お問い合わせが ${daysSinceLast}日間 1件も届いていません`,
-        context: 'フォームの受け口が壊れている可能性があります（2026-08 に12日間の不達が発生）',
-        detail: `最終受信: ${jstDateTime(lastOne!.createdAt)}`,
+        context: 'お問い合わせの入口か受け口が使えない可能性があります。単に送信が無いだけの場合もあります（2026-08 に12日間の不達が発生）',
+        detail: `最終受信: ${jstDateTime(lastAt!)}（お問い合わせフォームとサポートチャットの両方を数えています）`,
         dedupKey: 'feedback-silence',
         cooldownMs: 7 * 24 * 3600_000,
       })
     }
 
-    return NextResponse.json({ ok: true, days, received, total, daysSinceLast })
+    return NextResponse.json({ ok: true, days, received, tickets: ticketCount, total, daysSinceLast })
   } catch (error: any) {
     console.error('[Cron] feedback-report error:')
     await notifyAlert({
