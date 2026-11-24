@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { decideAdminGoogleSession } from './admin-google-session-core'
 
-const g = (providerEmail: string | null = null) => [{ provider: 'google', providerEmail, emailVerified: null as boolean | null }]
+const g = (providerEmail: string | null = null) => [{ provider: 'google', providerEmail, emailVerified: (providerEmail ? true : null) as boolean | null }]
 const run = (session: any, appAuthOn: boolean, accounts: any[] = [], spy?: string[]) =>
   decideAdminGoogleSession({ session, appAuthOn, listGoogleAccounts: async (id) => { spy?.push(id); return accounts } })
 
