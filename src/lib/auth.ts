@@ -10,6 +10,7 @@ import { authLogger } from './auth-logger';
 import { isRecentRegistration } from './registration-classification';
 import { buildAppleProviders } from './auth-link/apple-web-provider';
 import { decideWebSignIn } from './auth-link/app-auth-service';
+import { webSignInGuard } from './auth-link/web-signin-guard';
 import { createPrismaAuthRepo } from './auth-link/repo.server';
 import { isAppAuthEnabled } from './auth-link/app-auth-flag';
 import { guardAppSessionExpiry } from './auth-link/adapter-guard';
@@ -35,22 +36,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       // Apple（設定されているときだけ存在する）は、同じメールの既存ユーザーを自動では結び付けない（account-integrity.md の 4.1）。
-      // Google の動き（既存ユーザー・新規ユーザー）は変えない。
       // 旗 APP_AUTH_ENABLED がオンなら、結び付けの待ちを作って確認の画面 /auth/link?request=<id> へ移動する。オフなら、これまでどおり /auth/signin?error=LinkConfirmationRequired
-      if (account?.provider === 'apple') {
-        try {
-          const repo = createPrismaAuthRepo(prisma)
-          // 旗がオンのときだけ、乱数の部品を読む（オフでは何も読まない）
-          const linkRequests = isAppAuthEnabled()
-            ? await (async () => { const { randomBytes } = await import('node:crypto'); return { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) } })()
-            : undefined
-          const verdict = await decideWebSignIn(repo, {
-            provider: 'apple', providerAccountId: account.providerAccountId, profile: profile as any,
-          }, linkRequests)
-          if (verdict !== true) return verdict
-        } catch {
-          return '/auth/signin?error=AccessDenied'
-        }
+      // Google も、旗 APP_AUTH_ENABLED がオンのときだけ同じ決まりを通す（アプリで Apple を先に使った人が、同じメールの Google で入ると
+      // OAuthAccountNotLinked の行き止まりになるのを、確認の画面へ誘導する）。旗がオフなら今までどおり。web-signin-guard.ts
+      if (account) {
+        const verdict = await webSignInGuard(account.provider, { providerAccountId: account.providerAccountId, profile: profile as any }, {
+          appAuthEnabled: isAppAuthEnabled(),
+          decide: async (input) => {
+            const repo = createPrismaAuthRepo(prisma)
+            // 旗がオンのときだけ、乱数の部品を読む（オフでは何も読まない）
+            const linkRequests = isAppAuthEnabled()
+              ? await (async () => { const { randomBytes } = await import('node:crypto'); return { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) } })()
+              : undefined
+            return decideWebSignIn(repo, input, linkRequests)
+          },
+        })
+        if (verdict !== true) return verdict
       }
       // ※ 新規ユーザーの初回OAuthログインでは、この signIn コールバックは
       //   DBにユーザーが作成される前に走る（existing === null）。その場合の
