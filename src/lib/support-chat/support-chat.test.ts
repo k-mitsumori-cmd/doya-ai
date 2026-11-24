@@ -169,6 +169,7 @@ test('営業時間: 平日 10〜18時（日本時間）だけ', () => {
   assert.equal(isBusinessHours(Date.UTC(2026, 9, 25, 3, 0)), false)  // 日 12:00
   assert.match(replyEtaText('bug', Date.UTC(2026, 9, 25, 3, 0)), /受付時間外/)
   assert.match(replyEtaText('security'), /すぐに/)
+  assert.match(replyEtaText('other', Date.UTC(2026, 10, 24, 3), false), /メールでの返信を希望しない/)
 })
 
 test('伏せ字: メール・電話番号・カードらしい数字・トークンを伏せる', () => {
