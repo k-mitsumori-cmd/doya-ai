@@ -8,7 +8,8 @@
  *  - 既定の正規化（normalizeEmail）: Unicode NFKC、前後の空白を除く、小文字にする。この列だけを照合に使う。
  *  - Gmail の別名の除去（gmailCanonicalKey）: ドットと +タグを除く。別人の誤判定があり得るので、
  *    一意の制約にも自動の結び付けにも使わない。「同じ人らしい」候補を目で確かめる用途だけ。
- *    ※ これを使うかどうかは決定待ち（三森さんの決定が出るまで、どの経路からも呼ばない）。
+ *    ※ 2026-11-25 三森さんの決定: 初月無料と「最初の100」の判定にだけ使う（trial-siblings.server.ts、starter.ts）。
+ *      一意の制約・自動の結び付けには使わない。
  */
 
 const GMAIL_DOMAINS = new Set(['gmail.com', 'googlemail.com'])
@@ -45,6 +46,13 @@ export function gmailCanonicalKey(email: unknown): string | null {
   const noTag = local.split('+')[0]
   if (GMAIL_DOMAINS.has(domain)) return `${noTag.replace(/\./g, '')}@gmail.com`
   return noTag ? `${noTag}@${domain}` : null
+}
+
+/** Gmail 系（gmail.com / googlemail.com）のアドレスか。 */
+export function isGmailAddress(email: unknown): boolean {
+  const n = normalizeEmail(email)
+  if (!n) return false
+  return GMAIL_DOMAINS.has(n.slice(n.indexOf('@') + 1))
 }
 
 /** Apple の「メールを隠す」のアドレスか。ユーザーの照合・招待の照合には使わない（連絡用に控えるだけ）。 */

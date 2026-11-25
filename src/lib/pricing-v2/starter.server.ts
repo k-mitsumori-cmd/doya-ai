@@ -10,7 +10,8 @@ import { prisma } from '@/lib/prisma'
 import { normalizeEmail } from '@/lib/auth-link/email-normalize'
 import { doyaPowerLedgerAllowed } from '@/lib/doya-power/flag'
 import { isNewPricingEnabledFor, newPricingRollout } from './rollout'
-import { decideStarter, starterEmailHash, STARTER_POWER, STARTER_SOURCE_KEY, type StarterDecision } from './starter'
+import { findGmailVariantUsers } from '@/lib/trial-siblings.server'
+import { decideStarter, starterCanonicalEmailHash, starterEmailHashesForLookup, STARTER_POWER, STARTER_SOURCE_KEY, type StarterDecision } from './starter'
 
 /** 付け終わった（または受け取り済みと分かった）人。同じサーバーの中で、毎回 DB を見に行かないため */
 const settled = new Set<string>()
@@ -35,12 +36,16 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
     const company = await prisma.accountCompany.findUnique({ where: { userId }, select: { id: true } })
     const email = user?.email ?? null
     const google = await prisma.account.findFirst({ where: { userId, provider: 'google' }, select: { id: true } })
-    const emailHash = email ? starterEmailHash(email) : null
-    // 同じ人の別の User（正規化メールが同じ行。Apple 先行のアプリ登録など）が受け取っていても、二重に付けない
+    // 記録するのは、Gmail のドット違い・「+」付きをそろえた形。照会は旧形式の要約も含める（2026-11-25 三森さんの決定）
+    const emailHash = email ? starterCanonicalEmailHash(email) : null
+    const lookupHashes = email ? starterEmailHashesForLookup(email) : []
+    // 同じ人の別の User（正規化メールが同じ行。Apple 先行のアプリ登録など。Gmail のドット違い・「+」付きも含む）が受け取っていても、二重に付けない
     const n = normalizeEmail(email)
     const siblings = n ? await prisma.user.findMany({ where: { emailNormalized: n, id: { not: userId } }, select: { id: true }, take: 20 }) : []
+    const gmailSiblings = await findGmailVariantUsers(userId, email)
+    const siblingIds = Array.from(new Set([...siblings.map((x) => x.id), ...gmailSiblings.map((x) => x.id)]))
     const claim = await prisma.doyaPowerStarterClaim.findFirst({
-      where: { OR: [{ userId }, ...(emailHash ? [{ emailHash }] : []), ...(siblings.length ? [{ userId: { in: siblings.map((x) => x.id) } }] : [])] },
+      where: { OR: [{ userId }, ...(lookupHashes.length ? [{ emailHash: { in: lookupHashes } }] : []), ...(siblingIds.length ? [{ userId: { in: siblingIds } }] : [])] },
       select: { id: true },
     })
     const decision = decideStarter({
@@ -58,7 +63,7 @@ export async function ensureStarterGrant(userId: string): Promise<{ granted: num
       sourceKey: STARTER_SOURCE_KEY,
       note: 'starter',
       inTransaction: async (tx) => {
-        const exists = await tx.doyaPowerStarterClaim.findFirst({ where: { OR: [{ userId }, { emailHash }] }, select: { id: true } })
+        const exists = await tx.doyaPowerStarterClaim.findFirst({ where: { OR: [{ userId }, { emailHash: { in: lookupHashes } }] }, select: { id: true } })
         if (exists) return false
         await tx.doyaPowerStarterClaim.create({ data: { emailHash, userId, companyId: company.id, amount: STARTER_POWER } })
         return true

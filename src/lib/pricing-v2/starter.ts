@@ -8,7 +8,7 @@
 // - 同じ人には二度付けない。ユーザー単位でも、メール単位でも1回（会社の作り直し・退会して作り直しでも付けない）。
 // - メールはそのまま残さず、小文字にそろえた形の SHA-256 だけを記録する（doya_power_starter_claims）。
 import { createHash } from 'node:crypto'
-import { isApplePrivateRelay } from '../auth-link/email-normalize'
+import { gmailCanonicalKey, isApplePrivateRelay, isGmailAddress, normalizeEmail } from '../auth-link/email-normalize'
 
 // 量とようこその知らせの文は、画面からも読めるよう starter-welcome.ts（node: を使わない）に置き、ここから出し直す
 export { STARTER_POWER, STARTER_WELCOME } from './starter-welcome'
@@ -19,6 +19,22 @@ export const STARTER_SOURCE_KEY = 'starter'
 /** 記録に使うメールの要約（小文字にそろえ、前後の空白を除いたものの SHA-256。16進64文字） */
 export function starterEmailHash(email: string): string {
   return createHash('sha256').update(`doya-starter:v1:${email.trim().toLowerCase()}`).digest('hex')
+}
+
+/**
+ * Gmail のドット違い・「+」付きを同じ人にそろえた要約（2026-11-25 三森さんの決定）。
+ * 使うのは、受け取り済みかどうかの判定だけ。一意の制約や自動の結び付けには使わない。
+ * Gmail 系（gmail.com / googlemail.com）以外は、小文字にそろえた形のまま。
+ */
+export function starterCanonicalEmailHash(email: string): string {
+  const n = normalizeEmail(email)
+  const key = n && isGmailAddress(n) ? gmailCanonicalKey(n) : null
+  return createHash('sha256').update(`doya-starter:v2:${key ?? email.trim().toLowerCase()}`).digest('hex')
+}
+
+/** 受け取り済みの照会に使う要約の一覧（旧形式と、Gmail をそろえた形。重複は除く） */
+export function starterEmailHashesForLookup(email: string): string[] {
+  return Array.from(new Set([starterEmailHash(email), starterCanonicalEmailHash(email)]))
 }
 
 export type StarterDecision =
