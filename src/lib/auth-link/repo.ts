@@ -12,6 +12,8 @@ export type UserRecord = {
   image: string | null
   email: string | null
   plan: string
+  /** USER / ADMIN。審査用ログインが、管理者のアカウントを通さないために読む */
+  role?: string
   deletedAt: Date | null
 }
 

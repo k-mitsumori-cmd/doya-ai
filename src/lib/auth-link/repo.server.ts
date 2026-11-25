@@ -47,7 +47,7 @@ export function createPrismaAuthRepo(prisma: PrismaClient): AuthRepo {
       return { id: u.id, emailVerified: verified }
     },
     async getUser(id) {
-      return prisma.user.findUnique({ where: { id }, select: { id: true, name: true, image: true, email: true, plan: true, deletedAt: true } })
+      return prisma.user.findUnique({ where: { id }, select: { id: true, name: true, image: true, email: true, plan: true, role: true, deletedAt: true } })
     },
     async createUserWithAccount(input) {
       try {

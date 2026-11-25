@@ -139,6 +139,8 @@ export class MemoryRepo implements AuthRepo {
     return [...this.links.values()].find((l) => l.provider === provider && l.providerAccountId === sub && l.userId === userId && !l.consumedAt && l.expiresAt.getTime() > now.getTime()) ?? null
   }
   async createLinkRequest(i: { id: string; userId: string; provider: string; providerAccountId: string; providerEmail: string | null; expiresAt: Date }) {
+    // 本物の DB と同じく、同じ id の行があれば一意違反（回数を戻さない）
+    if (this.links.has(i.id)) throw new UniqueViolationError()
     this.links.set(i.id, { ...i, codeHash: null, attempts: 0, consumedAt: null, createdAt: new Date() })
   }
   async setLinkCode(id: string, codeHash: string | null) { this.links.get(id)!.codeHash = codeHash }

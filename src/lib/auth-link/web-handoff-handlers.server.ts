@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { appAuthOffResponse } from './app-auth-flag'
 import { handleAppAuth } from './route-helpers.server'
-import { consumeWebHandoff, createWebHandoff, devLogin, type AuthDeps } from './app-auth-service'
+import { consumeWebHandoff, createWebHandoff, devLogin, reviewLogin, type AuthDeps } from './app-auth-service'
 import { APP_REQUEST_HEADER, sessionCookieName } from './bearer-cookie'
 import { isDevLoginAllowed } from './dev-login'
+import { readReviewLoginConfig } from './review-login'
 import { HANDOFF_VERIFIER_HEADER, resolveOrigin } from './web-handoff'
 
 /**
@@ -70,6 +71,13 @@ export async function handleWebHandoffConsume(req: NextRequest, makeDeps?: MakeD
   } catch {
     return redirectTo(req, FAIL_PATH)
   }
+}
+
+/** POST /api/app/auth/review-login。旗・審査用のメールとコードがそろわなければ、理由を出さずに 404 */
+export async function handleReviewLogin(req: NextRequest, makeDeps?: MakeDeps): Promise<NextResponse> {
+  const cfg = readReviewLoginConfig(process.env)
+  if (!cfg) return NextResponse.json({ code: 'NOT_FOUND' }, { status: 404 })
+  return handleAppAuth(req, (deps, { body }) => reviewLogin(deps, body, cfg), { makeDeps })
 }
 
 /** POST /api/app/auth/dev-login。動かしてよい条件がそろわなければ、理由を出さずに 404 */
