@@ -95,3 +95,18 @@ test('審査用ログインの設定: 管理画面に入れる surisuta.jp の�
   const env = { APP_AUTH_ENABLED: '1', APP_REVIEW_LOGIN_ENABLED: '1', APP_REVIEW_LOGIN_EMAIL: 'x@surisuta.jp', APP_REVIEW_LOGIN_CODE: 'abcdefgh' }
   assert.equal(readReviewLoginConfig(env), null)
 })
+
+test('審査用ログインの回数の枠は、結び付けの確認（send-code・confirm）の待ちとして使えない', async () => {
+  const { sendLinkCode, confirmLink, REVIEW_LOGIN_WINDOW_MS: W } = await import('./app-auth-service')
+  const { deps, repo } = setup()
+  await reviewLogin(deps, ok({ code: 'wrong-code-00000000' }), CFG) // 枠の行ができる
+  const id = `review-login-${Math.floor(clock.getTime() / W)}`
+  assert.ok(repo.links.has(id))
+  const before = repo.links.get(id)!.attempts
+  const sent = await sendLinkCode(deps, { requestId: id })
+  assert.equal(sent.status, 410)
+  const confirmed = await confirmLink(deps, { authorization: null, body: { requestId: id, code: '123456' } })
+  assert.ok(confirmed.status === 410 || confirmed.status === 401, `status ${confirmed.status}`)
+  assert.equal(repo.links.get(id)!.attempts, before, '回数を減らされない')
+  assert.equal(repo.links.get(id)!.codeHash, null, '確認コードを置かれない')
+})

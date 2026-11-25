@@ -369,6 +369,7 @@ export async function devLogin(deps: AuthDeps, raw: unknown): Promise<ServiceRes
 // 審査用の限定ログイン（POST /api/app/auth/review-login）。2026-11-25 三森さんの決定（案 A）
 // ---------------------------------------------------------------------------
 /** 15分の枠ごとに、試せる回数。枠ごとの行は、結び付けの待ち（auth_link_request）の表を借りて数える（新しい表は作らない） */
+export const REVIEW_LOGIN_PROVIDER = 'review-login'
 export const REVIEW_LOGIN_MAX_ATTEMPTS = 5
 export const REVIEW_LOGIN_WINDOW_MS = 15 * 60 * 1000
 
@@ -402,7 +403,7 @@ export async function reviewLogin(deps: AuthDeps, raw: unknown, cfg: { email: st
   const windowId = `review-login-${bucket}`
   try {
     await deps.repo.createLinkRequest({
-      id: windowId, userId: user.id, provider: 'review-login', providerAccountId: 'window', providerEmail: null,
+      id: windowId, userId: user.id, provider: REVIEW_LOGIN_PROVIDER, providerAccountId: 'window', providerEmail: null,
       expiresAt: new Date((bucket + 1) * REVIEW_LOGIN_WINDOW_MS),
     })
   } catch { /* すでに同じ枠の行がある（2回目以降）。続ける */ }
@@ -419,7 +420,8 @@ export async function reviewLogin(deps: AuthDeps, raw: unknown, cfg: { email: st
 async function liveRequest(deps: AuthDeps, requestId: unknown): Promise<{ request: LinkRequestRecord } | { error: ServiceResult }> {
   if (typeof requestId !== 'string' || !isSafeTokenValue(requestId)) return { error: fail(400, 'INVALID_REQUEST') }
   const request = await deps.repo.getLinkRequest(requestId)
-  if (!request || request.consumedAt || request.expiresAt.getTime() <= deps.now().getTime() || !request.userId) {
+  // 審査用ログインの回数の枠（provider が review-login。id は推測できる）は、結び付けの待ちとして使わせない
+  if (!request || request.provider === REVIEW_LOGIN_PROVIDER || request.consumedAt || request.expiresAt.getTime() <= deps.now().getTime() || !request.userId) {
     return { error: fail(410, 'LINK_REQUEST_EXPIRED') }
   }
   return { request }
