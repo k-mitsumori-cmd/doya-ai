@@ -123,6 +123,12 @@ function errorFingerprint(source: string, args: unknown[]): string {
 export function safeRuntimeSource(stack: string | undefined): string {
   for (const line of stack?.split('\n').slice(2, 10) ?? []) {
     if (line.includes('node:internal')) continue;
+    // 2026-11-24: 「route.js:1:5076」だけでは、どの API か分からなかった（11/23 9:15 の通知）。
+    // Next.js のルートの組み立て済みファイルは .next/server/app/<ルートの道>/route.js にある。
+    // 道はフォルダーの名前（[id] などの決まった名前）だけで、利用者の値は入らないので、道ごと返す。
+    // 道が付くと、別々の API の route.js:1:5076 が同じ発生箇所として10分まとめられることも無くなる。
+    const appRoute = line.match(/[/\\]server[/\\]app[/\\]((?:[A-Za-z0-9_.@()[\]-]{1,60}[/\\]){0,8}(?:route|page|layout)\.js):(\d{1,7}):(\d{1,7})/);
+    if (appRoute) return `${appRoute[1].replace(/\\/g, '/')}:${appRoute[2]}:${appRoute[3]}`;
     const match = line.match(/(?:^|[/\\(\s])([A-Za-z0-9_.-]{1,100}\.[cm]?[jt]s):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
     if (match) return `${match[1]}:${match[2]}:${match[3]}`;
     // Bundler frames may add a query string between the script name and location.

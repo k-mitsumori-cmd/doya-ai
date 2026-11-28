@@ -146,6 +146,13 @@ async function main(){
   assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)'), 'サーバー処理（詳細はログ）');
   assert(!trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at handler (/var/task/private-canary/12345.js:18:72)').includes('private-canary'));
   pass('Runtime source skips virtual frames and retains only bounded static file locations');
+  // ルートの組み立て済みファイルは、どの API かが分かるように道ごと返す（2026-11-24）
+  assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at handler (/var/task/.next/server/app/api/cron/service-downloads/route.js:1:5076)'), 'api/cron/service-downloads/route.js:1:5076');
+  assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at handler (/var/task/.next/server/app/(shell)/banner/[id]/page.js:1:20)'), '(shell)/banner/[id]/page.js:1:20');
+  assert.notEqual(trace.exports.safeRuntimeSource('Error\n    at x (/var/task/.next/server/app/api/a/route.js:1:5076)\n    at x (/var/task/.next/server/app/api/a/route.js:1:5076)'), trace.exports.safeRuntimeSource('Error\n    at x (/var/task/.next/server/app/api/b/route.js:1:5076)\n    at x (/var/task/.next/server/app/api/b/route.js:1:5076)'));
+  // 道に使えない文字（空白・クエリ・利用者の値に見える物）が入る行は、これまでどおり名前だけにする
+  assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at handler (/var/task/.next/server/app/api/user name@example.com/route.js:1:9)'), 'route.js:1:9');
+  pass('Runtime source names the Next.js route path for compiled route files');
   await trace.exports.reportRuntimeFailure('fixed-source',{clientReported:true});await trace.exports.reportRuntimeFailure('fixed-source',{clientReported:true});
   assert.equal(trace.sends.length,1);assert.equal(trace.diagnostics.length,1);assert.equal(trace.diagnostics[0][1].source,'fixed-source');assert(trace.sends[0].text.includes(trace.diagnostics[0][1].incidentId));assert(trace.sends[0].text.includes('doya-synthetic.vercel.app'));assert(trace.sends[0].text.includes('dpl_Synthetic123'));assert(trace.sends[0].text.includes('未検証'));pass('Deduped client report includes matching incident ID and validated deployment');
   const malformed=tracedRuntime({VERCEL_URL:'doya.vercel.app?private-canary',VERCEL_DEPLOYMENT_ID:'dpl_abc\nprivate-canary'});
