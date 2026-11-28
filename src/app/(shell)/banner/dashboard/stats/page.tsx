@@ -1,7 +1,7 @@
 'use client'
 
 import { Bars, ColumnChart } from '@/components/ds/charts'
-import { Skeleton } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -442,9 +442,12 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
                 data={dailyStats.map((d) => ({ label: d.date, value: d.count }))}
               />
             ) : (
-              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">
-                まだデータがありません
-              </div>
+              <EmptyState
+                title="まだ集計できるバナーがありません"
+                description="バナーを作ると、ここに日ごとの枚数が出ます。"
+                art="/banner/empty-banners.webp"
+                action={<Button href="/banner/dashboard/create" icon="Sparkles">バナーを作る</Button>}
+              />
             )}
           </motion.div>
 
@@ -467,9 +470,12 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
                 format={(n) => `${n.toLocaleString('ja-JP')}件`}
               />
             ) : (
-              <div className="h-40 flex items-center justify-center text-gray-400 text-sm">
-                まだデータがありません
-              </div>
+              <EmptyState
+                title="まだ集計できるバナーがありません"
+                description="バナーを作ると、ここによく使うカテゴリの順位が出ます。"
+                art="/banner/empty-banners.webp"
+                action={<Button href="/banner/dashboard/create" icon="Sparkles">バナーを作る</Button>}
+              />
             )}
           </motion.div>
         </div>

@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/promane/format";
 import { Plus, Trash2, Building2, User, Mail, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Button as DsButton, EmptyState } from "@/components/ds";
 import { useConfirm } from "@/components/promane/confirm-dialog";
 
 import { useClientCreation } from '@/lib/promane/use-client-creation';
@@ -218,18 +219,20 @@ function EditableClientActions({ workspaceSlug, workspaceId, clients }: ClientAc
         </Dialog>
       </div>
 
-</>} onDelete={handleDelete} confirmation={<ConfirmDialog />} />;
+</>} onDelete={handleDelete} onAdd={() => setOpen(true)} confirmation={<ConfirmDialog />} />;
 }
 
-function ClientActionsContent({ clients, form, onDelete, confirmation }: Pick<ClientActionsProps, "clients"> & { form?: React.ReactNode; onDelete?: (id: string, name: string) => void; confirmation?: React.ReactNode }) {
+function ClientActionsContent({ clients, form, onDelete, onAdd, confirmation }: Pick<ClientActionsProps, "clients"> & { form?: React.ReactNode; onDelete?: (id: string, name: string) => void; onAdd?: () => void; confirmation?: React.ReactNode }) {
   return (
     <>
       {form}
       {clients.length === 0 ? (
-        <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm py-24 text-center animate-bounce-in">
-          <Image src="/character/surprise.png" alt="" width={120} height={120} className="mx-auto animate-float" unoptimized />
-          <p className="mt-4 text-[20px] font-black text-gray-400">まだ顧客がいないよ</p>
-          <p className="text-[15px] text-gray-300 font-bold mt-1">{onDelete ? "顧客を追加して案件を紐づけよう！" : "まだ顧客が登録されていません。"}</p>
+        <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm py-8">
+          <EmptyState
+            title="まだ顧客が登録されていません"
+            description={onDelete ? "顧客を登録すると、案件を顧客ごとにまとめて、売上を見られます。" : "顧客が登録されると、ここに並びます。"}
+            action={onAdd ? <DsButton onClick={onAdd} icon="Plus">顧客を追加する</DsButton> : undefined}
+          />
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">

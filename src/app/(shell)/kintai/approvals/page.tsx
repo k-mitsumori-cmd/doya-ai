@@ -4,7 +4,7 @@ import { PageTitle } from '@/components/kintai/ui-next'
 import { useEffect, useId, useState, useCallback, useRef } from 'react'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
-import { Skeleton } from '@/components/ds'
+import { Button, EmptyState, Skeleton } from '@/components/ds'
 import { confirmDialog } from '@/components/ds/dialog'
 import { useEscapeToClose } from '@/lib/kintai/use-escape'
 import { userErrorMessage, KINTAI_NETWORK_ERROR } from '@/lib/kintai/user-error'
@@ -259,20 +259,9 @@ export default function ApprovalsPage() {
             <button onClick={load} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : requests.length === 0 ? (
-          <div className="text-center py-16 fade-in-up space-y-4">
-            {tab === 'pending' ? (
-              <>
-                <img src="/kintai/characters/success_%E6%88%90%E5%8A%9F.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
-                <p className="text-lg font-bold text-slate-700">すべて承認済みです！</p>
-                <p className="text-sm text-slate-400">未承認の申請はありません</p>
-              </>
-            ) : (
-              <>
-                <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={80} height={80} className="bear-wiggle mx-auto" />
-                <p className="text-slate-500 font-medium">該当する申請はありません</p>
-              </>
-            )}
-          </div>
+          tab === 'pending'
+            ? <EmptyState art="/kintai/empty-records.webp" title="承認待ちの申請はありません" description="すべて承認済みです。新しい申請が届くと、ここに並びます。" />
+            : <EmptyState art="/kintai/empty-records.webp" title="この条件の申請はありません" description="承認待ちの申請を見ると、いま対応が必要なものが分かります。" action={<Button onClick={() => setTab('pending')} icon="ListChecks">承認待ちを見る</Button>} />
         ) : (
           <div className="space-y-3">
             {requests.map((r: any) => {

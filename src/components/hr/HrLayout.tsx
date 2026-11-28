@@ -208,25 +208,13 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
 
   if (status === 'authenticated' && !actor) return <div role="alert" className="p-6 text-center">ログイン情報を確認できません。<a href="/auth/signin" className="ml-2 underline">再度ログインする</a></div>
 
-  if ((usageError || selectionError) && session?.user && !knownScope && renderFrame) {
-    return framed(<div className="p-4 sm:p-6"><ErrorNotice what="組織の情報を読み込めませんでした。組織の状態は変わっていません。" how={selectionError || '時間をおいて、もう一度お試しください。'} onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
-  }
+  // 読み込みの失敗と待ちは、枠の有無にかかわらず、枠の中の表示（骨組みとエラーの案内）にそろえる。全面のスピナーや全面のエラーは出さない
   if ((usageError || selectionError) && session?.user && !knownScope) {
-    return framed(<div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center">{inlinePicker}<p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>)
+    return framed(<div className="p-4 sm:p-6">{inlinePicker}<ErrorNotice what="組織の情報を読み込めませんでした。組織の状態は変わっていません。" how={selectionError || '時間をおいて、もう一度お試しください。'} onRetry={() => void loadUsage()} retryLabel="再読み込み" /></div>)
   }
 
-  if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed) && renderFrame) {
-    return framed(<div className="grid gap-4 p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={1} height={28} delayMs={0} /><Skeleton lines={4} height={18} delayMs={0} /></div>)
-  }
   if (!knownScope && (isSessionLoading || (session?.user && hasOrg === null) || allowed)) {
-    return framed(
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-4 border-sky-200 border-t-sky-500 animate-spin" />
-          <p className="text-sm text-slate-400">読み込み中...</p>
-        </div>
-      </div>
-    )
+    return framed(<div className="grid gap-4 p-4 sm:p-6" aria-busy="true" aria-label="読み込み中"><Skeleton lines={1} height={28} delayMs={0} /><Skeleton lines={4} height={18} delayMs={0} /></div>)
   }
 
   if (!session?.user || isSignedOut) {
@@ -252,7 +240,7 @@ export default function HrLayout({ children, renderFrame }: HrLayoutProps) {
   }
 
   if ((pathname === '/hr/employees/new' || /^\/hr\/employees\/[^/]+\/edit$/.test(pathname || '')) && !usage.canManageEmployees) {
-    return framed(<div role="alert" className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center font-bold text-slate-700">従業員の登録・編集は管理者のみ利用できます。</div>)
+    return framed(<div className="p-4 sm:p-6"><ErrorNotice what="従業員の登録と編集は、管理者だけが行えます。" how="管理者に、登録や編集を頼んでください。" /></div>)
   }
 
   if (renderFrame) {

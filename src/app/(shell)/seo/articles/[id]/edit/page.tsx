@@ -251,19 +251,19 @@ function SeoRichEditor({ articleId }: { articleId: string }) {
             <p className="text-sm font-black text-gray-900 leading-none truncate max-w-xs">
               {article.title}
             </p>
-            <p className="text-[10px] font-bold text-gray-400 mt-0.5">エディタ</p>
+            <p className="text-xs font-bold text-gray-400 mt-0.5">エディタ</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {hasUnsaved && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+            <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
               <AlertTriangle className="w-3 h-3" />
               未保存
             </span>
           )}
           {saved && !hasUnsaved && !error && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+            <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
               <CheckCircle2 className="w-3 h-3" />
               保存しました
             </span>

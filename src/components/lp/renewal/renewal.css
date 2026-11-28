@@ -526,9 +526,12 @@
   font-weight: 800;
 }
 .doya-book strong {
-  font-size: 23px;
+  /* 表紙の題は1文字だけの行を出さない（2026-11 点検）。字を少し小さくして1行に6字入れ、折るときは行を均す */
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.45;
+  text-wrap: balance;
+  word-break: auto-phrase;
 }
 .doya-book small {
   font-size: 8px;
@@ -1106,12 +1109,12 @@
     height: 205px;
   }
   .doya-book {
-    width: 104px;
+    width: 112px;
     height: 143px;
     padding: 14px 12px 12px 16px;
   }
   .doya-book strong {
-    font-size: 16px;
+    font-size: 13px;
   }
   .doya-book span,
   .doya-book small {

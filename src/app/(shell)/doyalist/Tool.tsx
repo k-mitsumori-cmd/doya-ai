@@ -17,6 +17,7 @@ import Sym from '@/components/doyalist/Sym'
 import ShellLoading from '@/components/shell/ShellLoading'
 import { EmptyState as DsEmptyState, ErrorNotice, ToolHero, toolHeroArt, ToolNextStep, type NextStepView } from '@/components/ds'
 import { FirstSteps } from '@/components/ds/feedback'
+import ToolProgressNext from '@/components/ToolProgressNext'
 import { Check, Circle, X } from 'lucide-react'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
@@ -603,7 +604,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   <div className="mt-3 p-3 bg-gradient-to-r from-brand-50 to-brand-100 border border-brand-100 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs font-black text-brand-600 inline-flex items-center gap-0.5"><Sym name="smart_toy" className="text-sm" />AI変換タグ</span>
-                      <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
+                      <span className="text-xs text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {aiTags.map((tag) => {
@@ -623,7 +624,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         )
                       })}
                     </div>
-                    <p className="text-[10px] text-brand-500 mt-2">
+                    <p className="text-xs text-brand-500 mt-2">
                       {activeTags.size}個のタグを選択中
                       {activeTags.size > 0 && ' → これらの語を含む法人を検索します'}
                     </p>
@@ -653,7 +654,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   <p className="text-xs font-bold text-amber-700 leading-relaxed inline-flex items-start gap-1">
                     <Sym name="warning" className="text-base" /><strong>「{industry}」業界は国の法人データへの登録が少ない傾向です</strong>
                   </p>
-                  <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
+                  <p className="text-xs text-amber-600 mt-1 leading-relaxed">
                     代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
                     法人名・住所・法人番号は確実に取得できます。
                   </p>
@@ -711,6 +712,14 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   <><img src={CHARS.jump} alt="" className="w-6 h-6" />リストを抽出する</>
                 )}
               </button>
+              {/* 抽出は1分前後かかる。どの段階か・あとどれくらいかを出す */}
+              <ToolProgressNext
+                active={generating}
+                title="企業を抽出しています"
+                stages={['条件を検索の形に直しています', '国の法人データから企業を探しています', '重複を除いて並べています']}
+                estimateSec={90}
+                className="mt-3"
+              />
 
               {extractionIntent && (
                 <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -768,11 +777,11 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
 
               <div className="py-5 text-center border-b border-slate-100">
                 <p className="text-xs font-bold text-slate-500 mb-1">最大取得件数</p>
-                <p className="text-4xl font-black text-[#0a1530]">{count.toLocaleString()}<span className="text-base font-bold text-slate-500 ml-1">社</span></p>
+                <p className="text-4xl font-black text-[#0a1530]"><span className="whitespace-nowrap">{count.toLocaleString()}<span className="text-base font-bold text-slate-500 ml-1">社</span></span></p>
 
                 {/* 実数推定 */}
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-500">国の法人データでのキーワードの該当数（参考）</p>
+                  <p className="text-xs font-bold text-slate-500">国の法人データでのキーワードの該当数（参考）</p>
                   {estimateLoading ? (
                     <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
                   ) : estimatedCount !== null ? (
@@ -780,21 +789,23 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                       <p className={`text-2xl font-black mt-1 ${
                         estimatedCount >= count ? 'text-emerald-600' : estimateIsApprox ? 'text-slate-700' : 'text-amber-600'
                       }`}>
-                        {estimateIsApprox ? '少なくとも ' : ''}
-                        <CountUp value={estimatedCount} />
-                        <span className="text-sm font-bold ml-0.5">社</span>
+                        <span className="whitespace-nowrap">
+                          {estimateIsApprox ? '少なくとも ' : ''}
+                          <CountUp value={estimatedCount} />
+                          <span className="text-sm font-bold ml-0.5">社</span>
+                        </span>
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
-                        <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
+                        <p className="text-xs text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
                           <Sym name="warning" className="text-xs" />キーワード検索の参考件数が指定件数を下回っています。業種・規模などで絞り込んだ実際の取得数とは異なります
                         </p>
                       )}
                       {estimateNote && (
-                        <p className="text-[10px] text-slate-400 mt-1">{estimateNote}</p>
+                        <p className="text-xs text-slate-400 mt-1">{estimateNote}</p>
                       )}
                     </>
                   ) : (
-                    <p className="text-[10px] text-slate-400 mt-1">{estimateNote || '推定不可'}</p>
+                    <p className="text-xs text-slate-400 mt-1">{estimateNote || '推定不可'}</p>
                   )}
                 </div>
               </div>
@@ -805,10 +816,10 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                   <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
                     <span className={`mt-0.5 flex-shrink-0 ${f.always ? 'text-emerald-500' : 'text-cyan-500'}`}>{f.always ? <Check size={12} strokeWidth={2.5} aria-hidden /> : <Circle size={12} strokeWidth={2} aria-hidden />}</span>
                     <span className="flex-1">{f.label}</span>
-                    {!f.always && <span className="text-[9px] text-slate-400 whitespace-nowrap">登録時のみ</span>}
+                    {!f.always && <span className="text-xs text-slate-400 whitespace-nowrap">登録時のみ</span>}
                   </div>
                 ))}
-                <p className="text-[10px] text-slate-400 pt-2 mt-2 border-t border-slate-100 leading-relaxed">
+                <p className="text-xs text-slate-400 pt-2 mt-2 border-t border-slate-100 leading-relaxed">
                   ※ <Circle size={10} strokeWidth={2.5} aria-hidden className="inline-block align-[-1px] text-cyan-500" /> の項目は、国の法人データへの登録状況によって取得できないことがあります（株式会社未上場の小規模法人など）
                 </p>
               </div>
@@ -885,7 +896,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
               </div>
               {/* データ有無フィルタ（チップ） */}
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[11px] font-bold text-slate-500">絞り込み:</span>
+                <span className="text-xs font-bold text-slate-500">絞り込み:</span>
                 {[
                   { state: filterHasUrl, set: setFilterHasUrl, icon: 'language', label: '公式URLあり', count: companies.filter(c => !!c.website).length },
                   { state: filterHasRep, set: setFilterHasRep, icon: 'person', label: '代表者名あり', count: companies.filter(c => !!c.enrichedData?.representative).length },
@@ -901,7 +912,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'}`}
                   >
                     <span className="inline-flex items-center gap-1"><Sym name={f.icon} className="text-sm" />{f.label}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
                   </button>
                 ))}
                 {(filterHasUrl || filterHasRep || filterHasEmployees) && (
@@ -956,17 +967,17 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                           )}
                           {/* URL登録バッジ */}
                           {c.website ? (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-md leading-tight" title="公式URL登録あり">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-black rounded-md leading-tight" title="公式URL登録あり">
                               <Check size={10} strokeWidth={2.5} aria-hidden />URL登録
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-md leading-tight" title="国の法人データにURLの登録なし">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-xs font-black rounded-md leading-tight" title="国の法人データにURLの登録なし">
                               URL未登録
                             </span>
                           )}
                           {/* 代表者情報バッジ */}
                           {ed.representative && (
-                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-brand-50 text-brand-600 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-brand-50 text-brand-600 text-xs font-black rounded-md leading-tight" title="代表者名登録あり">
                               <Check size={10} strokeWidth={2.5} aria-hidden />代表者
                             </span>
                           )}
@@ -981,7 +992,7 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                         </div>
                         {(ed.businessSummary || c.description) && (
                           <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg">
-                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><Sym name="description" className="text-sm" />事業概要</p>
+                            <p className="text-xs font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><Sym name="description" className="text-sm" />事業概要</p>
                             <p className="text-sm text-slate-700 leading-relaxed">{ed.businessSummary || c.description}</p>
                           </div>
                         )}
@@ -1003,12 +1014,12 @@ function ScopedDoyalistTool({ identityEpoch, epoch, preview }: { identityEpoch: 
                             </a>
                           )}
                           {ed.corporateNumber && (
-                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-[11px] font-mono rounded-lg" title="法人番号">
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-mono rounded-lg" title="法人番号">
                               #{ed.corporateNumber}
                             </span>
                           )}
                         </div>
-                        <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
+                        <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
                           <span className="inline-flex items-center gap-0.5"><Sym name="cell_tower" className="text-xs" />情報ソース:</span>
                           <span>{c.source === 'gbizinfo' ? '国の法人データ（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? '国の法人データ + 法人番号公表サイト' : c.source || '不明'}</span>
                         </div>

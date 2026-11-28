@@ -722,6 +722,7 @@ function EditorInner() {
 
       {total === 0 && (!oneButton || structureNotice || project.status === 'structuring') && (
         <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
+          <img src="/doyaslide/empty-slides.webp" alt="" width={160} height={128} className="mx-auto mb-2" />
           <p className="font-black text-slate-800">スライドの構成がまだありません</p>
           <p className="mt-1 text-sm text-slate-600">作成中に処理が止まった場合も、このプロジェクトで再試行できます。</p>
           {/* 上の帯（ONE_BUTTON）が出ているときは、同じ「構成を作る」ボタンを二重に出さない */}

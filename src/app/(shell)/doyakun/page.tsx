@@ -10,7 +10,8 @@ import { brandName } from '@/lib/brand'
 import DoyaKunIntro from './DoyaKunIntro'
 
 export const metadata: Metadata = {
-  title: `ドヤくんとは？ | ${brandName()}`,
+  // サイト名は root layout の title.template が付ける（自分で付けると「| ドヤバディ | ドヤバディ」と重なる）
+  title: 'ドヤくんとは？',
   description: `${brandName()}の相棒のクマ、ドヤくんの紹介です。`,
 }
 

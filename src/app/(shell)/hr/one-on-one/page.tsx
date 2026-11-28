@@ -292,7 +292,6 @@ export default function OneOnOnePage() {
         ) : !listError ? (
           // 新しい見た目: 空の状態は絵＋次にやること1つ
           <EmptyState
-            art="/hr/empty-members.webp"
             title="1on1の記録はまだありません"
             description={canCreate
               ? '定期的な1on1で、メンバーの成長を支えましょう。記録すると、AIが会話の要約とやることを作ります。'

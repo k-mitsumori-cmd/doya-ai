@@ -971,7 +971,7 @@ export default function SeoJobPage() {
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
               </div>
-              <div className="mt-2 text-[10px] font-bold text-gray-400 flex items-center gap-2">
+              <div className="mt-2 text-xs font-bold text-gray-400 flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${isDone ? 'bg-emerald-500' : isError ? 'bg-red-500' : isRunning ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
                 <span>{isDone ? '完了しました' : isError ? 'エラーが発生しました' : '進捗を更新中…'}</span>
               </div>
@@ -998,7 +998,7 @@ export default function SeoJobPage() {
               imageMode="off"
             />
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] font-bold text-gray-500">
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold text-gray-500">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
               <span className={`w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-500' : isPaused ? 'bg-amber-500' : isError ? 'bg-red-500' : 'bg-gray-300'}`} />
               <span>状態: {JOB_STATUS_LABELS[job.status] || job.status}</span>
@@ -1012,14 +1012,14 @@ export default function SeoJobPage() {
           {/* 経過時間のみ表示 */}
           <div className="mt-5 max-w-4xl mx-auto">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left max-w-xs">
-              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <div className="flex items-center gap-2 text-xs font-black text-gray-400 uppercase tracking-widest">
                 <Clock className="w-4 h-4 text-gray-500" />
                 経過時間
               </div>
               <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
                 {formatMmSs(elapsed)}
               </p>
-              <p className="mt-1 text-[10px] font-bold text-gray-400">開始からの経過</p>
+              <p className="mt-1 text-xs font-bold text-gray-400">開始からの経過</p>
             </div>
           </div>
 
@@ -1035,7 +1035,7 @@ export default function SeoJobPage() {
                       （{reviewedCount}/{job.sections.length}）
                     </span>
                   </h2>
-                  <div className="text-[10px] font-black text-gray-500">
+                  <div className="text-xs font-black text-gray-500">
                     {heartbeatAgo === null ? '通信中…' : `最終更新: ${heartbeatAgo}秒前`}
                   </div>
                 </div>
@@ -1094,7 +1094,7 @@ export default function SeoJobPage() {
                             <p className="text-sm font-black text-gray-900 truncate">
                               {s.headingPath || `セクション ${s.index + 1}`}
                             </p>
-                            <p className="text-[10px] text-gray-500 mt-1 font-bold">
+                            <p className="text-xs text-gray-500 mt-1 font-bold">
                               {s.status === 'generating' && !isRunning ? '未完了' : SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
                             </p>
                           </div>
@@ -1114,11 +1114,11 @@ export default function SeoJobPage() {
                 <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-700 text-white flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] font-black tracking-widest">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-xs font-black tracking-widest">
                         <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                         制作中（ライブ）
                       </span>
-                      <span className="text-[10px] font-black text-white/80 tracking-widest uppercase">STATUS</span>
+                      <span className="text-xs font-black text-white/80 tracking-widest uppercase">STATUS</span>
                     </div>
                     <p className="mt-2 text-base sm:text-lg font-black text-white truncate">
                       {job.step?.toLowerCase() === 'outline'
@@ -1132,7 +1132,7 @@ export default function SeoJobPage() {
                               : '準備中'}
                     </p>
                   </div>
-                  <div className="inline-flex items-center gap-2 text-[11px] font-black text-white bg-white/15 border border-white/20 px-4 py-2 rounded-full shadow-lg shadow-indigo-900/30">
+                  <div className="inline-flex items-center gap-2 text-xs font-black text-white bg-white/15 border border-white/20 px-4 py-2 rounded-full shadow-lg shadow-indigo-900/30">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     生成中
                   </div>
@@ -1174,10 +1174,10 @@ export default function SeoJobPage() {
                               <Clock className="w-5 h-5" />
                             </div>
                             <div className="min-w-0">
-                              <p className="text-[11px] font-black text-blue-100 uppercase tracking-widest">
+                              <p className="text-xs font-black text-blue-100 uppercase tracking-widest">
                                 推定生成時間
                                 {isComparison ? (
-                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-200 border border-orange-500/25 text-[10px] font-black">
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-200 border border-orange-500/25 text-xs font-black">
                                     {comparisonCount}社比較
                                   </span>
                                 ) : null}
@@ -1192,10 +1192,10 @@ export default function SeoJobPage() {
                               {timeDetail}
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-black text-white/90">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-black text-white/90">
                                 他のタブに移動してもOK
                               </span>
-                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-white/70">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-bold text-white/70">
                                 戻ると自動で最新状態に追いつきます
                               </span>
                             </div>
@@ -1216,7 +1216,7 @@ export default function SeoJobPage() {
                     
                     <div className="relative flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md shadow-blue-500/20">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-md shadow-blue-500/20">
                           <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                           ライブ執筆
                         </div>
@@ -1225,7 +1225,7 @@ export default function SeoJobPage() {
                         </h3>
                       </div>
                       <div className="flex-shrink-0 px-3 py-2 rounded-xl bg-white/80 border border-gray-100 shadow-sm">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">経過</p>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">経過</p>
                         <p className="text-lg font-black text-gray-900 tabular-nums" style={{ fontFamily: "'JetBrains Mono', 'SF Mono', monospace" }}>
                           {formatMmSs(elapsed)}
                         </p>
@@ -1239,13 +1239,13 @@ export default function SeoJobPage() {
                         <div className="px-5 py-4 bg-gradient-to-r from-white to-slate-50 border-b border-gray-200/60">
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">本文執筆中</p>
+                              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">本文執筆中</p>
                               <p className="mt-1 text-sm font-black text-gray-900">
                                 {liveHeading ? liveHeading : '本文を執筆中...'}
                               </p>
                             </div>
                             <div className="flex-shrink-0 text-right">
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">進捗</p>
+                              <p className="text-xs font-black text-gray-400 uppercase tracking-wider">進捗</p>
                               <p className="text-base font-black text-gray-900 tabular-nums">
                                 {reviewedCount}/{(job?.sections || []).length || 0}
                               </p>
@@ -1256,7 +1256,7 @@ export default function SeoJobPage() {
                         <div className="p-5">
                           <div className="grid grid-cols-2 gap-3">
                             <div className="rounded-xl border border-gray-200/70 bg-gradient-to-b from-white to-slate-50 p-3">
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">工程</p>
+                              <p className="text-xs font-black text-gray-400 uppercase tracking-wider">工程</p>
                               <p className="mt-1 text-sm font-black text-gray-900">
                                 {job.step?.toLowerCase() === 'outline'
                                   ? '見出し（構成）'
@@ -1270,7 +1270,7 @@ export default function SeoJobPage() {
                               </p>
                             </div>
                             <div className="rounded-xl border border-gray-200/70 bg-gradient-to-b from-white to-slate-50 p-3">
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">推定完了</p>
+                              <p className="text-xs font-black text-gray-400 uppercase tracking-wider">推定完了</p>
                               <p className="mt-1 text-sm font-black text-gray-900 tabular-nums">
                                 {Math.max(0, Math.min(100, Math.round(Number(job?.progress || 0))))}%
                               </p>
@@ -1279,8 +1279,8 @@ export default function SeoJobPage() {
 
                           <div className="mt-4 rounded-2xl border border-gray-200/70 bg-slate-50/60 p-4">
                             <div className="flex items-center justify-between gap-2">
-                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">要点（ライブ）</p>
-                              <span className="text-[10px] font-black text-gray-400">自動更新</span>
+                              <p className="text-xs font-black text-gray-500 uppercase tracking-widest">要点（ライブ）</p>
+                              <span className="text-xs font-black text-gray-400">自動更新</span>
                             </div>
                             <ul className="mt-3 space-y-2">
                               {String(liveSource || '')
@@ -1295,7 +1295,7 @@ export default function SeoJobPage() {
                                   </li>
                                 ))}
                             </ul>
-                            <p className="mt-3 text-[11px] font-bold text-gray-400">
+                            <p className="mt-3 text-xs font-bold text-gray-400">
                               セクション完了後、本文プレビューに反映されます
                             </p>
                           </div>
@@ -1303,9 +1303,9 @@ export default function SeoJobPage() {
                           <div className="mt-4 flex items-center gap-3">
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
                               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-[10px] font-black text-emerald-700">AIが執筆中</span>
+                              <span className="text-xs font-black text-emerald-700">AIが執筆中</span>
                             </div>
-                            <p className="text-[11px] font-bold text-gray-400">
+                            <p className="text-xs font-bold text-gray-400">
                               タブを移動しても生成は継続されます
                             </p>
                           </div>
@@ -1321,7 +1321,7 @@ export default function SeoJobPage() {
                             <span className="w-3 h-3 rounded-full bg-amber-400/80" />
                             <span className="w-3 h-3 rounded-full bg-emerald-400/80" />
                           </div>
-                          <span className="ml-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Article Preview</span>
+                          <span className="ml-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Article Preview</span>
                         </div>
 
                         {/* 本文エリア */}
@@ -1358,7 +1358,7 @@ export default function SeoJobPage() {
 
                   {/* 進行アクション（ライブ執筆の下に配置） */}
                   <div className="rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-slate-50 p-5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">いま起きていること</p>
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">いま起きていること</p>
                     <div className="mt-3 space-y-3">
                       <div className="flex items-start gap-3">
                         <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -1366,7 +1366,7 @@ export default function SeoJobPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-black text-gray-900">タイトル確定</p>
-                          <p className="text-[11px] font-bold text-gray-500 truncate">{job.article.title}</p>
+                          <p className="text-xs font-bold text-gray-500 truncate">{job.article.title}</p>
                         </div>
                       </div>
 
@@ -1384,7 +1384,7 @@ export default function SeoJobPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-black text-gray-900">見出し（構成）</p>
-                          <p className="text-[11px] font-bold text-gray-500">
+                          <p className="text-xs font-bold text-gray-500">
                             {job.article.outline ? '見出しが確定しました' : '見出しを設計しています'}
                           </p>
                         </div>
@@ -1396,7 +1396,7 @@ export default function SeoJobPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-black text-gray-900">本文執筆</p>
-                          <p className="text-[11px] font-bold text-gray-500">
+                          <p className="text-xs font-bold text-gray-500">
                             {generatingSection
                               ? `「${String(generatingSection.headingPath || '').replace(/^#+\\s*/, '').slice(0, 26)}」を書いています`
                               : '推敲しながら書き進めています'}
@@ -1419,17 +1419,17 @@ export default function SeoJobPage() {
                               animate={{ opacity: [0.25, 0.6, 0.25] }}
                               transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
                             />
-                            <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-700">
+                            <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-xs font-black text-emerald-700">
                               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                               LIVE
                             </span>
                           </div>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setShowResearchPanel((v) => !v)}
-                          className="text-[10px] font-black text-blue-600 hover:text-blue-700"
+                          className="text-xs font-black text-blue-600 hover:text-blue-700"
                         >
                           {showResearchPanel ? '隠す' : '表示'}
                         </button>
@@ -1455,21 +1455,21 @@ export default function SeoJobPage() {
                                   </p>
                                   <div className="mt-1 flex flex-wrap items-center gap-2">
                                     {researchLast?.url && (
-                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-black text-white/90">
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-xs font-black text-white/90">
                                         <ExternalLink className="w-3 h-3" />
                                         {hostnameFromUrl(String(researchLast.url)) || 'source'}
                                       </span>
                                     )}
-                                    <span className="text-[11px] font-bold text-white/60">
+                                    <span className="text-xs font-bold text-white/60">
                                       {researchLast?.detail || researchLast?.url || '検索/巡回/抽出を進めています'}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="flex-shrink-0 text-right">
-                                  <p className="text-[10px] font-black text-white/60 tabular-nums">
+                                  <p className="text-xs font-black text-white/60 tabular-nums">
                                     {researchLast?.at ? formatHhMmSs(Number(researchLast.at)) : ''}
                                   </p>
-                                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
+                                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-xs font-black text-emerald-200">
                                     <Zap className="w-3 h-3" />
                                     高速巡回中
                                   </div>
@@ -1503,7 +1503,7 @@ export default function SeoJobPage() {
                                 return (
                                   <div className="mt-5 grid sm:grid-cols-2 gap-4">
                                     <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">候補</p>
+                                      <p className="text-xs font-black text-white/60 uppercase tracking-widest">候補</p>
                                       <p className="mt-1 text-xl font-black text-white tabular-nums">
                                         {candidatesCount}
                                         {candidatesTarget ? <span className="text-white/40">/{candidatesTarget}</span> : null}
@@ -1523,7 +1523,7 @@ export default function SeoJobPage() {
                                     </div>
 
                                     <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">参考URL</p>
+                                      <p className="text-xs font-black text-white/60 uppercase tracking-widest">参考URL</p>
                                       <p className="mt-1 text-xl font-black text-white tabular-nums">{urlsCount}</p>
                                       <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
                                         <motion.div
@@ -1557,10 +1557,10 @@ export default function SeoJobPage() {
                                 return (
                                   <div className="mt-5 rounded-2xl bg-white/5 border border-white/10 p-4">
                                     <div className="flex items-center justify-between gap-3">
-                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                                      <p className="text-xs font-black text-white/60 uppercase tracking-widest">
                                         いままでに分かったこと（要約）
                                       </p>
-                                      <p className="text-[10px] font-black text-white/50 tabular-nums">
+                                      <p className="text-xs font-black text-white/50 tabular-nums">
                                         {items.length}件
                                       </p>
                                     </div>
@@ -1574,7 +1574,7 @@ export default function SeoJobPage() {
                                               </p>
                                               <div className="mt-1 flex flex-wrap items-center gap-2">
                                                 {it.host && (
-                                                  <span className="text-[10px] font-black text-white/75 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
+                                                  <span className="text-xs font-black text-white/75 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
                                                     {it.host}
                                                   </span>
                                                 )}
@@ -1583,7 +1583,7 @@ export default function SeoJobPage() {
                                                     href={it.url}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="text-[10px] font-black text-indigo-200 hover:text-indigo-100 underline decoration-white/20"
+                                                    className="text-xs font-black text-indigo-200 hover:text-indigo-100 underline decoration-white/20"
                                                   >
                                                     開く
                                                   </a>
@@ -1591,7 +1591,7 @@ export default function SeoJobPage() {
                                               </div>
                                             </div>
                                             <div className="flex-shrink-0">
-                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
+                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-xs font-black text-emerald-200">
                                                 <Brain className="w-3 h-3" />
                                                 要点抽出
                                               </span>
@@ -1608,10 +1608,10 @@ export default function SeoJobPage() {
                                             <div className="mt-3 grid md:grid-cols-2 gap-3">
                                               {it.claims.length ? (
                                                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">抽出した主張</p>
+                                                  <p className="text-xs font-black text-white/60 uppercase tracking-widest">抽出した主張</p>
                                                   <ul className="mt-2 space-y-1">
                                                     {it.claims.slice(0, 4).map((c, idx) => (
-                                                      <li key={idx} className="text-[11px] font-bold text-white/75 leading-relaxed">
+                                                      <li key={idx} className="text-xs font-bold text-white/75 leading-relaxed">
                                                         - {c.length > 80 ? `${c.slice(0, 80)}…` : c}
                                                       </li>
                                                     ))}
@@ -1620,10 +1620,10 @@ export default function SeoJobPage() {
                                               ) : null}
                                               {it.faq.length ? (
                                                 <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">よくある疑問</p>
+                                                  <p className="text-xs font-black text-white/60 uppercase tracking-widest">よくある疑問</p>
                                                   <ul className="mt-2 space-y-1">
                                                     {it.faq.slice(0, 4).map((q, idx) => (
-                                                      <li key={idx} className="text-[11px] font-bold text-white/75 leading-relaxed">
+                                                      <li key={idx} className="text-xs font-bold text-white/75 leading-relaxed">
                                                         - {q.length > 80 ? `${q.slice(0, 80)}…` : q}
                                                       </li>
                                                     ))}
@@ -1642,10 +1642,10 @@ export default function SeoJobPage() {
                               {/* timeline */}
                               <div className="mt-5 rounded-2xl bg-black/20 border border-white/10 p-4">
                                 <div className="flex items-center justify-between gap-3">
-                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                                  <p className="text-xs font-black text-white/60 uppercase tracking-widest">
                                     直近のアクション
                                   </p>
-                                  <p className="text-[10px] font-black text-white/50 tabular-nums">
+                                  <p className="text-xs font-black text-white/50 tabular-nums">
                                     {researchEvents.length ? `${researchEvents.length}件` : ''}
                                   </p>
                                 </div>
@@ -1663,16 +1663,16 @@ export default function SeoJobPage() {
                                           <div className="min-w-0 flex-1">
                                             <div className="flex items-center justify-between gap-3">
                                               <p className="text-sm font-black text-white/90 truncate">{title}</p>
-                                              <p className="text-[10px] font-black text-white/45 tabular-nums">{at}</p>
+                                              <p className="text-xs font-black text-white/45 tabular-nums">{at}</p>
                                             </div>
                                             <div className="mt-0.5 flex flex-wrap items-center gap-2">
                                               {host && (
-                                                <span className="text-[10px] font-black text-white/70 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
+                                                <span className="text-xs font-black text-white/70 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
                                                   {host}
                                                 </span>
                                               )}
                                               {detail && (
-                                                <p className="text-[11px] font-bold text-white/55 break-words line-clamp-2">
+                                                <p className="text-xs font-bold text-white/55 break-words line-clamp-2">
                                                   {detail}
                                                 </p>
                                               )}
@@ -1682,7 +1682,7 @@ export default function SeoJobPage() {
                                       )
                                     })
                                   ) : (
-                                    <p className="text-[10px] font-bold text-white/60">リサーチイベントを待っています…</p>
+                                    <p className="text-xs font-bold text-white/60">リサーチイベントを待っています…</p>
                                   )}
                                 </div>
                               </div>
@@ -1759,7 +1759,7 @@ export default function SeoJobPage() {
                 <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
                   <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">稼働ログ</p>
+                      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">稼働ログ</p>
                       <p className="text-sm font-black text-gray-900 mt-1 truncate">
                         記事制作の進捗ログ
                       </p>
@@ -1822,15 +1822,15 @@ export default function SeoJobPage() {
                                 {it.title}
                               </p>
                               {it.detail && (
-                                <p className="text-[10px] font-bold text-gray-500 mt-1 break-words">
+                                <p className="text-xs font-bold text-gray-500 mt-1 break-words">
                                   {it.detail}
                                 </p>
                         )}
                       </div>
               </div>
                           <div className="flex-shrink-0 text-right">
-                            <p className="text-[10px] font-black text-gray-400 tabular-nums">{formatHhMmSs(it.at)}</p>
-                            <p className="text-[10px] font-bold text-gray-400 tabular-nums">{ageSec}秒前</p>
+                            <p className="text-xs font-black text-gray-400 tabular-nums">{formatHhMmSs(it.at)}</p>
+                            <p className="text-xs font-bold text-gray-400 tabular-nums">{ageSec}秒前</p>
             </div>
               </div>
                       )
@@ -1942,12 +1942,12 @@ export default function SeoJobPage() {
             <div className="rounded-3xl border border-gray-100 bg-white overflow-hidden shadow-sm">
               <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">途中プレビュー</p>
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">途中プレビュー</p>
                   <p className="text-base sm:text-lg font-black text-gray-900 truncate">
                     完成済み本文プレビュー（{reviewedSections.length}件）
                   </p>
                 </div>
-                <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                <span className="text-xs font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
                   できたところから読めます
                 </span>
               </div>
@@ -1967,7 +1967,7 @@ export default function SeoJobPage() {
                       >
                         <div className="min-w-0 text-left">
                           <p className="text-xs font-black text-gray-900 truncate">{heading}</p>
-                          <p className="mt-0.5 text-[10px] font-bold text-gray-500">
+                          <p className="mt-0.5 text-xs font-bold text-gray-500">
                             {content ? `${Math.min(99999, content.length).toLocaleString()}文字` : isRunning ? '本文生成中…' : '本文はまだありません'}
                         </p>
                       </div>

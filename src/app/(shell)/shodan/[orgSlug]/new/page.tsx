@@ -13,6 +13,7 @@ import { readOrgProfile } from '@/lib/org-profile-view'
 import { useOneButton } from '@/components/one-button/context'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { useDoyaPrefill } from '@/components/agent-router/useDoyaPrefill'
+import ToolProgressNext from '@/components/ToolProgressNext'
 
 type Phase = 'input' | 'researching' | 'reveal'
 
@@ -215,9 +216,16 @@ export default function ShodanNewPage() {
           <motion.div key="researching" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="rounded-3xl bg-white border border-brand-50 p-8 shadow-sm text-center">
             <div className="flex justify-center"><DoyaKun mood={RESEARCH_MOODS[Math.min(tick, RESEARCH_MOODS.length - 1)]} size={120} /></div>
-            <p className="font-black text-brand-600 text-lg mt-3 flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined animate-spin">progress_activity</span>企業を調査中…
-            </p>
+            <p className="font-black text-brand-600 text-lg mt-3">企業を調査中</p>
+            {/* 30秒〜2分ほど。どの段階か・あとどれくらいかを出す。段階は下の経過メッセージの進みに合わせる */}
+            <ToolProgressNext
+              active
+              title="企業を調査しています"
+              stages={['企業サイトを読み取り中', '公的データと照合中', '施策と最新動向を調査中', '結果をまとめ中']}
+              estimateSec={90}
+              current={Math.floor((tick * 4) / RESEARCH_TICKER.length)}
+              className="mx-auto mt-4 max-w-md text-left"
+            />
             <div className="mt-5 max-w-md mx-auto text-left space-y-2">
               {RESEARCH_TICKER.map((m, i) => (
                 <motion.div key={i} initial={false}

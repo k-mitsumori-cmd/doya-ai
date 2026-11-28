@@ -54,7 +54,7 @@ export default function SeoPricingPage() {
                 残り {formatRemainingTime(freeHourRemainingMs)}
               </div>
             </div>
-            <p className="mt-1 text-[11px] font-bold text-blue-800/80">
+            <p className="mt-1 text-xs font-bold text-blue-800/80">
               画像生成や自動修正も解放されます。使えるようになった瞬間は画面に演出が出ます。
             </p>
             <div className="mt-2 h-2 w-full rounded-full bg-blue-200/60 overflow-hidden">

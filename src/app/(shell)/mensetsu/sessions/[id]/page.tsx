@@ -538,7 +538,6 @@ export default function MensetsuReportPage() {
           <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
             {s.turns.length === 0 ? (
               <EmptyState
-                art="/mensetsu/empty-interviews.webp"
                 title="発話の記録はまだありません"
                 description="応募者が面接を受けると、面接官と応募者の発言がここに順に残ります。"
                 action={<Button onClick={() => setTab('report')} variant="secondary" icon="ListChecks">評価に戻る</Button>}

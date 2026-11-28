@@ -235,7 +235,6 @@ function ScopedEvaluationsPage({ actor }: { actor: string }) {
         ) : (
           // 新しい見た目: 空の状態は絵＋次にやること1つ（作れない人には一覧のかわりにダッシュボードへ）
           <EmptyState
-            art="/hr/empty-members.webp"
             title="評価期間はまだありません"
             description={canCreatePeriods
               ? '上期・下期などの評価期間を作り、従業員に評価シートを配ります。自己評価・上司評価・最終評価の順に進みます。'

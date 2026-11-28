@@ -162,7 +162,7 @@ export default async function SeoImageDetailPage(props: { params: Promise<{ id: 
                 <div className="absolute inset-0 bg-black/55 flex items-center justify-center p-4">
                   <div className="rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
                     <p className="text-white text-sm font-black">ロック中（表示のみ）</p>
-                    <p className="mt-1 text-white/80 text-[11px] font-bold">
+                    <p className="mt-1 text-white/80 text-xs font-bold">
                       アップグレードでダウンロードできます
                     </p>
                     <Link href="/seo/dashboard/plan" className="inline-flex mt-3">
@@ -177,7 +177,7 @@ export default async function SeoImageDetailPage(props: { params: Promise<{ id: 
 
             <div className="mt-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
               <p className="text-xs font-black text-gray-400 uppercase tracking-widest">プロンプト（生成ログ）</p>
-              <pre className="mt-2 text-[11px] whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
+              <pre className="mt-2 text-xs whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
                 {sanitizedPrompt || '（プロンプトが保存されていません）'}
               </pre>
             </div>
@@ -185,7 +185,7 @@ export default async function SeoImageDetailPage(props: { params: Promise<{ id: 
             {!!sanitizedDescription && (
               <div className="mt-4 p-4 rounded-2xl bg-white border border-gray-100">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">コピー構成 / デザイン意図（生成結果）</p>
-                <pre className="mt-2 text-[11px] whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
+                <pre className="mt-2 text-xs whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
                   {sanitizedDescription}
                 </pre>
               </div>

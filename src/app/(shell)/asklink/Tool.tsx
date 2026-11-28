@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Link2, Loader2 } from 'lucide-react'
+import ToolProgressNext from '@/components/ToolProgressNext'
 import RunResult from '@/components/asklink/RunResult'
 import { useBannerQueue } from '@/components/asklink/useBannerQueue'
 import type { RunDto } from '@/lib/asklink/dto'
@@ -208,19 +209,7 @@ export default function AskLinkTool() {
         )}
 
         {loading && (
-          <ol className="mt-4 grid gap-2 sm:grid-cols-3">
-            {LOADING_STEPS.map((label, i) => (
-              <li
-                key={label}
-                className="flex items-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-[#0066ff] motion-reduce:![animation:none]"
-                style={{ animation: `pulse 1.6s ease-in-out ${i * 0.5}s infinite` }}
-              >
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#0066ff] text-[10px] font-black text-white">{i + 1}</span>
-                {label}
-              </li>
-            ))}
-            <li className="text-xs font-bold text-slate-500 sm:col-span-3">十数秒ほどかかります。このままお待ちください。</li>
-          </ol>
+          <ToolProgressNext active title="リンクを作っています" stages={LOADING_STEPS} estimateSec={15} className="mt-4" />
         )}
         {error && (
           <div id="asklink-form-error" className="mt-3">
