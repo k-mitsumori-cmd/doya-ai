@@ -14,6 +14,8 @@ import { serviceLabelOf } from '@/lib/attribution'
  * なぜ必要か（2026-08 の不具合）:
  *   サイドバーの問い合わせフォームが API とキー不一致で 400 を返し続け、
  *   12日間ぶんの問い合わせが保存も通知もされないまま消えた。
+ *   現行のサポートチャットは SupportTicket、旧フォームは ServiceFeedback に保存する。
+ *   両方を数えないと、受信があるのに長期未受信の誤警報になる。
  *   失敗は利用者の画面にしか出ないため、運営側には**何の痕跡も残らなかった**。
  *   保存0件が「誰も送っていない」のか「全部弾かれている」のか判別できない状態が
  *   一番危ない。だから **0件のときこそ必ず送る**。沈黙を許さないための定点観測。
@@ -35,7 +37,8 @@ export async function GET(request: NextRequest) {
     const since = new Date(Date.now() - days * 86400_000)
     const period = { createdAt: { gte: since } }
 
-    const [received, byService, recent, total, lastOne] = await Promise.all([
+    const [legacyReceived, byService, feedbackRecent, legacyTotal, feedbackLast,
+      ticketReceived, byTool, ticketRecent, ticketTotal, ticketLast] = await Promise.all([
       prisma.serviceFeedback.count({ where: period }),
       prisma.serviceFeedback.groupBy({ by: ['serviceId'], where: period, _count: { _all: true } }),
       prisma.serviceFeedback.findMany({
@@ -49,34 +52,50 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         select: { createdAt: true },
       }),
+      prisma.supportTicket.count({ where: period }),
+      prisma.supportTicket.groupBy({ by: ['toolId'], where: period, _count: { _all: true } }),
+      prisma.supportTicket.findMany({
+        where: period,
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: { createdAt: true, toolId: true, summary: true },
+      }),
+      prisma.supportTicket.count(),
+      prisma.supportTicket.findFirst({
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      }),
     ])
-    // 2026-11-24: サポートチャット（旗 SUPPORT_CHAT_ROLLOUT）の受付は、別の表（support_ticket）に入る。
-    // ここを数えないと、チャットで届いていても「届いていません」と知らせてしまう。表が無いときは 0 件として扱う。
-    //    ⚠️ 呼び出しそのものが同期で投げても（表やモデルが無いとき）、ここで受け止めてレポートを止めない
-    const [ticketCount, lastTicket] = await Promise.all([
-      Promise.resolve().then(() => prisma.supportTicket.count({ where: period })).catch(() => 0),
-      Promise.resolve().then(() => prisma.supportTicket.findFirst({ orderBy: { createdAt: 'desc' }, select: { createdAt: true } })).catch(() => null),
-    ])
-    const lastAt = [lastOne?.createdAt, lastTicket?.createdAt]
-      .filter((d): d is Date => d instanceof Date)
-      .sort((a, b) => b.getTime() - a.getTime())[0] ?? null
+
+    const received = legacyReceived + ticketReceived
+    const total = legacyTotal + ticketTotal
+    const lastOne = [feedbackLast, ticketLast]
+      .filter((r): r is { createdAt: Date } => r !== null)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
+    const recent = [
+      ...feedbackRecent.map(r => ({ createdAt: r.createdAt, serviceId: r.serviceId, text: r.text })),
+      ...ticketRecent.map(r => ({ createdAt: r.createdAt, serviceId: r.toolId || 'support', text: r.summary })),
+    ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5)
 
     const jstDateTime = (d: Date) => d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    const daysSinceLast = lastAt
-      ? Math.floor((Date.now() - lastAt.getTime()) / 86400_000)
+    const daysSinceLast = lastOne
+      ? Math.floor((Date.now() - lastOne.createdAt.getTime()) / 86400_000)
       : null
 
     const lines: string[] = []
     lines.push(`*お問い合わせ受信レポート（直近${days}日） ${jstDateTime(new Date())}*`)
     lines.push('')
     lines.push(`*受信件数: ${received}件*（累計 ${total}件）`)
-    if (ticketCount > 0) lines.push(`・サポートチャットの受付: ${ticketCount}件`)
+    lines.push(`・サポートチャット ${ticketReceived}件 / 旧お問い合わせ ${legacyReceived}件`)
 
-    if (received > 0 || ticketCount > 0) {
+    if (received > 0) {
       lines.push('')
       lines.push('*サービス別*')
       for (const row of [...byService].sort((a, b) => b._count._all - a._count._all)) {
         lines.push(`・${serviceLabelOf(row.serviceId)}: ${row._count._all}件`)
+      }
+      for (const row of [...byTool].sort((a, b) => b._count._all - a._count._all)) {
+        lines.push(`・${serviceLabelOf(row.toolId || 'support')}（サポートチャット）: ${row._count._all}件`)
       }
       lines.push('')
       lines.push('*直近の内容*')
@@ -87,11 +106,11 @@ export async function GET(request: NextRequest) {
     } else {
       lines.push('・この期間の受信はありません。')
       lines.push(
-        lastAt
-          ? `・最後に受信したのは ${jstDateTime(lastAt)}（${daysSinceLast}日前）です。`
+        lastOne
+          ? `・最後に受信したのは ${jstDateTime(lastOne.createdAt)}（${daysSinceLast}日前）です。`
           : '・これまで一度も受信がありません。'
       )
-      lines.push('・画面にお問い合わせの入口が出ているかと、受け口（/api/feedback）に送信が来ているかを確かめてください。')
+      lines.push('・受付が壊れていないか、画面右下の「質問・お問い合わせ」から1件テスト送信して確認できます。')
     }
 
     await postPlainToSlack(lines.join('\n'), { app: 'ドヤAI', kind: 'report', severity: 'info' })
@@ -102,14 +121,14 @@ export async function GET(request: NextRequest) {
       await notifyAlert({
         level: 'warn',
         title: `お問い合わせが ${daysSinceLast}日間 1件も届いていません`,
-        context: 'お問い合わせの入口か受け口が使えない可能性があります。単に送信が無いだけの場合もあります（2026-08 に12日間の不達が発生）',
-        detail: `最終受信: ${jstDateTime(lastAt!)}（お問い合わせフォームとサポートチャットの両方を数えています）`,
+        context: 'フォームの受け口が壊れている可能性があります（2026-08 に12日間の不達が発生）',
+        detail: `最終受信: ${jstDateTime(lastOne!.createdAt)}`,
         dedupKey: 'feedback-silence',
         cooldownMs: 7 * 24 * 3600_000,
       })
     }
 
-    return NextResponse.json({ ok: true, days, received, tickets: ticketCount, total, daysSinceLast })
+    return NextResponse.json({ ok: true, days, received, total, legacyReceived, ticketReceived, daysSinceLast })
   } catch (error: any) {
     console.error('[Cron] feedback-report error:')
     await notifyAlert({

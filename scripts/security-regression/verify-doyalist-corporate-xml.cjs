@@ -72,7 +72,7 @@ async function noRequest(params) { const before = requests.length; await assert.
       './corporate-number': { searchCorporateNumber: search },
       './gbizinfo': { searchGbizInfo: async () => [], getGbizCompanyDetailsBatch: async () => new Map() },
       './prefecture-codes': mocks['./prefecture-codes'],
-    });
+    }, { process: { env: { CORPORATE_NUMBER_API_KEY: 'synthetic-fixture-only' } } });
     respond = () => { const code = requests.at(-1).searchParams.get('address'); const prefecture = Object.entries(mocks['./prefecture-codes'].PREFECTURE_TO_CODE).find(([, value]) => value === code)?.[0] || '全国に拡大した不正な検査値'; return reply(document([record(String(code || '0').padStart(13, '0')).replace('<prefectureName>北海道</prefectureName>', `<prefectureName>${prefecture}</prefectureName>`)])); };
     const before = requests.length;
     const result = await collect.collectCompaniesDetailed({ criteria: { keywords: ['見本'], areas: ['関東'] }, maxResults: 100, sources: ['corporate_number'], enrich: false });
@@ -87,7 +87,7 @@ async function noRequest(params) { const before = requests.length; await assert.
       './corporate-number': { searchCorporateNumber: async () => { calls++; now += 6; return []; } },
       './gbizinfo': { searchGbizInfo: async () => { throw Error('No other provider requested'); }, getGbizCompanyDetailsBatch: async () => new Map() },
       './prefecture-codes': mocks['./prefecture-codes'],
-    }, { Date: Clock });
+    }, { Date: Clock, process: { env: { CORPORATE_NUMBER_API_KEY: 'synthetic-fixture-only' } } });
     const result = await collect.collectCompaniesDetailed({ criteria: { keywords: ['見本', '次の見本'], areas: ['関東'] }, maxResults: 100, sources: ['corporate_number'], enrich: false, budgetMs: 10 });
     assert.equal(calls, 2); assert.equal(result.budgetExhausted, true);
   });

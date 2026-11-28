@@ -89,7 +89,8 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
   }
 
   // Source 1: 法人番号API（国税庁）
-  if (sources.includes('corporate_number')) {
+  // 国税庁のキーが無いときは呼び出さず、設定済みの gBizINFO に進む。
+  if (sources.includes('corporate_number') && process.env.CORPORATE_NUMBER_API_KEY) {
     corporateSearch: for (const keyword of (criteria.keywords || []).slice(0, 3)) {
       if (!keyword) continue
       for (const prefecture of targetPrefectures) {

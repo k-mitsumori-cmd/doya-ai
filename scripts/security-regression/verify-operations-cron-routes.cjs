@@ -9,7 +9,7 @@ const request = (path, token = 'Bearer secret') => ({
   headers: { get: (name) => name === 'authorization' ? token : null },
 })
 
-function feedbackFixture({ fail = false, tickets = null, lastFeedbackAt = null } = {}) {
+function feedbackFixture({ fail = false, ticket = false } = {}) {
   const calls = []
   const posts = []
   const alerts = []
@@ -27,16 +27,17 @@ function feedbackFixture({ fail = false, tickets = null, lastFeedbackAt = null }
       return [{ serviceId: 'banner', _count: { _all: 800 } }, { serviceId: 'seo', _count: { _all: 400 } }]
     },
     findMany: async (args) => { calls.push(['findMany', args]); return recent },
-    findFirst: async (args) => { calls.push(['findFirst', args]); return { createdAt: lastFeedbackAt || recent[0].createdAt } },
+    findFirst: async (args) => { calls.push(['findFirst', args]); return { createdAt: recent[0].createdAt } },
   }
-  // サポートチャットの受付（2026-11-24）。tickets を渡さないときは、表もモデルも無い本番の前の形として扱う
-  const supportTicket = tickets ? {
-    count: async () => tickets.count,
-    findFirst: async () => (tickets.lastAt ? { createdAt: tickets.lastAt } : null),
-  } : undefined
+  const supportTicket = {
+    count: async (args) => ticket ? (args ? 1 : 1) : 0,
+    groupBy: async () => ticket ? [{ toolId: 'banner', _count: { _all: 1 } }] : [],
+    findMany: async () => ticket ? [{ createdAt: new Date(), toolId: 'banner', summary: '動作確認用のテストです。返信不要です。' }] : [],
+    findFirst: async () => ticket ? { createdAt: new Date() } : null,
+  }
   const route = load('src/app/api/cron/feedback-report/route.ts', {
     'next/server': { NextResponse: { json } },
-    '@/lib/prisma': { prisma: { serviceFeedback, ...(supportTicket ? { supportTicket } : {}) } },
+    '@/lib/prisma': { prisma: { serviceFeedback, supportTicket } },
     '@/lib/notifications': { postPlainToSlack: async (message) => { posts.push(message) } },
     '@/lib/alert': { notifyAlert: async (details) => { alerts.push(details) } },
     '@/lib/attribution': { serviceLabelOf: (id) => id },
@@ -59,24 +60,15 @@ function feedbackFixture({ fail = false, tickets = null, lastFeedbackAt = null }
     assert.match(f.posts[0], /seo: 400件/)
     assert.equal((f.posts[0].match(/feedback \d/g) || []).length, 5)
   })
-  await check('feedback report keeps working when the support chat table is absent', async () => {
-    const f = feedbackFixture()
+  await check('feedback report counts the current support chat and resets stale silence', async () => {
+    const f = feedbackFixture({ ticket: true })
     const response = await f.route.GET(request('feedback-report?days=30'))
     assert.equal(response.status, 200)
-    assert.equal(response.body.tickets, 0)
-  })
-  await check('feedback silence alert counts support chat tickets and reads as monitoring', async () => {
-    const old = new Date(Date.now() - 45 * 86400_000)
-    const quiet = feedbackFixture({ lastFeedbackAt: old, tickets: { count: 0, lastAt: null } })
-    quiet.route && (await quiet.route.GET(request('feedback-report?days=30')))
-    assert.equal(quiet.alerts.length, 1)
-    assert.match(quiet.alerts[0].title, /45日間 1件も届いていません/)
-    assert.match(quiet.alerts[0].detail, /サポートチャット/)
-    const chat = feedbackFixture({ lastFeedbackAt: old, tickets: { count: 1, lastAt: new Date(Date.now() - 2 * 86400_000) } })
-    const response = await chat.route.GET(request('feedback-report?days=30'))
-    assert.equal(response.body.daysSinceLast, 2)
-    assert.equal(chat.alerts.length, 0)
-    assert.match(chat.posts[0], /サポートチャットの受付: 1件/)
+    assert.equal(response.body.received, 1201)
+    assert.equal(response.body.ticketReceived, 1)
+    assert.equal(response.body.daysSinceLast, 0)
+    assert.equal(f.alerts.length, 0)
+    assert.match(f.posts[0], /サポートチャット 1件/)
   })
   await check('feedback report rejects invalid periods before reading or posting', async () => {
     for (const days of ['0', '-1', '1.5', 'NaN', '3651']) {
