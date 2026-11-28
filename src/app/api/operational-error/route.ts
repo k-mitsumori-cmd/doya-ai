@@ -4,6 +4,7 @@ import { claimClientErrorReport, type ClientErrorKind } from '@/lib/operational-
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json';
 import { clientIp, consumeDailyQuota, quotaSubject } from '@/lib/server-daily-quota';
 import { createHash } from 'node:crypto';
+import { normalizeClientErrorArea, normalizeClientErrorReason } from '@/lib/client-error-context';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,12 @@ export async function POST(request: NextRequest) {
     const { reportHeishaFailure } = await import('@/lib/heisha-runtime-alert');
     await reportHeishaFailure(label);
   } else {
-    await reportRuntimeFailure(`${native ? 'スマホアプリ' : 'ブラウザー'}：${label}`, { clientReported: true });
+    // 画面と種類は決まった一覧の名前だけ（一覧に無い値は 'other'）。本文・URL の全体・利用者を見分けられる値は受け取らない。
+    await reportRuntimeFailure(`${native ? 'スマホアプリ' : 'ブラウザー'}：${label}`, {
+      clientReported: true,
+      clientArea: native ? null : normalizeClientErrorArea(body.area),
+      clientReason: normalizeClientErrorReason(body.reason),
+    });
   }
   return NextResponse.json({ ok: true });
 }

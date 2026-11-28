@@ -123,6 +123,12 @@ function errorFingerprint(source: string, args: unknown[]): string {
 export function safeRuntimeSource(stack: string | undefined): string {
   for (const line of stack?.split('\n').slice(2, 10) ?? []) {
     if (line.includes('node:internal')) continue;
+    // 2026-11-24: 「route.js:1:5076」だけでは、どの API か分からなかった（11/23 9:15 の通知）。
+    // Next.js のルートの組み立て済みファイルは .next/server/app/<ルートの道>/route.js にある。
+    // 道はフォルダーの名前（[id] などの決まった名前）だけで、利用者の値は入らないので、道ごと返す。
+    // 道が付くと、別々の API の route.js:1:5076 が同じ発生箇所として10分まとめられることも無くなる。
+    const appRoute = line.match(/[/\\]server[/\\]app[/\\]((?:[A-Za-z0-9_.@()[\]-]{1,60}[/\\]){0,8}(?:route|page|layout)\.js):(\d{1,7}):(\d{1,7})/);
+    if (appRoute) return `${appRoute[1].replace(/\\/g, '/')}:${appRoute[2]}:${appRoute[3]}`;
     const match = line.match(/(?:^|[/\\(\s])([A-Za-z0-9_.-]{1,100}\.[cm]?[jt]s):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
     if (match) return `${match[1]}:${match[2]}:${match[3]}`;
     // Bundler frames may add a query string between the script name and location.
@@ -138,20 +144,26 @@ export function safeRuntimeSource(stack: string | undefined): string {
   return 'サーバー処理（詳細はログ）';
 }
 
-/** Node.js deprecations are logged for maintenance, without paging operators. */
-function isDeprecationWarning(args: unknown[]): boolean {
+/**
+ * Node.js deprecation and experimental-feature warnings are logged for maintenance, without paging operators.
+ * 2026-11-22: Node 24 の ExperimentalWarning が、新しい実行環境が立ち上がるたびに1回 console.error に出て、
+ * 処理は成功しているのに「要対応のエラー」として通知されていた（persona-purge の定期処理で 2時間おきに通知）。
+ * 警告の本文はこれまでどおりログに残し、通知だけ止める。
+ */
+const NODE_PROCESS_WARNING_NAMES = ['DeprecationWarning', 'ExperimentalWarning'];
+function isNodeProcessWarning(args: unknown[]): boolean {
   // Do not hide a separate error attached to a warning message.
   if (args.length !== 1) return false;
   const warning = args[0];
   if (warning instanceof Error) {
-    try { return warning.name === 'DeprecationWarning'; } catch { return false; }
+    try { return NODE_PROCESS_WARNING_NAMES.includes(warning.name); } catch { return false; }
   }
   return typeof warning === 'string'
-    && /^(?:\(node:\d+\)\s+)?(?:\[DEP\d+\]\s+)?DeprecationWarning:/.test(warning);
+    && /^(?:\(node:\d+\)\s+)?(?:\[[A-Z0-9_-]+\]\s+)?(?:DeprecationWarning|ExperimentalWarning):/.test(warning);
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[]; warningKind?: string | null } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[]; warningKind?: string | null; clientArea?: string | null; clientReason?: string | null } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -193,6 +205,9 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const stackLineCount = Number.isSafeInteger(options.stackLineCount) ? Math.max(0, Math.min(20, options.stackLineCount!)) : 0;
       const stackTraceLimit = Number.isSafeInteger(options.stackTraceLimit) ? Math.max(0, Math.min(100, options.stackTraceLimit!)) : -1;
       const firstArgLength = ['non-string', 'empty', '1-32', '33-128', '129-512', '513+'].includes(options.firstArgLength ?? '') ? options.firstArgLength : 'unknown';
+      // 端末の報告の画面と種類（2026-11-22）：呼び出し側で決まった一覧に照らした値を、ここでも形だけ確かめる
+      const clientArea = options.clientReported && typeof options.clientArea === 'string' && /^[a-z0-9-]{1,32}$/.test(options.clientArea) ? options.clientArea : null;
+      const clientReason = options.clientReported && typeof options.clientReason === 'string' && /^[A-Za-z-]{1,40}$/.test(options.clientReason) ? options.clientReason : null;
       // 種類は決まった名前だけを通す（中身は持たない）
       const kind = (WARNING_KINDS as readonly string[]).includes(options.warningKind ?? '') ? options.warningKind as WarningKind : null;
       const frameKinds = (options.frameKinds ?? []).filter(kind =>
@@ -202,6 +217,8 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       console.warn('[runtime-alert] delivery', {
         incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, firstArgLength, family, stackState, frameKinds,
         ...(kind ? { warningKind: kind } : {}),
+        ...(clientArea ? { clientArea } : {}),
+        ...(clientReason ? { clientReason } : {}),
         stackLineCount, stackHasLocation: options.stackHasLocation === true,
         stackExternalLocation: options.stackExternalLocation === true,
         stackScriptLocation: options.stackScriptLocation === true,
@@ -219,6 +236,8 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           '環境：本番',
           `発生箇所：${key}`,
           ...(kind ? [`種類：${kind}（既知の警告の形。中身は送っていません）`] : []),
+          ...(clientArea ? [`画面：${clientArea === 'top' ? 'トップページ' : clientArea === 'other' ? 'その他' : '/' + clientArea}`] : []),
+          ...(clientReason ? [`失敗の種類：${clientReason}（種類の名前だけ。本文は送っていません）`] : []),
           `発生日時：${new Date(now).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
           `照合ID：${incidentId}`,
           `照合指紋：${signature}`,
@@ -244,7 +263,7 @@ export function installRuntimeAlerts(): void {
   installed = true;
   console.error = (...args: unknown[]) => {
     originalError(...args);
-    if (sending.getStore() || isEmptyConsoleCall(args) || isDeprecationWarning(args)) return;
+    if (sending.getStore() || isEmptyConsoleCall(args) || isNodeProcessWarning(args)) return;
     // Capture our own call site; the original error may contain private text.
     const stack = new Error().stack;
     const source = safeRuntimeSource(stack);

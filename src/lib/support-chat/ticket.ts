@@ -29,7 +29,8 @@ export function isBusinessHours(now = Date.now()): boolean {
 }
 
 /** 画面に出す返信の目安 */
-export function replyEtaText(category: SupportCategory, now = Date.now()): string {
+export function replyEtaText(category: SupportCategory, now = Date.now(), contactOk = true): string {
+  if (!contactOk) return 'メールでの返信を希望しない設定で受け付けました。'
   if (category === 'security') return '担当者がすぐに確認します。'
   return isBusinessHours(now)
     ? '1営業日以内に、ログインに使っているメールアドレスへお返事します。'

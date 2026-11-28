@@ -12,7 +12,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut, Menu, Search, Sparkles, X } from 'lucide-react'
+import { Bell, ChevronDown, CircleUser, CreditCard, LayoutGrid, ListTodo, LogOut, Menu, MessageSquarePlus, Search, Sparkles, X } from 'lucide-react'
+import { SidebarHelpContact } from '@/components/sidebar/SidebarHelpContact'
 import { HOME_INTENT_GROUPS } from '@/app/(shell)/home/intents'
 import { signOut } from 'next-auth/react'
 import ds from '@/components/ds/tokens.module.css'
@@ -566,6 +567,14 @@ export default function AppShell({ children, userName, initialRecent, department
             <span className={styles.navLabel}>料金プラン</span>
           </Link>
           )}
+          {/* お問い合わせ・改善依頼（2026-11-24）。10/19 の新しい見た目で古いサイドバーが出なくなり、ログイン後の画面から入口が消えていた。
+              送り先は今までと同じ /api/feedback（保存と Slack の通知はそちらで行う） */}
+          <SidebarHelpContact showLabel isCollapsed={false} trigger={(openForm) => (
+            <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => { close(); openForm() }} title="お問い合わせ・改善依頼">
+              <MessageSquarePlus size={18} strokeWidth={2} aria-hidden />
+              <span className={styles.navLabel}>お問い合わせ・改善依頼</span>
+            </button>
+          )} />
           <button type="button" className={`${styles.navItem} ${styles.logout}`} onClick={() => signOut({ callbackUrl: '/' })} title="ログアウト">
             <LogOut size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>ログアウト</span>

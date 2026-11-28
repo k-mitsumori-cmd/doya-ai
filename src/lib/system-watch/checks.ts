@@ -364,7 +364,6 @@ export const OPTIONAL_ENV: [string, string][] = [
   ['SERPER_API_KEY', '記事作成・スライド・AIO の検索'],
   ['PERPLEXITY_API_KEY', 'AIO の Perplexity'],
   ['GBIZINFO_API_TOKEN', 'ドヤリストの gBizINFO'],
-  ['CORPORATE_NUMBER_API_KEY', 'ドヤリストの国税庁の法人番号'],
 ]
 
 export function configChecks(base = siteBase()): CheckDef[] {

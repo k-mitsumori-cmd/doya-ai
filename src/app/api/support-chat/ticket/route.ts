@@ -86,5 +86,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'お問い合わせを受け付けられませんでした。時間をおいてもう一度お試しください。' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, ticketNo, replyEta: replyEtaText(parsed.category), businessHours: isBusinessHours(), history: saved?.store === 'ticket' })
+  return NextResponse.json({ ok: true, ticketNo, replyEta: replyEtaText(parsed.category, Date.now(), parsed.contactOk), businessHours: isBusinessHours(), history: saved?.store === 'ticket' })
 }

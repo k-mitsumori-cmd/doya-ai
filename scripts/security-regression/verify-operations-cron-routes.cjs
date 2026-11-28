@@ -9,7 +9,7 @@ const request = (path, token = 'Bearer secret') => ({
   headers: { get: (name) => name === 'authorization' ? token : null },
 })
 
-function feedbackFixture({ fail = false } = {}) {
+function feedbackFixture({ fail = false, ticket = false } = {}) {
   const calls = []
   const posts = []
   const alerts = []
@@ -29,9 +29,15 @@ function feedbackFixture({ fail = false } = {}) {
     findMany: async (args) => { calls.push(['findMany', args]); return recent },
     findFirst: async (args) => { calls.push(['findFirst', args]); return { createdAt: recent[0].createdAt } },
   }
+  const supportTicket = {
+    count: async (args) => ticket ? (args ? 1 : 1) : 0,
+    groupBy: async () => ticket ? [{ toolId: 'banner', _count: { _all: 1 } }] : [],
+    findMany: async () => ticket ? [{ createdAt: new Date(), toolId: 'banner', summary: '動作確認用のテストです。返信不要です。' }] : [],
+    findFirst: async () => ticket ? { createdAt: new Date() } : null,
+  }
   const route = load('src/app/api/cron/feedback-report/route.ts', {
     'next/server': { NextResponse: { json } },
-    '@/lib/prisma': { prisma: { serviceFeedback } },
+    '@/lib/prisma': { prisma: { serviceFeedback, supportTicket } },
     '@/lib/notifications': { postPlainToSlack: async (message) => { posts.push(message) } },
     '@/lib/alert': { notifyAlert: async (details) => { alerts.push(details) } },
     '@/lib/attribution': { serviceLabelOf: (id) => id },
@@ -53,6 +59,16 @@ function feedbackFixture({ fail = false } = {}) {
     assert.match(f.posts[0], /banner: 800件/)
     assert.match(f.posts[0], /seo: 400件/)
     assert.equal((f.posts[0].match(/feedback \d/g) || []).length, 5)
+  })
+  await check('feedback report counts the current support chat and resets stale silence', async () => {
+    const f = feedbackFixture({ ticket: true })
+    const response = await f.route.GET(request('feedback-report?days=30'))
+    assert.equal(response.status, 200)
+    assert.equal(response.body.received, 1201)
+    assert.equal(response.body.ticketReceived, 1)
+    assert.equal(response.body.daysSinceLast, 0)
+    assert.equal(f.alerts.length, 0)
+    assert.match(f.posts[0], /サポートチャット 1件/)
   })
   await check('feedback report rejects invalid periods before reading or posting', async () => {
     for (const days of ['0', '-1', '1.5', 'NaN', '3651']) {
