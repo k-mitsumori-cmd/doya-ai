@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, ReactNode } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Ring } from '@/components/ds/charts'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
@@ -765,7 +766,7 @@ export default function GeneratePage() {
                 <div className="flex-1">
                   <p className="font-medium mb-1">エラーが発生しました</p>
                   <p className="text-red-500">{error}</p>
-                  {limitAction && <a href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-3 inline-block font-semibold text-blue-700 underline">{limitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</a>}
+                  {limitAction && <HideInAppMode><a href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-3 inline-block font-semibold text-blue-700 underline">{limitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</a></HideInAppMode>}
                   <a href={`/interview/projects/${projectId}/skill`} className="mt-3 mr-4 inline-block font-semibold text-blue-700 underline">スキル選択に戻る</a>
                   {providerConfigurationError && <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold text-blue-700 underline">サポートに問い合わせる</a>}
                 </div>

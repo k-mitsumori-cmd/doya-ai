@@ -13,6 +13,7 @@ async function scenario(strict,kind){
   if(n==='react'||n==='react/jsx-runtime')return dep(n);
   if(n==='next/link')return {__esModule:true,default:({children,prefetch,...props})=>React.createElement('a',props,children)};
   if(n==='next/navigation')return {usePathname:()=>'/kintai/clock',useRouter:()=>({push:()=>{}})};
+  if(n==='@/lib/app-mode/client')return {useAppMode:()=>false};
   if(n==='next-auth/react')return {SessionProvider:pass,signOut:()=>{throw Error('Unexpected signOut')}};
   if(n==='lucide-react')return new Proxy({},{get:()=>none});
   if(n.endsWith('.module.css'))return {__esModule:true,default:new Proxy({},{get:(_,k)=>String(k)})};

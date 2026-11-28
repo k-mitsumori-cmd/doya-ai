@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3, Target, MessageSquare, TrendingUp, Users, PenTool, Mail, Megaphone, Layers, Briefcase, Palette, Globe, Zap, BookOpen, Settings, Scale, Languages, Edit3, Cpu, ChevronRight, Rocket, Clock, Star, CheckCircle2, Timer, Crown, Flame, Home, DollarSign, HelpCircle, UserCircle, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
@@ -137,6 +139,8 @@ const CATEGORIES = [
 const POPULAR_AGENTS = ALL_AGENTS.filter(a => a.popular)
 
 export default function KantanTextListPage() {
+  // アプリ表示モード（ドヤバディの WebView）では、プラン・料金のナビを出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
   const { data: session } = useSession()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('すべて')
@@ -220,7 +224,7 @@ export default function KantanTextListPage() {
           <div className="mt-6">
             <p className="px-3 text-xs text-white/50 uppercase tracking-wider mb-2">データベース</p>
             <ul className="space-y-1">
-              {SIDEBAR_DATA_MENU.map((item) => (
+              {navForMode(SIDEBAR_DATA_MENU, appMode).map((item) => (
                 <li key={item.id}>
                   <Link
                     href={item.href}

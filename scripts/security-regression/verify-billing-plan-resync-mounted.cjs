@@ -41,7 +41,7 @@ async function fixture(kind) {
     return runtime[method](type, p, ...args);
   };
   const inert = () => null;
-  const mocks = { react: React, 'react/jsx-runtime': jsx, 'next-auth/react': auth,
+  const mocks = { react: React, 'react/jsx-runtime': jsx, '@/lib/app-mode/client': { useAppMode: () => false }, 'next-auth/react': auth,
     'next/link': ({ children, ...p }) => React.createElement('a', p, children),
     'next/navigation': { usePathname: () => `/${props.serviceId}/pricing` },
     '@/hooks/useBillingPlanResync': hook, '@/hooks/useSubscriptionManagement': { useSubscriptionManagement: () => ({ data: null, busy: false, disabled: true, message: '', run: async () => null, recheck: async () => {} }) }, '@/components/CheckoutButton': { CheckoutButton: inert },

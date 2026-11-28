@@ -124,3 +124,19 @@ a.stat:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
   .heroArt { width: 120px; justify-self: end; margin-top: -8px; }
   .heroTitle { font-size: 20px; }
 }
+
+/* ---- アプリ表示モード（AppShell が data-app-mode を付ける。それ以外は何も変わらない） ----
+   見出しが、言葉の途中（例: 「検／索」）で折り返さないようにする。見出しの <wbr> でだけ折り返し、
+   <wbr> が無い見出しは、行に収まらないときだけ従来どおりどこでも折り返す（overflow-wrap: anywhere）。
+   説明文・空状態の文は、PhraseText（src/components/app-mode）が文節の切れ目に <wbr> を入れる（WKWebView は auto-phrase 非対応のため）。
+   ⚠️ text-wrap の一括指定は white-space: nowrap を上書きする（renewal.css の件）ので、ここでは使わない。 */
+:global([data-app-mode='true']) .heroTitle,
+:global([data-app-mode='true']) .heroLead,
+:global([data-app-mode='true']) .emptyTitle,
+:global([data-app-mode='true']) .emptyText { word-break: keep-all; overflow-wrap: anywhere; }
+@supports (word-break: auto-phrase) {
+  :global([data-app-mode='true']) .heroTitle,
+  :global([data-app-mode='true']) .heroLead,
+  :global([data-app-mode='true']) .emptyTitle,
+  :global([data-app-mode='true']) .emptyText { word-break: auto-phrase; }
+}

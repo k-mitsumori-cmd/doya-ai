@@ -7,6 +7,7 @@
 // ⚠️ 組織の読み込み・選択・HrOrganizationScope・HrOnboarding は HrLayout がそのまま持つ。
 //    HrLayout が組織の切り替え（<select>）を switcher として渡し、ここで ToolFrame に入れる
 import type { ReactNode } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import ToolFrame from '@/components/shell/ToolFrame'
 import { ShellUsageSlot } from '@/components/shell/ShellUsage'
@@ -50,7 +51,7 @@ function HrUsageMeter({ employeeCount, employeeLimit, plan }: { employeeCount: n
       )}
       <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-white/80">
         <span>{planLabel(tierFrom(plan))}プラン</span>
-        <Link href="/hr/pricing" className="underline underline-offset-2">プランを見る</Link>
+        <HideInAppMode><Link href="/hr/pricing" className="underline underline-offset-2">プランを見る</Link></HideInAppMode>
       </div>
     </div>
   )

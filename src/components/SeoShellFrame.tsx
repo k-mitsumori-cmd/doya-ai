@@ -4,6 +4,9 @@
 // 旧来の SeoAppLayout（2026-10-24 に削除）が出していた「初回ログイン特典の残り時間」「現在のプラン」「新規記事作成」を、枠の中でも同じ値で出す。
 // ⚠️ 本文の余白と最大幅は旧来の SeoAppLayout と同じにする（/seo/template の負の margin がこの余白を打ち消す前提のため）
 import React from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Plus, Timer } from 'lucide-react'
@@ -53,7 +56,9 @@ export default function SeoShellFrame({
   const pathname = usePathname()
   const showCreate = !(pathname === '/seo')
 
-  const nav = SEO_NAV.map((item) => ({ ...item, href: seoNavHref(item.href, !!isLoggedIn) }))
+  // アプリ表示モード（ドヤバディの WebView）では、料金・プランの管理のナビと「現在のプラン」のリンクを出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const nav = navForMode(SEO_NAV, appMode).map((item) => ({ ...item, href: seoNavHref(item.href, !!isLoggedIn) }))
 
   return (
     <ToolFrame
@@ -61,12 +66,12 @@ export default function SeoShellFrame({
       nav={nav}
       action={
         <div className="flex items-center gap-2">
-          <Link
+          <HideInAppMode><Link
             href={seoNavHref('/seo/pricing', !!isLoggedIn)}
             className="hidden sm:inline-flex h-10 px-4 items-center rounded-xl border border-gray-200 bg-gray-50 text-xs font-black text-gray-600"
           >
             現在のプラン：{PLAN_LABEL[currentPlan ?? 'UNKNOWN']}
-          </Link>
+          </Link></HideInAppMode>
           {showCreate && <Link
             href="/seo/create"
             className="h-10 px-3 sm:px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 sm:gap-2"

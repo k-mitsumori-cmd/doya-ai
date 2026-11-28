@@ -1,6 +1,8 @@
 'use client'
 
 import React, { memo, useMemo, useState } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -47,6 +49,9 @@ function InterviewXSidebarImpl({
   const pathname = usePathname()
   const router = useRouter()
   const { data: session } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const interviewxNav = navForMode(NAV_ITEMS, appMode)
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -133,7 +138,7 @@ function InterviewXSidebarImpl({
 
   const PlanBanner = () => {
     if (isFreeHourActive && freeHourRemainingMs > 0) return null
-    if (!showLabel || !isLoggedIn || !nextPlanLabel) return null
+    if (appMode || !showLabel || !isLoggedIn || !nextPlanLabel) return null
 
     return (
       <div className="mx-3 mb-2">
@@ -163,7 +168,7 @@ function InterviewXSidebarImpl({
 
         <div className="flex-1 overflow-y-auto">
           <nav className="py-4 px-3 space-y-1">
-            {NAV_ITEMS.map((item) => (
+            {interviewxNav.map((item) => (
               <SidebarNavLink
                 key={item.href}
                 item={item}

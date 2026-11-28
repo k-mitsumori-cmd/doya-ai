@@ -11,7 +11,7 @@ const warnings=[],originalError=console.error;console.error=(...args)=>warnings.
  class ClockDate extends Date {static now(){return now}}
  const clock={setTimeout:(fn,ms)=>{timers.set(++seq,{fn,at:now+ms});return seq},clearTimeout:id=>timers.delete(id)};
  const helper=load('src/lib/trial-eligibility-client.ts',{}, {AbortController,TextDecoder,Uint8Array,Date:ClockDate,...clock,fetch:(url,init)=>{requests.push({url,init});return respond(url,init)}});
- const mocks={'react':React,'react/jsx-runtime':require('react/jsx-runtime'),'next-auth/react':{useSession:()=>({status,data})},'lucide-react':{Gift:()=>null,Sparkles:()=>null},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial-eligibility-client':helper};
+ const mocks={'react':React,'react/jsx-runtime':require('react/jsx-runtime'),'next-auth/react':{useSession:()=>({status,data})},'lucide-react':{Gift:()=>null,Sparkles:()=>null},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/app-mode/client':{useAppMode:()=>false},'@/lib/trial-eligibility-client':helper};
  const exportsObject={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/components/TrialCallout.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX,esModuleInterop:true}}).outputText,{exports:exportsObject,require:name=>{assert.ok(name in mocks,'Unmocked '+name);return mocks[name]},window,document,Date:ClockDate,console,...clock});
  const container=document.getElementById('root'),root=createRoot(container);
  const render=()=>React.act(async()=>{root.render(React.createElement(React.StrictMode,null,React.createElement(React.Fragment,null,React.createElement(exportsObject.TrialBadge),React.createElement(exportsObject.TrialNote))));await tick();await tick()});

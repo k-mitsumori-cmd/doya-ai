@@ -20,6 +20,7 @@ import { jstDateKey, jstDateTime, recoveryLabel } from './time'
 import { useDoyaPowerFx } from './fx-context'
 import styles from './doya-power.module.css'
 import { useDoyaPower } from './doya-power-context'
+import { useAppMode } from '@/lib/app-mode/client'
 
 export { CostBadge } from '@/components/ds/cost-badge'
 
@@ -199,7 +200,7 @@ function LowPowerNoticeBody({
   blockedText,
   addHref = '/pricing',
   teamHref = '/pricing',
-  actions,
+  actions: actionsProp,
 }: {
   remaining: number
   limit: number
@@ -231,6 +232,9 @@ function LowPowerNoticeBody({
   className?: string
 }) {
   const { mascot: showMascot, motion } = useDoyaPowerFx(fx)
+  // アプリ表示モード（ドヤバディの WebView）: 追加購入・チーム契約・プランへの案内（行動の欄、「追加する」「チームにする」、増やし方へのリンク）を出さない。待つ案内だけを残す（旗オフなら appMode は常に false）
+  const appMode = useAppMode()
+  const actions = appMode ? undefined : actionsProp
   const value = Math.max(0, remaining)
   const recovery = nextRecoveryAt !== undefined ? recoveryLabel(nextRecoveryAt, now) : null
   const lightest = conversions ? powerEquivalents(value, conversions).sort((a, b) => a.cost - b.cost)[0] : undefined
@@ -256,7 +260,7 @@ function LowPowerNoticeBody({
                 <span className={styles.choiceSub}>{recoveryAmount !== undefined ? `毎日 ${fmt(recoveryAmount)} ずつ回復します。` : '毎日、少しずつ回復します。'}</span>
               </span>
             </li>
-            <li>
+            {!appMode && <li>
               <a href={addHref} className={styles.choice}>
                 <span className={styles.choiceIcon}><Plus size={18} aria-hidden /></span>
                 <span className={styles.choiceText}>
@@ -265,8 +269,8 @@ function LowPowerNoticeBody({
                 </span>
                 <ArrowRight size={16} aria-hidden className={styles.choiceGo} />
               </a>
-            </li>
-            <li>
+            </li>}
+            {!appMode && <li>
               <a href={teamHref} className={styles.choice}>
                 <span className={styles.choiceIcon}><Users size={18} aria-hidden /></span>
                 <span className={styles.choiceText}>
@@ -275,10 +279,10 @@ function LowPowerNoticeBody({
                 </span>
                 <ArrowRight size={16} aria-hidden className={styles.choiceGo} />
               </a>
-            </li>
+            </li>}
           </ul>
         ) : null}
-        {!actions && moreHref && value > 0 ? (
+        {!appMode && !actions && moreHref && value > 0 ? (
           <a href={moreHref} className={styles.noticeLink}>{moreLabel}<ArrowRight size={14} aria-hidden /></a>
         ) : null}
       </div>

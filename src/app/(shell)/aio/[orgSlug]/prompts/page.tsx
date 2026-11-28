@@ -1,6 +1,7 @@
 'use client'
 
 import { useParams } from 'next/navigation'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useAioPrompts } from '@/lib/aio/use-prompts'
 import { AIO_MAX_PROMPTS_PER_SCAN } from '@/lib/aio/types'
 import { TrialNote } from '@/components/TrialCallout'
@@ -39,7 +40,7 @@ export default function AioPromptsPage() {
         <p className="font-black">監視プロンプトの利用枠に達しました</p>
         <p className="mt-1">{quota.message}</p>
         {quota.canManageBilling === true && quota.upgradeUrl ? <>
-          <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-2 inline-block font-black underline">料金プランを確認する</Link>
+          <HideInAppMode><Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-2 inline-block font-black underline">料金プランを確認する</Link></HideInAppMode>
           <TrialNote className="mt-2" />
         </> : <p className="mt-2">利用枠について組織オーナーにご相談ください。</p>}
       </div>}

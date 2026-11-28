@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { seoUserMessage } from '@/components/seo/user-message'
@@ -468,12 +469,12 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
             <div className="mt-3 p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold">
               {applyError}
               {paidAction && (
-                <Link
+                <HideInAppMode><Link
                   href={paidAction === 'login' ? `/auth/signin?callbackUrl=${encodeURIComponent(`/seo/articles/${articleId}`)}` : '/seo/pricing'}
                   className="mt-2 block w-fit text-blue-700 underline"
                 >
                   {paidAction === 'login' ? 'ログインする' : 'SEOの料金プランを見る'}
-                </Link>
+                </Link></HideInAppMode>
               )}
             </div>
           )}

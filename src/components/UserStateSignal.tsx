@@ -21,6 +21,7 @@
 
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { useAppMode } from '@/lib/app-mode/client'
 
 declare global {
   interface Window {
@@ -30,8 +31,11 @@ declare global {
 
 export function UserStateSignal() {
   const { data: session, status } = useSession()
+  // アプリ表示モードでは、計測のための dataLayer への書き込みをしない（GTM を読み込まないため、読む側も無い）
+  const appMode = useAppMode()
 
   useEffect(() => {
+    if (appMode) return
     // 未確定（loading）のうちは送らない。guest と誤って送ると、
     // ログイン済みの人にも一瞬ポップアップが出る余地が残る。
     if (status === 'loading') return
@@ -44,7 +48,7 @@ export function UserStateSignal() {
       user_state: session?.user ? 'logged_in' : 'guest',
       user_plan: user?.plan || 'none',
     })
-  }, [session, status])
+  }, [session, status, appMode])
 
   return null
 }

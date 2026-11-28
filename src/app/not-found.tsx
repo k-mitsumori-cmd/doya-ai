@@ -5,6 +5,7 @@
 // 今は無い入口（カンタンドヤAI・ドヤバナーAI）へのリンクは出さない（2026-10-24 メインの全画面の点検）。
 // ⚠️ ログインの有無で中身を変えない（どの画面の下でも同じ文字にする）。行き先は、経営ホーム・トップ・料金の3つだけ
 import type { Metadata } from 'next'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import tokens from '@/components/ds/tokens.module.css'
 import { Button, EmptyState } from '@/components/ds'
@@ -37,7 +38,7 @@ export default function NotFound() {
         />
         <nav aria-label="ほかの行き先" className="mt-2 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-[var(--line)] pt-5 text-[14px] font-bold">
           <Link href="/" className="text-[var(--blue)] hover:underline">トップページ</Link>
-          <Link href="/pricing" className="text-[var(--blue)] hover:underline">料金プラン</Link>
+          <HideInAppMode><Link href="/pricing" className="text-[var(--blue)] hover:underline">料金プラン</Link></HideInAppMode>
           <Link href="/auth/signin" className="text-[var(--blue)] hover:underline">ログイン</Link>
         </nav>
         <ErrorReportForm errorType="404" />

@@ -1,6 +1,8 @@
 'use client'
 
 import React, { memo, useState } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -46,6 +48,9 @@ function AdSimSidebarImpl({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const adsimNav = navForMode(ADSIM_NAV, appMode)
   const { isCollapsed, showLabel, toggle } = useSidebarState({
     controlledIsCollapsed,
     onToggle,
@@ -90,7 +95,7 @@ function AdSimSidebarImpl({
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <div className="space-y-1">
               <SidebarSectionTitle title="ドヤ広告シミュ" isCollapsed={isCollapsed} theme={adsimTheme} />
-              {ADSIM_NAV.map((item) => (
+              {adsimNav.map((item) => (
                 <SidebarNavLink
                   key={item.href}
                   item={item}
@@ -104,7 +109,7 @@ function AdSimSidebarImpl({
           </nav>
 
           {/* プランバナー */}
-          {(isMobile || !isCollapsed) && (
+          {!appMode && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="hidden md:block relative z-10">
                 <div className="flex items-center gap-2 mb-3">

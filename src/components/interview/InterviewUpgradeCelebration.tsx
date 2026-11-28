@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { ComponentProps } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import confetti from 'canvas-confetti'
 
@@ -20,7 +22,7 @@ const PRO_FEATURES = [
   { icon: 'support_agent', text: '優先サポート', highlight: false },
 ]
 
-export default function InterviewUpgradeCelebration({
+function InterviewUpgradeCelebrationImpl({
   isOpen,
   onClose,
   planName = 'PRO',
@@ -208,4 +210,10 @@ export default function InterviewUpgradeCelebration({
       </motion.div>
     </AnimatePresence>
   )
+}
+
+/** アプリ表示モード（ドヤバディの WebView）では、料金・アップグレードの案内なので何も描画しない（旗オフ・アプリでないときは今までと同じ） */
+export default function InterviewUpgradeCelebration(props: ComponentProps<typeof InterviewUpgradeCelebrationImpl>) {
+  const appMode = useAppMode()
+  return appMode ? null : <InterviewUpgradeCelebrationImpl {...props} />
 }

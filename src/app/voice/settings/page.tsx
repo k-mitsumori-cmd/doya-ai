@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Save, SlidersHorizontal, Bell, AlertTriangle, Trash2, User } from 'lucide-react'
@@ -104,12 +105,12 @@ export default function VoiceSettingsPage() {
               <p className="text-sm text-slate-400 truncate mt-0.5">{user.email || ''}</p>
             </div>
             {/* Plan Change Button */}
-            <Link
+            <HideInAppMode><Link
               href="/voice/pricing"
               className="flex-shrink-0 px-4 py-2 rounded-xl border border-violet-200 text-violet-600 text-sm font-bold hover:bg-violet-50 transition-colors"
             >
               プランを変更
-            </Link>
+            </Link></HideInAppMode>
           </div>
         ) : (
           <div className="flex items-center gap-4">

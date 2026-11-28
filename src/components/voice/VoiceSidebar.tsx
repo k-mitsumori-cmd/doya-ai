@@ -1,6 +1,8 @@
 'use client'
 
 import React, { memo, useState, useEffect } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -50,6 +52,9 @@ function VoiceSidebarImpl({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const voiceNav = navForMode(VOICE_NAV, appMode)
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const user = session?.user as any
@@ -113,7 +118,7 @@ function VoiceSidebarImpl({
         {/* ナビゲーション */}
         <div className="flex-1 overflow-y-auto scrollbar-none">
         <nav className="px-3 space-y-0.5">
-          {VOICE_NAV.map((item) => (
+          {voiceNav.map((item) => (
             <SidebarNavLink
               key={item.href}
               item={item}
@@ -166,7 +171,7 @@ function VoiceSidebarImpl({
         )}
 
         {/* プランバナー */}
-        {showLabel && currentPlan !== 'PRO' && currentPlan !== 'ENTERPRISE' && (
+        {!appMode && showLabel && currentPlan !== 'PRO' && currentPlan !== 'ENTERPRISE' && (
           <div className="mx-3 mt-4 my-2 p-4 rounded-2xl bg-gradient-to-br from-violet-600/20 to-purple-700/20 border border-violet-500/30 flex flex-col gap-3 relative overflow-hidden group">
             <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
               <Zap className="w-16 h-16 text-white" />

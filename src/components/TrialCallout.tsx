@@ -14,6 +14,7 @@ import { useSession } from 'next-auth/react'
 import { Gift, Sparkles } from 'lucide-react'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { fetchTrialEligibility } from '@/lib/trial-eligibility-client'
+import { useAppMode } from '@/lib/app-mode/client'
 
 const BRAND = '#7f19e6'
 
@@ -25,10 +26,13 @@ export const TRIAL_SUBTEXT = `期間中はいつでも解約でき、料金は�
 type Tone = 'light' | 'dark'
 
 export function useTrialEligible(): boolean {
+  // アプリ表示モード（ドヤバディの WebView）では、初月無料の訴求を一切出さない（判定中も出さない。取りに行かない）。
+  // TrialBadge / TrialNote / TrialInlineSuffix / TrialCallout は、すべてこの値が false なら null を返す。旗がオフなら、常に false で、今までと同じ。
+  const appMode = useAppMode()
   const { data: session, status } = useSession()
   const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
   const identity = user?.id || user?.email
-  const key = status === 'loading' ? '' : status === 'authenticated' ? identity ? JSON.stringify([identity, user?.plan]) : '' : 'guest'
+  const key = appMode ? '' : status === 'loading' ? '' : status === 'authenticated' ? identity ? JSON.stringify([identity, user?.plan]) : '' : 'guest'
   const [result, setResult] = useState<{ key: string; eligible: boolean }>({ key: '', eligible: false })
   useEffect(() => {
     if (!key) return

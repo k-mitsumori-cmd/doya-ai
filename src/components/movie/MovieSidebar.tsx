@@ -3,6 +3,8 @@
 // ドヤムービーAI - サイドバー
 // ============================================
 import React, { memo, useState, useEffect } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
@@ -42,6 +44,9 @@ function MovieSidebarImpl({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const movieNav = navForMode(MOVIE_NAV, appMode)
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -97,7 +102,7 @@ function MovieSidebarImpl({
         <nav className="py-4 sm:py-6 px-3 space-y-1">
           <div className="space-y-1">
             <SidebarSectionTitle title="ドヤムービーAI" isCollapsed={isCollapsed} theme={movieTheme} />
-            {MOVIE_NAV.map((item) => (
+            {movieNav.map((item) => (
               <SidebarNavLink key={item.href} item={item} isActive={isActive(item.href)} showLabel={showLabel} theme={movieTheme} layoutId="movieActiveIndicator" />
             ))}
           </div>
@@ -123,7 +128,7 @@ function MovieSidebarImpl({
         )}
 
         {/* プランバナー */}
-        {showLabel && currentPlan !== 'PRO' && currentPlan !== 'ENTERPRISE' && (
+        {!appMode && showLabel && currentPlan !== 'PRO' && currentPlan !== 'ENTERPRISE' && (
           <div className="mx-3 mb-3">
             <Link
               href="/movie/pricing"

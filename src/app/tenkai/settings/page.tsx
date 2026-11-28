@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -512,13 +513,13 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
-            <Link
+            <HideInAppMode><Link
               href="/tenkai/pricing"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100 transition-colors"
             >
               <span className="material-symbols-outlined text-base">upgrade</span>
               {plan === 'FREE' ? 'アップグレード' : 'プラン変更'}
-            </Link>
+            </Link></HideInAppMode>
           </div>
         </motion.div>
 
@@ -692,12 +693,12 @@ export default function SettingsPage() {
               <p className="text-sm text-slate-500 mb-3">
                 API アクセスはPro以上のプランで利用可能です
               </p>
-              <Link
+              <HideInAppMode><Link
                 href="/tenkai/pricing"
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 text-sm font-semibold hover:bg-blue-100 transition-colors"
               >
                 プランを確認
-              </Link>
+              </Link></HideInAppMode>
             </div>
           )}
         </motion.div>

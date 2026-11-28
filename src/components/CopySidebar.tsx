@@ -22,6 +22,8 @@ import {
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { higherPlan } from '@/lib/plan-utils'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 
 const COPY_NAV: NavItem[] = [
   { href: '/copy/new', label: '新規コピー生成', icon: PenLine, hot: true },
@@ -41,6 +43,9 @@ function CopySidebarImpl({
 }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン案内の枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  const copyNav = navForMode(COPY_NAV, appMode)
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
   //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
@@ -78,14 +83,14 @@ function CopySidebarImpl({
         <nav className="py-4 sm:py-6 px-3 space-y-1">
           <div className="space-y-1">
             <SidebarSectionTitle title="ドヤコピーAI" isCollapsed={isCollapsed} theme={copyTheme} />
-            {COPY_NAV.map((item) => (
+            {copyNav.map((item) => (
               <SidebarNavLink key={item.href} item={item} isActive={isActive(item.href)} showLabel={showLabel} theme={copyTheme} layoutId="copyActiveIndicator" />
             ))}
           </div>
         </nav>
 
         {/* プランバナー */}
-        {sessionReady && (isMobile || !isCollapsed) && (
+        {!appMode && sessionReady && (isMobile || !isCollapsed) && (
           <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
             <div className="hidden md:block relative z-10">
               <div className="flex items-center gap-2 mb-3">

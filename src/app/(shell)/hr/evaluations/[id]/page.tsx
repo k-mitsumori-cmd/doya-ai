@@ -1,5 +1,6 @@
 'use client'
 import { PageTitle } from '@/components/hr/ui-next'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
@@ -157,7 +158,7 @@ function EvaluationDetailContent({ id, actor }: { id: string; actor: string }) {
       <p className="mt-2">{ai.message || '前回の生成結果が未確認です。新しく生成せず、同じ操作の結果を確認してください。'}</p>
       {ai.limit && (ai.limit.canManageBilling ? <div className="mt-3">
         <p>組織のAI利用枠とプランをご確認ください。変更が反映された後、同じ操作で生成を再開できます。</p>
-        <Link className={buttonClass + ' inline-block mt-3'} href="/hr/pricing">プランと利用枠を確認する</Link>
+        <HideInAppMode><Link className={buttonClass + ' inline-block mt-3'} href="/hr/pricing">プランと利用枠を確認する</Link></HideInAppMode>
         <TrialNote className="mt-2" />
       </div> : <p className="mt-3">組織のオーナーに、AI利用枠とプランについてご相談ください。</p>)}
       {ai.result?.state === 'completed' && <p className="mt-2 whitespace-pre-wrap break-words">{ai.result.aiComment}</p>}

@@ -45,6 +45,7 @@ import { ShellPowerMeter } from './power'
 import { DoyaLogoMark } from '@/components/brand/DoyaLogo'
 // 名前（旗 NEXT_PUBLIC_BRAND_RENAME_ROLLOUT が all ならドヤバディ、それ以外はドヤAI）
 import { brandName } from '@/lib/brand'
+import { useAppMode } from '@/lib/app-mode/client'
 
 const RECENT_KEY = 'doya-shell-recent-v1'
 
@@ -381,6 +382,7 @@ export default function AppShell({ children, userName, initialRecent, department
   const otherGroups = useMemo<NavGroup[]>(() => (productsOn ? buildProductGroups(product).map((g) => ({ key: g.product ?? 'other', label: g.label, tools: g.tools })) : []), [product, productsOn])
   const [open, setOpen] = useState(false)
   const [palette, setPalette] = useState(false)
+  const appMode = useAppMode()
   // 1日1つの決まりで止めた知らせ（新機能・「〜でできること」）。あるときだけ、左下に「お知らせ」を出す
   const { enabled: noticeOn, held, openHeld } = useNotice()
   const [recent, setRecent] = useState<string[]>(initialRecent ?? [])
@@ -457,7 +459,7 @@ export default function AppShell({ children, userName, initialRecent, department
   return (
     <InShellContext.Provider value={true}>
     <ShellUsageProvider>
-    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined}>
+    <div className={`${ds.ds} ${styles.shell}`} data-ui-next="true" data-agent-chat={agentChat ? 'true' : undefined} data-app-mode={appMode ? 'true' : undefined}>
       {/* 枠の中のアプリの画面では、HubSpot のポップアップ（GTM のカスタム HTML タグから出る）を出さない。
           375px で画面の下と下のタブを覆うため。ログインしていない人の LP（枠の外）には、この style は出ないので今のまま出る */}
       <style>{HIDE_HUBSPOT_CSS}</style>
@@ -558,10 +560,13 @@ export default function AppShell({ children, userName, initialRecent, department
               <span className={styles.navLabel}>お知らせ{held.length ? <span className={styles.noticeCount}>{held.length}</span> : null}</span>
             </button>
           ) : null}
+          {/* アプリ表示モード（ドヤバディの WebView）では、料金プランへの入口を出さない（旗オフなら appMode は常に false） */}
+          {!appMode && (
           <Link href="/pricing" className={styles.navItem} onClick={close} title="料金プラン">
             <CreditCard size={18} strokeWidth={2} aria-hidden />
             <span className={styles.navLabel}>料金プラン</span>
           </Link>
+          )}
           {/* お問い合わせ・改善依頼（2026-11-24）。10/19 の新しい見た目で古いサイドバーが出なくなり、ログイン後の画面から入口が消えていた。
               送り先は今までと同じ /api/feedback（保存と Slack の通知はそちらで行う） */}
           <SidebarHelpContact showLabel isCollapsed={false} trigger={(openForm) => (

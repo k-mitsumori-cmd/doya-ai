@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
@@ -678,7 +679,7 @@ export default function SkillManagementPage() {
               {aiDailyLimit !== null && (
                 <div role="status" className="rounded-lg border border-brand-100 bg-brand-50 p-3 text-sm text-slate-700">
                   <p>本日のレシピ自動生成の上限（{aiDailyLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
-                  {aiLimitAction && <Link href={aiLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline">{aiLimitAction === 'contact' ? '追加枠を相談する' : 'プランを確認する'}</Link>}
+                  {aiLimitAction && <HideInAppMode><Link href={aiLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-block font-bold text-brand-600 underline">{aiLimitAction === 'contact' ? '追加枠を相談する' : 'プランを確認する'}</Link></HideInAppMode>}
                 </div>
               )}
 

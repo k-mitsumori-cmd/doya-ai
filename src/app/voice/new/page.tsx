@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSession, signIn } from 'next-auth/react'
@@ -219,7 +220,7 @@ function NewVoicePageInner() {
           {!isPro && (
             <p className="text-xs text-slate-400">
               無料プランは1,000文字まで。
-              <Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline">Proにアップグレード</Link>
+              <HideInAppMode><Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline">Proにアップグレード</Link></HideInAppMode>
               で5,000文字まで対応。
             </p>
           )}

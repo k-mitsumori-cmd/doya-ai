@@ -1,6 +1,7 @@
 'use client'
 
 import { shrinkDataUrl } from '@/lib/image-downscale'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
@@ -590,17 +591,17 @@ function BannerUrlAutoPageInner() {
                             >
                               追加の利用枠を相談する
                             </a>
-                            <Link href="/banner/pricing" className="text-xs text-red-700 underline">料金・利用条件を確認する</Link>
+                            <HideInAppMode><Link href="/banner/pricing" className="text-xs text-red-700 underline">料金・利用条件を確認する</Link></HideInAppMode>
                             </>
                           ) : (
                             <>
-                              <Link
+                              <HideInAppMode><Link
                                 href="/banner/pricing"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
                               >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 {trialEligible && !isPaidUser ? `${TRIAL_DAYS}日間無料の対象プランを確認する` : 'プランを確認する'}
-                              </Link>
+                              </Link></HideInAppMode>
                               <span className="text-[10px] text-red-600 font-bold">
                                 プロプランは月{BANNER_PRICING.proLimit}枚まで
                               </span>
@@ -799,12 +800,12 @@ function BannerUrlAutoPageInner() {
                     無料は制限付き。有料は枚数/サイズ指定が可能です。
                   </p>
                 </div>
-                <Link
+                <HideInAppMode><Link
                   href="/banner/pricing"
                   className="text-xs font-black text-blue-600 hover:text-blue-800"
                 >
                   料金ページへ
-                </Link>
+                </Link></HideInAppMode>
               </div>
 
               {/* 現在プラン表示 */}

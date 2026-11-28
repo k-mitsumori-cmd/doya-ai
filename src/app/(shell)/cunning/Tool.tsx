@@ -1,6 +1,7 @@
 'use client'
 
 import { showServiceLimit } from '@/lib/service-limit-ui'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -550,7 +551,7 @@ export default function CunningTool() {
         </button>
         {usageError && loginRequired && <Link href="/auth/signin?callbackUrl=%2Fcunning" className="mt-3 block underline">再度ログインする</Link>}
         {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={() => refreshUsage()} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
-        {overLimit && !usage?.reservedSeconds && <a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl p-3 text-center font-bold border border-[#0066ff] bg-white text-[#0047d6]">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a>}
+        {overLimit && !usage?.reservedSeconds && <HideInAppMode><a href={usage?.plan === 'FREE' ? '/cunning/pricing' : SUPPORT_CONTACT_URL} className="mt-3 block w-full rounded-xl p-3 text-center font-bold border border-[#0066ff] bg-white text-[#0047d6]">{usage?.plan === 'FREE' ? 'プラン・利用条件を確認する' : '追加の利用枠を相談する'}</a></HideInAppMode>}
         <p className={`text-center text-xs font-bold mt-2 text-slate-500 ${PHRASE_CLASS}`}>
           <Phrase text="開始後、会議・配信のタブの音声の共有を許可してください（Chrome・Edge推奨）" />
         </p>

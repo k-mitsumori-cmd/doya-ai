@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -744,12 +745,12 @@ export default function AdSimProjectPage() {
                     )}
                   </motion.button>
                   {bannerRemaining === 0 && (
-                    <Link
+                    <HideInAppMode><Link
                       href="/adsim/pricing"
                       className="inline-flex items-center gap-2 rounded-2xl border-2 border-white/40 bg-white/10 px-5 py-4 text-sm font-black text-white backdrop-blur hover:bg-white/20"
                     >
                       Pro プランで無制限に →
-                    </Link>
+                    </Link></HideInAppMode>
                   )}
                 </div>
               </div>
@@ -838,12 +839,12 @@ export default function AdSimProjectPage() {
                 })}
               </div>
               {isFree && (
-                <Link
+                <HideInAppMode><Link
                   href="/adsim/pricing"
                   className="mt-5 flex items-center justify-center gap-2 rounded-2xl border-2 border-[#0017C1]/30 bg-gradient-to-r from-[#D9E6FF] to-[#C5D7FB] px-5 py-4 text-sm font-black text-[#0017C1] transition hover:from-[#C5D7FB] hover:to-[#D9E6FF]"
                 >
                   🔓 Pro プランへアップグレードしてバナー画像をダウンロード →
-                </Link>
+                </Link></HideInAppMode>
               )}
             </div>
           )}

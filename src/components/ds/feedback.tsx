@@ -9,6 +9,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, X } from 'lucide-react'
 import { usePrefersReducedMotion } from './motion'
 import styles from './feedback.module.css'
+import { useAppMode } from '@/lib/app-mode/client'
+import { mapLimitMessage } from '@/lib/app-mode/limit-message'
 
 /* ---- FirstSteps（初めて開いたときの3ステップ。閉じたら出さない。S-16） ---- */
 export function FirstSteps({ id, title = 'はじめての使い方', steps, action }: {
@@ -113,6 +115,10 @@ export function ErrorNotice({ what, how, onRetry, retryLabel = 'やり直す' }:
   onRetry?: () => void
   retryLabel?: string
 }) {
+  // アプリ表示モード（ドヤバディの WebView）では、料金・プラン・契約の語を含む文を、中立の文に差し替える（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
+  what = mapLimitMessage(what, appMode)
+  how = how === undefined ? undefined : mapLimitMessage(how, appMode, '')
   return (
     <div className={styles.error} role="alert">
       <AlertTriangle size={18} aria-hidden className={styles.errorIcon} />

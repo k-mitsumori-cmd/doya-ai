@@ -6,6 +6,9 @@
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
 import { useOneButton } from '@/components/one-button/context'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
+import { isAppModeClient } from '@/lib/app-mode/client'
+import { mapLimitMessage } from '@/lib/app-mode/limit-message'
 import { OneButtonBar } from '@/components/one-button/OneButtonBar'
 import { Button, EmptyState, ErrorNotice, Skeleton, ToolHero } from '@/components/ds'
 import { LoadIssueNotice, NX_FOCUS, NX_TAP, friendlyText, loadIssueOf, type LoadIssue } from '@/components/mensetsu/states'
@@ -560,8 +563,8 @@ export default function MensetsuTool() {
           </div>
         ) : error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4 text-sm font-bold text-[#c2185b]">
-            {error}
-            {templateUpgrade?.message === error && <p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">{proPlanLinkLabel}</Link></p>}
+            {mapLimitMessage(error, isAppModeClient())}
+            {templateUpgrade?.message === error && <HideInAppMode><p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">{proPlanLinkLabel}</Link></p></HideInAppMode>}
           </div>
         )}
         {notice && (
@@ -875,8 +878,8 @@ export default function MensetsuTool() {
                     </div>
                   ) : issueLimit && error === issueLimit.message && (
                     <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
-                      <p>{issueLimit.message}</p>
-                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label || proPlanLinkLabel}</Link>
+                      <p>{mapLimitMessage(issueLimit.message, isAppModeClient())}</p>
+                      <HideInAppMode><Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">{issueLimit.label || proPlanLinkLabel}</Link></HideInAppMode>
                     </div>
                   )}
                   {templates.find((t) => t.id === selectedTemplate)?.status === 'draft' && (

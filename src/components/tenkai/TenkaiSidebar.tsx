@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface TenkaiSidebarProps {
@@ -137,12 +138,14 @@ export default function TenkaiSidebar({
             />
           </div>
           <p className="text-[10px] text-slate-400 mb-2">月末リセットまであと{daysUntilReset}日</p>
+          <HideInAppMode>
           <Link
             href="/tenkai/pricing"
             className="block w-full py-2 text-center text-xs font-semibold text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
           >
             プランをアップグレード
           </Link>
+          </HideInAppMode>
         </div>
       )}
 

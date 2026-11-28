@@ -8,6 +8,8 @@ import { TrialNote, useTrialEligible, TRIAL_DAYS } from '@/components/TrialCallo
 import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { tierFrom } from '@/lib/plan-utils'
+import { useAppMode } from '@/lib/app-mode/client'
+import AppLimitNotice from '@/components/app-mode/AppLimitNotice'
 
 export default function ServiceLimitProvider() {
   const { data: session, status } = useSession()
@@ -27,6 +29,7 @@ export default function ServiceLimitProvider() {
   const limit = notice?.key === key ? notice.limit : null
   const panel = useRef<HTMLDivElement>(null)
   const eligible = useTrialEligible()
+  const appMode = useAppMode()
   const sessionPlan = (session?.user as any)?.plan
   // サーバーが返した料金/追加枠の導線を優先する。明示がない旧APIだけ階層で補完。
   const contactAction = limit?.action === 'contact' || (limit?.action !== 'upgrade' && isPaidPlan(sessionPlan) && (tierFrom(sessionPlan) !== 'LIGHT' || limit?.service === 'cunning'))
@@ -66,6 +69,8 @@ export default function ServiceLimitProvider() {
   }, [limit])
 
   if (!limit || status === 'loading') return null
+  // アプリ表示モード: 料金・プラン・契約への案内を出さず、中立の1文だけにする（旗オフなら appMode は常に false）
+  if (appMode) return <AppLimitNotice onClose={dismiss} />
   const guest = status === 'unauthenticated'
   const selfService = limit.kind !== 'owner' && limit.kind !== 'capacity'
   const ownerNeedsPlan = limit.kind === 'owner' && limit.service === 'shodan' && limit.message.includes('プロプラン契約が必要')

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -201,7 +202,7 @@ export default function ProjectsPage() {
       {thumbnailLimitMessage && (
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-3">
           <span>{thumbnailLimitMessage}</span>
-          {thumbnailLimitAction && <Link href={thumbnailLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="font-bold underline underline-offset-2">{thumbnailLimitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</Link>}
+          {thumbnailLimitAction && <HideInAppMode><Link href={thumbnailLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="font-bold underline underline-offset-2">{thumbnailLimitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</Link></HideInAppMode>}
         </div>
       )}
 

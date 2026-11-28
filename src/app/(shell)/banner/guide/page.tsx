@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import Link from 'next/link'
 import { buildServiceSubMetadata } from '@/lib/seo'
 
@@ -56,9 +57,9 @@ export default function BannerGuidePage() {
           <p className="mt-3 text-sm leading-7 text-slate-700">
             生成画面に表示される上限案内を確認してください。上限に達した場合は、次の月の枠を待つか、料金ページでプランを確認できます。
           </p>
-          <Link href="/banner/pricing" className="mt-5 inline-flex rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800">
+          <HideInAppMode><Link href="/banner/pricing" className="mt-5 inline-flex rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800">
             料金プランを見る
-          </Link>
+          </Link></HideInAppMode>
         </section>
 
         <div className="mt-10 flex flex-wrap gap-3">

@@ -2,6 +2,8 @@
 
 import { ReactNode } from 'react'
 import Link from 'next/link'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Sparkles, Home, FolderOpen, CreditCard, BookOpen } from 'lucide-react'
@@ -15,6 +17,8 @@ const NAV_ITEMS = [
 
 export default function OpeningAppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  // アプリ表示モード（ドヤバディの WebView）では、料金のナビを出さない（旗オフ・アプリでないときは今までと同じ）
+  const openingNav = navForMode(NAV_ITEMS, useAppMode())
 
   return (
     <div className="min-h-screen bg-[#0A0505] text-white">
@@ -32,7 +36,7 @@ export default function OpeningAppLayout({ children }: { children: ReactNode }) 
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_ITEMS.map((item) => {
+            {openingNav.map((item) => {
               const isActive = pathname === item.href || (item.href !== '/opening' && pathname.startsWith(item.href))
               return (
                 <Link

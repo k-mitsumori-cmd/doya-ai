@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -1047,7 +1048,7 @@ export default function SeoCreateWizardPage() {
                       })}
                       {/* プランアップグレード誘導 */}
                       {userPlan !== 'ENTERPRISE' && (
-                        <a href={userPlan === 'PRO' ? HIGH_USAGE_CONTACT_URL : '/seo/pricing'} target={userPlan === 'PRO' ? '_blank' : undefined} rel={userPlan === 'PRO' ? 'noopener noreferrer' : undefined} className="block">
+                        <HideInAppMode><a href={userPlan === 'PRO' ? HIGH_USAGE_CONTACT_URL : '/seo/pricing'} target={userPlan === 'PRO' ? '_blank' : undefined} rel={userPlan === 'PRO' ? 'noopener noreferrer' : undefined} className="block">
                           <div className="p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
                             <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
                               <Lock className="w-3.5 h-3.5" />
@@ -1055,7 +1056,7 @@ export default function SeoCreateWizardPage() {
                             </div>
                             <p className="text-[10px] text-gray-400 mt-0.5">{userPlan === 'PRO' ? '利用について相談する' : 'プランを確認する'}</p>
                           </div>
-                        </a>
+                        </a></HideInAppMode>
                       )}
                     </div>
                   </div>

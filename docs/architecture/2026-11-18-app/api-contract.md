@@ -212,6 +212,7 @@ source={{ uri: url, headers: { 'x-doya-handoff': verifier } }}
 
 - 成功の条件: コードが未使用で、60秒以内で、ユーザーが退会していず、その端末が失効していず、**ヘッダー `x-doya-handoff` の `verifier` の SHA-256 が、作成時の `challenge` と一致する**こと。比較は定数時間で行う。
 - 成功: Web の通常のセッション（`Session` の行。期間は next-auth の `maxAge` と同じ24時間。`AppDevice` には結び付けない。そのため、既存の延長の動きに従う）を作り、Cookie（名前は `next-auth.session-token`、`NEXTAUTH_URL` が https なら `__Secure-next-auth.session-token`。HttpOnly、SameSite=Lax、Path=/、https なら Secure）をセットして、`next` へ `302`。開く先は、DB に控えた検証済みの `next` で、URL の `next` は使わない。
+- 成功のときは、アプリ表示モードの印の Cookie `doya_app=1` も、セッションの Cookie と一緒にセットする（2026-11-18 追加）。HttpOnly なし（ブラウザ側の判定が `document.cookie` で読むため）、SameSite=Lax、Path=/、https なら Secure、期限はセッションの Cookie と同じ。値は `1` だけで、ログアウトでは消さない。Web 側は、環境変数 `APP_MODE_ENABLED=1` のときだけ、この Cookie か User-Agent（`DoyaBuddyApp`）で、課金の導線と計測を出さない。仕組みと止める経路の一覧は `app-mode-web.md`。失敗の応答では、どちらの Cookie もセットしない。
 - 失敗（期限切れ・使用済み・不正なコード、ヘッダーが無い、`verifier` の不一致など、理由は区別しない）: `/auth/signin?error=HandoffInvalid` へ `302`。`verifier` が無い・不一致のときは、**コードを消費しない**（消費すると、コードを知る別の人に使い切られて、妨害されるため）。
 - 応答には常に `Cache-Control: no-store` と `Referrer-Policy: no-referrer` を付ける。
 - なぜヘッダーで束縛するか（ログイン CSRF の防止）: 束縛が無いと、攻撃者が自分のアカウントでコードを作り、60秒以内にその url を被害者に踏ませて、被害者のブラウザを攻撃者のセッションにできる。普通のブラウザのリンクは、カスタムヘッダーを付けられないので、この攻撃は成立しない。

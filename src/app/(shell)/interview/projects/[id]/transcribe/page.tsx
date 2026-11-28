@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -777,12 +778,12 @@ export default function TranscribePage() {
                   サポートに問い合わせる
                 </a>
               ) : limitReached && limitAction ? (
-                <a
+                <HideInAppMode><a
                   href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#0066ff] hover:bg-[#0047d6] transition-colors"
                 >
                   {limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
-                </a>
+                </a></HideInAppMode>
               ) : (
                 <button
                   onClick={() => window.location.reload()}

@@ -15,11 +15,14 @@ import {
 } from 'lucide-react'
 import { getUsageCount, getRemainingCount, PLAN_LIMITS, UserTier } from '@/lib/usage'
 import { TrialCallout, useTrialEligible } from '@/components/TrialCallout'
+import { useAppMode } from '@/lib/app-mode/client'
 
 export function UsageLimitBanner() {
   // テスト用: 制限表示を無効化（NEXT_PUBLIC_DOYA_DISABLE_LIMITS=1）
   // NOTE: Hooksの呼び出し順を守るため、早期returnはhooksの後で行う
-  const disableLimitUi = process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1'
+  // アプリ表示モード（ドヤバディの WebView）では、アップグレードの呼びかけを出さない（旗オフなら appMode は常に false）
+  const appMode = useAppMode()
+  const disableLimitUi = appMode || process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1'
   const { data: session, status } = useSession()
   const trialEligible = useTrialEligible()
   const [remaining, setRemaining] = useState<number | 'unlimited'>(3)
@@ -154,7 +157,8 @@ export function UsageLimitModal({
   tier: UserTier
 }) {
   const trialEligible = useTrialEligible()
-  if (!isOpen) return null
+  const appMode = useAppMode()
+  if (!isOpen || appMode) return null
 
   return (
     <motion.div

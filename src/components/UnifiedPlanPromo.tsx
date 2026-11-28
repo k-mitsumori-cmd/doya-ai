@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import NextImage from 'next/image';
+import { useAppMode } from '@/lib/app-mode/client';
 
 type PromoService = {
   id: string;
@@ -73,9 +74,13 @@ export default function UnifiedPlanPromo({
   currentServiceId?: string;
   className?: string;
 }) {
+  // アプリ表示モード（ドヤバディの WebView）: 統一プランの宣伝は何も描画しない（旗オフなら appMode は常に false）
+  const appMode = useAppMode();
   const otherCount = currentServiceId
     ? ACTIVE_SERVICES.filter((s) => s.id !== currentServiceId).length
     : ACTIVE_SERVICES.length;
+
+  if (appMode) return null;
 
   return (
     <section

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
@@ -1435,7 +1436,7 @@ ${htmlBody}
                   <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4" role="alert">
                     <p className="text-sm font-semibold text-amber-900">{auxLimitMessage}</p>
                     <p className="mt-1 text-xs text-amber-800">利用枠は日本時間の翌日0時に切り替わります。</p>
-                    {auxLimitAction && <a href={auxLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-flex text-sm font-bold text-blue-700 underline underline-offset-2">{auxLimitAction === 'contact' ? '追加枠を相談する' : 'プランと利用枠を見る'}</a>}
+                    {auxLimitAction && <HideInAppMode><a href={auxLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-flex text-sm font-bold text-blue-700 underline underline-offset-2">{auxLimitAction === 'contact' ? '追加枠を相談する' : 'プランと利用枠を見る'}</a></HideInAppMode>}
                   </div>
                 )}
                 <AnimatePresence mode="wait">

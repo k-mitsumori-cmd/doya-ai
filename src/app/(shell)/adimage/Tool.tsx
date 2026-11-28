@@ -8,6 +8,7 @@
 // 中心的な体験は「URLだけで始まること」なので、他の入力は全て任意にする。
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession } from 'next-auth/react'
 import { FEEDBACK_ITEM_MAX, feedbackTotalMax } from '@/lib/adimage/score-max'
 import { useAdImageRecovery } from '@/lib/adimage/use-operation-recovery'
@@ -587,10 +588,10 @@ export default function AdImageTool() {
 
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
           <p>{error}</p>
-          {limitAction && <Link
+          {limitAction && <HideInAppMode><Link
             href={limitAction === 'pricing' ? '/adimage/pricing' : 'https://doyamarke.surisuta.jp/contact'}
             className="mt-3 inline-flex rounded-lg bg-[#0017C1] px-4 py-2 text-sm font-bold text-white hover:bg-[#0017C1]/85"
-          >{limitAction === 'pricing' ? 'プランと無料体験を見る' : '追加枠を相談する'}</Link>}
+          >{limitAction === 'pricing' ? 'プランと無料体験を見る' : '追加枠を相談する'}</Link></HideInAppMode>}
         </div>}
 
         {/* ⚠️ 2〜4のセクションは入力が進むまで描画されない。この行が無いと

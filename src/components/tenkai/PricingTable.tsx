@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import type { ComponentProps } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
@@ -131,7 +134,7 @@ const FEATURE_ROWS = [
 // ============================================
 // PricingTable コンポーネント
 // ============================================
-export default function PricingTable({ currentPlan = 'FREE' }: PricingTableProps) {
+function PricingTableImpl({ currentPlan = 'FREE' }: PricingTableProps) {
   const [isAnnual, setIsAnnual] = useState(false)
   const router = useRouter()
 
@@ -403,12 +406,18 @@ export default function PricingTable({ currentPlan = 'FREE' }: PricingTableProps
       <div className="mt-16 text-center">
         <p className="text-slate-500 text-sm">
           ご不明な点がございましたら、
-          <a href="/tenkai/pricing" className="text-blue-600 font-semibold hover:underline">
+          <HideInAppMode><a href="/tenkai/pricing" className="text-blue-600 font-semibold hover:underline">
             お問い合わせ
-          </a>
+          </a></HideInAppMode>
           ください。
         </p>
       </div>
     </div>
   )
+}
+
+/** アプリ表示モード（ドヤバディの WebView）では、料金・アップグレードの案内なので何も描画しない（旗オフ・アプリでないときは今までと同じ） */
+export default function PricingTable(props: ComponentProps<typeof PricingTableImpl>) {
+  const appMode = useAppMode()
+  return appMode ? null : <PricingTableImpl {...props} />
 }

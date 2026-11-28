@@ -8,6 +8,7 @@
 // - 作ったプロジェクトへ移る行き先は、サーバーが返した id から作り、形を確かめる（slideProjectPath）。
 // - 同じ見積書について出すのは1回だけ（once。見た記録の id に見積書の id を使う）。
 import { usePathname, useRouter } from 'next/navigation'
+import { isAppModeClient } from '@/lib/app-mode/client'
 import { useEffect, useState } from 'react'
 import { freshestArtifact, slideProjectPath, type RecentArtifact } from '@/lib/notice/artifacts'
 import { useNotice } from './NoticeProvider'
@@ -32,7 +33,7 @@ function HandoffActions({ artifact, close }: { artifact: RecentArtifact; close: 
       // 201 は新しく作った資料（開いたら構成と絵を作る）。200 は同じ見積書から前に作った資料で、開くだけにする（自動で生成しない）
       const path = res.status === 201 ? slideProjectPath(data?.projectId) : res.status === 200 ? slideProjectPath(data?.projectId, false) : null
       if (path) { close(true); router.push(path); return }
-      if (res.status === 403 && data?.code === 'LIMIT_REACHED') notify({ tone: 'error', title: '今月のスライドの上限に達しています', sub: 'プランを見直すと、続けて作れます', action: { label: 'プランを見る', href: '/doyaslide/pricing' } })
+      if (res.status === 403 && data?.code === 'LIMIT_REACHED') notify(isAppModeClient() ? { tone: 'error', title: '今月のスライドの上限に達しています' } : { tone: 'error', title: '今月のスライドの上限に達しています', sub: 'プランを見直すと、続けて作れます', action: { label: 'プランを見る', href: '/doyaslide/pricing' } })
       else if (res.status === 404) notify({ tone: 'error', title: '見積書が見つかりませんでした', sub: '消されたか、ほかの組織の見積書です' })
       else notify({ tone: 'error', title: '材料にできませんでした', sub: data?.error || '時間をおいて、もう一度お試しください' })
       close(true)

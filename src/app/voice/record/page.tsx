@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useSession, signIn } from 'next-auth/react'
 import { Mic, Square, Play, Pause, Trash2, Upload, Download, Loader2, Scissors, X, Check, AlertCircle, LogIn, Sparkles } from 'lucide-react'
 import Link from 'next/link'
@@ -436,12 +437,12 @@ export default function RecordPage() {
               <p className="font-bold text-lg">Proプランにアップグレード</p>
               <p className="text-white/80 text-sm">クラウド録音スタジオはProプランの機能です。ブラウザで直接録音し、AI音声と合成できます。</p>
             </div>
-            <Link
+            <HideInAppMode><Link
               href="/voice/pricing"
               className="bg-white text-violet-600 px-6 py-2 rounded-lg font-black text-sm flex-shrink-0 hover:bg-violet-50 transition-colors"
             >
               アップグレード
-            </Link>
+            </Link></HideInAppMode>
           </div>
         </div>
       </div>

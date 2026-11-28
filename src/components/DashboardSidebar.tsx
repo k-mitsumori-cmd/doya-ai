@@ -1,6 +1,8 @@
 'use client'
 
 import React, { memo, useMemo, useState, type ComponentProps } from 'react'
+import { useAppMode } from '@/lib/app-mode/client'
+import { navForMode } from '@/lib/app-mode/nav'
 import { useInShell } from '@/components/shell/in-shell'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -56,6 +58,8 @@ function DashboardSidebarImpl({
 }: SidebarProps & { onTourOpen?: () => void }) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
+  // アプリ表示モード（ドヤバディの WebView）では、料金プランのナビと、プラン・アップグレードの枠を出さない（旗オフ・アプリでないときは今までと同じ）
+  const appMode = useAppMode()
   // ⚠️ 表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
   const sessionReady = sessionStatus !== 'loading'
   const { isCollapsed, showLabel, toggle, expand } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
@@ -79,7 +83,7 @@ function DashboardSidebarImpl({
   const { isFreeHourActive, freeHourRemainingMs } = useFreeHour(firstLoginAt)
 
   const isBanner = useMemo(() => pathname.startsWith('/banner'), [pathname])
-  const activeNavItems = useMemo(() => (isBanner ? bannerNavItems : seoNavItems), [isBanner])
+  const activeNavItems = useMemo(() => navForMode(isBanner ? bannerNavItems : seoNavItems, appMode), [isBanner, appMode])
 
   const postLogoutUrl = useMemo(() => {
     if (pathname.startsWith('/banner')) return '/banner?loggedOut=1'
@@ -163,7 +167,7 @@ function DashboardSidebarImpl({
   // Dashboard固有: 多段プラン案内バナー
   const SidebarBanner = () => {
     if (isFreeHourActive && freeHourRemainingMs > 0) return null
-    if (!showLabel) return null
+    if (appMode || !showLabel) return null
     // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう
     if (!sessionReady) return null
 
@@ -322,14 +326,18 @@ function DashboardSidebarImpl({
                   targetSelector: '[data-tour="generation-form"]',
                   allowMissing: true,
                 },
-                {
-                  id: 'pricing-plans',
-                  label: 'プランをアップグレード',
-                  description:
-                    '無料は月15枚まで。プロ（¥9,980/月）にアップグレードすると生成枚数が大幅に増えます。',
-                  targetSelector: '[data-tour="pricing-plans"]',
-                  allowMissing: true,
-                },
+                ...(appMode
+                  ? []
+                  : [
+                      {
+                        id: 'pricing-plans',
+                        label: 'プランをアップグレード',
+                        description:
+                          '無料は月15枚まで。プロ（¥9,980/月）にアップグレードすると生成枚数が大幅に増えます。',
+                        targetSelector: '[data-tour="pricing-plans"]',
+                        allowMissing: true,
+                      },
+                    ]),
               ]
             : []),
           {

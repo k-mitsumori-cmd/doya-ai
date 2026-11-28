@@ -1,5 +1,6 @@
 'use client'
 import { useHrOrganizationRequest } from '@/components/hr/HrOrganizationScope'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -208,7 +209,7 @@ export default function CsvImportModal({
               {importError && (
                 <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-800">
                   <p>{importError.message}</p>
-                  {importError.pricing && <Link href="/hr/pricing" className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2">料金プランを見る</Link>}
+                  {importError.pricing && <HideInAppMode><Link href="/hr/pricing" className="mt-2 inline-flex min-h-11 items-center underline underline-offset-2">料金プランを見る</Link></HideInAppMode>}
                 </div>
               )}
               {result ? (
@@ -226,9 +227,9 @@ export default function CsvImportModal({
                   {result.limitNotice && (
                     <div role="alert" className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
                       <p className="font-bold">{result.limitNotice.message}</p>
-                      <Link href={result.limitNotice.upgradeUrl || result.limitNotice.contactUrl || '/hr/pricing'} className="mt-2 inline-flex items-center gap-1 font-bold underline underline-offset-2">
+                      <HideInAppMode><Link href={result.limitNotice.upgradeUrl || result.limitNotice.contactUrl || '/hr/pricing'} className="mt-2 inline-flex items-center gap-1 font-bold underline underline-offset-2">
                         {result.limitNotice.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ'}<ArrowRight size={16} aria-hidden="true" />
-                      </Link>
+                      </Link></HideInAppMode>
                     </div>
                   )}
                   {result.failed > 0 && (

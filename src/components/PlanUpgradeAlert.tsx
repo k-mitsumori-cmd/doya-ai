@@ -2,6 +2,7 @@
 import { Lock } from 'lucide-react'
 import Link from 'next/link'
 import { useTrialEligible } from '@/components/TrialCallout'
+import { useAppMode } from '@/lib/app-mode/client'
 
 interface PlanUpgradeAlertProps {
   message: string
@@ -11,6 +12,16 @@ interface PlanUpgradeAlertProps {
 
 export default function PlanUpgradeAlert({ message, upgradePath, serviceName }: PlanUpgradeAlertProps) {
   const trialEligible = useTrialEligible()
+  // アプリ表示モード（ドヤバディの WebView）: アップグレードの呼びかけとリンクを出さず、お知らせの文だけにする（旗オフなら appMode は常に false）
+  const appMode = useAppMode()
+  if (appMode) {
+    return (
+      <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+        <p className="text-sm font-medium text-amber-900">この機能はアプリではご利用になれません。</p>
+      </div>
+    )
+  }
   return (
     <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
       <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />

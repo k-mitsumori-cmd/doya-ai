@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import HideInAppMode from '@/components/app-mode/HideInAppMode'
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -268,12 +269,12 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
         <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold mb-4">
           {error}
           {paidAction && (
-            <Link
+            <HideInAppMode><Link
               href={paidAction === 'login' ? `/auth/signin?callbackUrl=${encodeURIComponent(`/seo/articles/${articleId}`)}` : '/seo/pricing'}
               className="mt-2 block w-fit text-blue-700 underline"
             >
               {paidAction === 'login' ? 'ログインする' : 'SEOの料金プランを見る'}
-            </Link>
+            </Link></HideInAppMode>
           )}
         </div>
       )}

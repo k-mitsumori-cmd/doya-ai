@@ -4,6 +4,7 @@ import { handleAppAuth } from './route-helpers.server'
 import { consumeWebHandoff, createWebHandoff, devLogin, reviewLogin, type AuthDeps } from './app-auth-service'
 import { APP_REQUEST_HEADER, sessionCookieName } from './bearer-cookie'
 import { isDevLoginAllowed } from './dev-login'
+import { APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE } from '../app-mode/detect'
 import { readReviewLoginConfig } from './review-login'
 import { HANDOFF_VERIFIER_HEADER, resolveOrigin } from './web-handoff'
 
@@ -65,6 +66,17 @@ export async function handleWebHandoffConsume(req: NextRequest, makeDeps?: MakeD
       sameSite: 'lax',
       path: '/',
       secure: name.startsWith('__Secure-') || origin.startsWith('https://'),
+      expires: r.expires,
+    })
+    // アプリ表示モードの印（値は '1' だけ。ブラウザ側の判定が読むので HttpOnly ではない。期限はセッションと同じ）。
+    // アプリの WebView 専用の領域に置くもので、ログアウトで消えなくてもよい。
+    res.cookies.set({
+      name: APP_MODE_COOKIE,
+      value: APP_MODE_COOKIE_VALUE,
+      httpOnly: false,
+      sameSite: 'lax',
+      path: '/',
+      secure: origin.startsWith('https://'),
       expires: r.expires,
     })
     return res
