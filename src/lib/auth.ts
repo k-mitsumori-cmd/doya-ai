@@ -8,18 +8,51 @@ import { enrollUserInDripSequences } from './drip-enroll';
 import { higherPlan } from './plan-utils';
 import { authLogger } from './auth-logger';
 import { isRecentRegistration } from './registration-classification';
+import { buildAppleProviders } from './auth-link/apple-web-provider';
+import { decideWebSignIn } from './auth-link/app-auth-service';
+import { webSignInGuard } from './auth-link/web-signin-guard';
+import { createPrismaAuthRepo } from './auth-link/repo.server';
+import { isAppAuthEnabled } from './auth-link/app-auth-flag';
+import { guardAppSessionExpiry } from './auth-link/adapter-guard';
+import { isApplePrivateRelay, normalizeEmail } from './auth-link/email-normalize';
 
 export const authOptions: NextAuthOptions = {
   logger: authLogger,
-  adapter: PrismaAdapter(prisma) as any,
+  // 旗 APP_AUTH_ENABLED がオンのときだけ、アプリが発行したセッションの期限（1時間）を NextAuth に延ばさせない。オフなら従来のまま
+  adapter: (isAppAuthEnabled()
+    ? guardAppSessionExpiry(PrismaAdapter(prisma), async (sessionToken) => {
+        const sess = await prisma.session.findUnique({ where: { sessionToken }, select: { id: true } })
+        return Boolean(sess && (await prisma.appDevice.findFirst({ where: { sessionId: sess.id }, select: { id: true } })))
+      })
+    : PrismaAdapter(prisma)) as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
+    // Apple は、APPLE_CLIENT_ID・APPLE_TEAM_ID・APPLE_KEY_ID・APPLE_PRIVATE_KEY が全部あるときだけ足す（無ければ何も足さない）
+    ...buildAppleProviders(),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
+      // Apple（設定されているときだけ存在する）は、同じメールの既存ユーザーを自動では結び付けない（account-integrity.md の 4.1）。
+      // 旗 APP_AUTH_ENABLED がオンなら、結び付けの待ちを作って確認の画面 /auth/link?request=<id> へ移動する。オフなら、これまでどおり /auth/signin?error=LinkConfirmationRequired
+      // Google も、旗 APP_AUTH_ENABLED がオンのときだけ同じ決まりを通す（アプリで Apple を先に使った人が、同じメールの Google で入ると
+      // OAuthAccountNotLinked の行き止まりになるのを、確認の画面へ誘導する）。旗がオフなら今までどおり。web-signin-guard.ts
+      if (account) {
+        const verdict = await webSignInGuard(account.provider, { providerAccountId: account.providerAccountId, profile: profile as any }, {
+          appAuthEnabled: isAppAuthEnabled(),
+          decide: async (input) => {
+            const repo = createPrismaAuthRepo(prisma)
+            // 旗がオンのときだけ、乱数の部品を読む（オフでは何も読まない）
+            const linkRequests = isAppAuthEnabled()
+              ? await (async () => { const { randomBytes } = await import('node:crypto'); return { repo, now: new Date(), randomBytes: (n: number) => new Uint8Array(randomBytes(n)) } })()
+              : undefined
+            return decideWebSignIn(repo, input, linkRequests)
+          },
+        })
+        if (verdict !== true) return verdict
+      }
       // ※ 新規ユーザーの初回OAuthログインでは、この signIn コールバックは
       //   DBにユーザーが作成される前に走る（existing === null）。その場合の
       //   firstLoginAt記録・自動エンロールは events.createUser 側で確実に行う。
@@ -143,6 +176,10 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       try {
         if (!user?.id) return
+        // 旗 APP_AUTH_ENABLED がオンのときだけ、照合用の正規化メールを入れる（隠したメールは入れない）。オフなら何もしない
+        if (isAppAuthEnabled() && user.email && !isApplePrivateRelay(user.email)) {
+          await prisma.user.updateMany({ where: { id: user.id, emailNormalized: null }, data: { emailNormalized: normalizeEmail(user.email) } }).catch(() => {})
+        }
         // 既に signIn 側で処理済みなら二重処理しない（べき等）
         const existing = await prisma.user.findUnique({
           where: { id: user.id },

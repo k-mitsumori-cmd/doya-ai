@@ -29,6 +29,12 @@ model Account {
   id_token          String? @db.Text
   session_state     String?
 
+  /// ログイン手段（Google・Apple）が返したメールの控え。User.email とは別で、書き換えない。既存の行は null
+  /// 本番への反映: prisma/manual-migrations/2026-11-18-app-auth-foundation.sql（先に SQL、次にコード）
+  providerEmail String?
+  /// そのログイン手段が、メールを確認済みと返したか。既存の行は null（不明）
+  emailVerified Boolean?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -48,6 +54,104 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ============================================
+// アプリ版の認証の土台（2026-11-18。設計: docs/architecture/2026-11-18-app/account-integrity.md）
+// 本番への反映: prisma/manual-migrations/2026-11-18-app-auth-foundation.sql（先に SQL、次にコード。手順書は docs/architecture/2026-11-18-app/db-push-runbook.md）
+// ============================================
+
+/// 端末ごとのリフレッシュトークン（1行 = トークン1つ）。同じ端末のログインから続く行を familyId でまとめる。
+/// 平文は持たない（SHA-256 のハッシュだけ）。古いトークンの再利用を検出したら、同じ familyId の行を全部失効させる。
+/// 規則は src/lib/auth-link/device-token.ts。
+model AppDevice {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 端末の名前（例: 「iPhone」）。画面の「ログイン中の端末」に出す
+  deviceLabel      String?
+  /// ios / android
+  platform         String
+  /// SHA-256（16進）。平文は端末の Keychain にだけある
+  refreshTokenHash String    @unique
+  familyId         String
+  /// この行のリフレッシュトークンと対で出したアクセストークン（Session の行）の id。失効・ローテーション・ログアウトで Session の行を消すために持つ（秘密の値ではない）
+  sessionId        String?
+  /// 新しいトークンに替えた時刻。値があるトークンを再び使うと「使い回し」として系統を失効させる
+  rotatedAt        DateTime?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  /// Expo のプッシュトークン（ExponentPushToken[...]）。通知を許した端末だけ。ログアウト・失効・退会で消す（行ごと消える）。送信は未実装（push-design.md）
+  /// ⚠️ 生きている行（revokedAt・rotatedAt が null）の pushToken は一意。部分一意索引 app_device_pushToken_live_key は Prisma に書けないので、manual-migrations の SQL 側にだけある
+  pushToken        String?
+  webHandoffs      AppWebHandoff[]
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([sessionId])
+  @@map("app_device")
+}
+
+/// アプリのセッションから Web のセッション Cookie へ引き渡すための、使い捨てのコード（60秒・1回だけ）。コードそのものは持たず、SHA-256（16進）だけを持つ。
+/// consumedAt が入った時点で使用済み。webSessionId は、そのとき作った Web のセッション（Session.id）。端末のログアウト・系統の失効のとき、これも消す。
+/// 規則は src/lib/auth-link/app-auth-service.ts の createWebHandoff / consumeWebHandoff。
+model AppWebHandoff {
+  id           String    @id @default(cuid())
+  codeHash     String    @unique
+  /// 受け取る側（WebView）に束縛するための値。アプリが作った verifier の SHA-256（16進、64文字）。consume は、ヘッダー x-doya-handoff の verifier の SHA-256 がこれと一致するときだけ成功する（ログイン CSRF の防止）
+  challengeHash String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId     String
+  device       AppDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  /// 引き渡したあとに開く、同じサイトのパス（検証済み）
+  nextPath     String
+  expiresAt    DateTime
+  consumedAt   DateTime?
+  webSessionId String?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+  @@map("app_web_handoff")
+}
+
+/// ログイン手段の結び付けの待ち。同じメールの既存ユーザーがいるとき、自動では結び付けず、本人の確認が済むまでここに置く。
+/// 確認の方法は、前に使ったログイン手段でのログイン、または既存ユーザーのメールあての確認コード（6桁。ハッシュで持つ）。
+model AccountLinkRequest {
+  id                String    @id @default(cuid())
+  /// つなぐ先の既存ユーザー
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  /// そのログイン手段が返したメール（正規化したもの）
+  providerEmail     String?
+  /// 確認コードの SHA-256（16進）。コードで確認しない待ちは null
+  codeHash          String?
+  /// 15分
+  expiresAt         DateTime
+  /// コードを試した回数。5回まち違えたら捨てる
+  attempts          Int       @default(0)
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([userId])
+  @@index([provider, providerAccountId])
+  @@index([expiresAt])
+  @@map("auth_link_request")
+}
+
+/// 使った id_token の控え（1回しか使えないようにする）。hash は、署名を確かめたあとの claims（iss・aud・sub と jti、無ければ iat・exp・nonce）の SHA-256（16進）。expiresAt は id_token の期限 + 2分。期限を過ぎた行は、あとで消す（次の段）
+model AppIdTokenUse {
+  hash      String   @id
+  expiresAt DateTime
+
+  @@index([expiresAt])
+  @@map("app_id_token_use")
 }
 
 // ============================================
@@ -161,6 +265,19 @@ model User {
 
   // アカウントの会社（1つのアカウントに会社は1つ。UI 品質 B-1・B-2）
   accountCompany AccountCompany?
+
+  // アプリ版の認証の土台（2026-11-18）。反映: prisma/manual-migrations/2026-11-18-app-auth-foundation.sql
+  /// メールの正規化（NFKC・trim・小文字）。照合用。重複があるうちは @unique にしない（重複の統合のあとの別の変更）
+  emailNormalized String?
+  /// 退会した時刻。匿名化して残す（期間のあとで削除する。期間は未決）
+  deletedAt       DateTime?
+  /// 匿名化した時刻
+  anonymizedAt    DateTime?
+  appDevices      AppDevice[]
+  appWebHandoffs  AppWebHandoff[]
+  authLinkRequests AccountLinkRequest[]
+
+  @@index([emailNormalized])
 }
 
 // ============================================
@@ -1610,7 +1727,8 @@ model MovieRenderJob {
 model InterviewXProject {
   id     String @id @default(cuid())
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  // onDelete: Cascade を明示（2026-11-18。それまでは指定が無く、User の削除が止まっていた）。反映: prisma/manual-migrations/2026-11-18-app-auth-foundation.sql
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // 基本設定
   title      String

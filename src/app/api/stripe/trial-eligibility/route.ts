@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
+import { findTrialSiblings } from '@/lib/trial-siblings.server'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
 import { TEAM_TRIAL_DAYS } from '@/lib/pricing-v2/plans'
 
@@ -26,13 +27,15 @@ export async function GET() {
     }
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: TRIAL_USER_SELECT,
+      select: { id: true, ...TRIAL_USER_SELECT },
     })
+    const siblings = await findTrialSiblings(user?.id, session.user.email)
     const eligible = await isTrialEligible({
       email: session.user.email,
       stripeCustomerId: user?.stripeCustomerId,
       plan: user?.plan,
-      servicePlans: user?.serviceSubscriptions?.map(s => s.plan),
+      servicePlans: [...(user?.serviceSubscriptions?.map(s => s.plan) || []), ...siblings.plans],
+      siblingEmails: siblings.emails,
     })
     return NextResponse.json({ eligible }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {

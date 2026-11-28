@@ -1,0 +1,74 @@
+{
+  "checkedAt": "2026-11-18T06:08:50.472Z",
+  "passed": 14,
+  "failed": 0,
+  "expectedCases": 14,
+  "results": [
+    {
+      "name": "ordinary creation stays pending until all configured banners are done",
+      "passed": true
+    },
+    {
+      "name": "new creation remains enabled and waits behind earlier banner jobs",
+      "passed": true
+    },
+    {
+      "name": "clicking all waiting banners does not duplicate their queued generation",
+      "passed": true
+    },
+    {
+      "name": "old network response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old 401 response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old 500 response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old missing-run response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old wrong-run response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old missing-kind response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "old invalid-json response keeps new result jobs and scopes its error",
+      "passed": true
+    },
+    {
+      "name": "partial generation failure has no completion notice and can be retried",
+      "passed": true
+    },
+    {
+      "name": "completed flags without image URLs cannot announce completion",
+      "passed": true
+    },
+    {
+      "name": "failed regeneration cannot show a completion notice beside its error",
+      "passed": true
+    },
+    {
+      "name": "empty banner list cannot announce completion",
+      "passed": true
+    }
+  ],
+  "observations": [],
+  "sources": {
+    "src/app/(shell)/asklink/Tool.tsx": "2351138cca12b27b8eb032ffd3dbdf29c3c68d370c3bc9d033af5bc443bbd141",
+    "src/components/asklink/useBannerQueue.ts": "d9202c0ea91c97a42209645a721a95de66f0910928d3f2b3c6a086527f4c6652",
+    "src/components/asklink/RunResult.tsx": "bebf2a4f079210e84595efc99a2c1768c9873421cdc81274a9efe28ca29ee0dd",
+    "src/lib/asklink/link.ts": "34bc77d0c8039da89b5cd825f53f48a27e40219f75ed5d9432385593e87aab49",
+    "src/components/ds/feedback.tsx": "652215495057515ade0092d8bf6bb389a12bbc7e58b1031a7e9ec8449c129106",
+    "src/components/ds/feedback.module.css": "c4a89c7dc22ba0e3d62c060254fdcaf3bdbd11bbc7f4e4a052172addd7dd0410"
+  },
+  "scope": "Actual Tool create form, RunResult/LinkCard/BannerCard, useBannerQueue and link builder mounted in React18 StrictMode/JSDOM. Actual ds/DoneBanner and ErrorNotice also mounted, with CSS class names and unused motion helper mocked. Only visual shell, prefill, next wrappers and one-button context are peripheral mocks. No CSS layout or physical image rendering measured. Controlled synthetic creation and banner acknowledgements only, no real browser/network/provider/API/DB or customer records. Demonstrates actual parent create/queue wiring, not production impact, actual generated image pixels or all queue/cancellation behaviors."
+}

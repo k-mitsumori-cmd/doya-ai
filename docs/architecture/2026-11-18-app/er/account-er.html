@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>アカウントまわりのER図</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg:#f7f8fa; --fg:#1b2230; --mut:#5b6575; --card:#ffffff; --line:#d5dae3; --halo:#ffffff;
+  --user:#1d4ed8; --user-bg:#e8efff; --auth:#0e7490; --auth-bg:#e3f4f8; --admin:#475569; --admin-bg:#eceff3;
+  --company:#15803d; --company-bg:#e5f5ea; --bill:#b45309; --bill-bg:#fdf0dc; --power:#7e22ce; --power-bg:#f1e7fb;
+  --tool:#0f766e; --tool-bg:#e0f5f1; --org:#be185d; --org-bg:#fce7f1; --nofk:#b91c1c; --nofk-bg:#fde8e8;
+  --warn:#9a3412; --warn-bg:#ffe6d5; --ext:#4b5563; --ext-bg:#eceff3; --hdr-text:#ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0f1420; --fg:#e6eaf2; --mut:#9aa6b8; --card:#171d2b; --line:#2c3547; --halo:#0f1420;
+    --user:#7ea6ff; --user-bg:#1a2646; --auth:#58c7de; --auth-bg:#102a33; --admin:#a5b1c2; --admin-bg:#1e2533;
+    --company:#6fd391; --company-bg:#12301f; --bill:#f2b25c; --bill-bg:#35260e; --power:#c79bf5; --power-bg:#2b1b40;
+    --tool:#52d1bf; --tool-bg:#0f2f2a; --org:#f48fba; --org-bg:#3a1627; --nofk:#ff8a8a; --nofk-bg:#3a1818;
+    --warn:#ffa56b; --warn-bg:#40200f; --ext:#aab3c2; --ext-bg:#222a39; --hdr-text:#0b1020;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0f1420; --fg:#e6eaf2; --mut:#9aa6b8; --card:#171d2b; --line:#2c3547; --halo:#0f1420;
+  --user:#7ea6ff; --user-bg:#1a2646; --auth:#58c7de; --auth-bg:#102a33; --admin:#a5b1c2; --admin-bg:#1e2533;
+  --company:#6fd391; --company-bg:#12301f; --bill:#f2b25c; --bill-bg:#35260e; --power:#c79bf5; --power-bg:#2b1b40;
+  --tool:#52d1bf; --tool-bg:#0f2f2a; --org:#f48fba; --org-bg:#3a1627; --nofk:#ff8a8a; --nofk-bg:#3a1818;
+  --warn:#ffa56b; --warn-bg:#40200f; --ext:#aab3c2; --ext-bg:#222a39; --hdr-text:#0b1020;
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.75 "Noto Sans JP","Hiragino Sans",system-ui,sans-serif; }
+.wrap { max-width:1080px; margin:0 auto; padding:24px 16px 64px; }
+h1 { font-size:22px; line-height:1.4; margin:0 0 8px; }
+h2 { font-size:18px; margin:40px 0 8px; padding-top:8px; border-top:1px solid var(--line); }
+h3 { font-size:15px; margin:20px 0 6px; }
+p { margin:6px 0; }
+.meta { color:var(--mut); font-size:13px; }
+.note { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin:12px 0; font-size:14px; }
+.legend { display:flex; flex-wrap:wrap; gap:6px 16px; margin:12px 0; font-size:13px; }
+.lg { display:inline-flex; align-items:center; gap:6px; }
+.lines { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; margin:6px 0 0; color:var(--mut); }
+.lines span { display:inline-flex; align-items:center; gap:6px; }
+.scroll { overflow-x:auto; border:1px solid var(--line); border-radius:8px; background:var(--card); -webkit-overflow-scrolling:touch; }
+svg.er { display:block; min-width:1000px; }
+.nd .body { stroke-width:1.5; }
+.ln { stroke-width:1.6; fill:none; stroke:var(--fg); opacity:.75; }
+.ln.nofk { stroke:var(--nofk); stroke-dasharray:6 5; opacity:.95; }
+.el { font-size:11px; fill:var(--fg); paint-order:stroke; stroke:var(--halo); stroke-width:4px; stroke-linejoin:round; }
+.tt { font-size:13px; font-weight:700; fill:var(--hdr-text); }
+.ts { font-size:10.5px; fill:var(--hdr-text); opacity:.92; }
+.tr { font-size:11px; fill:var(--fg); }
+.c-user .body { fill:var(--user-bg); stroke:var(--user); } .c-user .hdr { fill:var(--user); }
+.c-auth .body { fill:var(--auth-bg); stroke:var(--auth); } .c-auth .hdr { fill:var(--auth); }
+.c-admin .body { fill:var(--admin-bg); stroke:var(--admin); } .c-admin .hdr { fill:var(--admin); }
+.c-company .body { fill:var(--company-bg); stroke:var(--company); } .c-company .hdr { fill:var(--company); }
+.c-bill .body { fill:var(--bill-bg); stroke:var(--bill); } .c-bill .hdr { fill:var(--bill); }
+.c-power .body { fill:var(--power-bg); stroke:var(--power); } .c-power .hdr { fill:var(--power); }
+.c-tool .body { fill:var(--tool-bg); stroke:var(--tool); } .c-tool .hdr { fill:var(--tool); }
+.c-org .body { fill:var(--org-bg); stroke:var(--org); } .c-org .hdr { fill:var(--org); }
+.c-nofk .body { fill:var(--nofk-bg); stroke:var(--nofk); stroke-dasharray:5 3; } .c-nofk .hdr { fill:var(--nofk); }
+.c-warn .body { fill:var(--warn-bg); stroke:var(--warn); stroke-width:2.5; } .c-warn .hdr { fill:var(--warn); }
+.c-ext .body { fill:var(--ext-bg); stroke:var(--ext); } .c-ext .hdr { fill:var(--ext); }
+.tw { overflow-x:auto; margin:10px 0; border:1px solid var(--line); border-radius:8px; background:var(--card); }
+table { border-collapse:collapse; width:100%; min-width:760px; font-size:13px; line-height:1.55; }
+th, td { text-align:left; vertical-align:top; padding:6px 10px; border-bottom:1px solid var(--line); }
+th { background:var(--bg); font-weight:700; white-space:nowrap; }
+ul.f { list-style:none; margin:10px 0; padding:0; display:grid; gap:10px; }
+ul.f li { display:flex; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+ul.f p { margin:2px 0 0; font-size:13.5px; color:var(--mut); }
+.badge { flex:none; align-self:flex-start; font-size:12px; font-weight:700; padding:1px 8px; border-radius:999px; border:1.5px solid currentColor; }
+li.lv1 .badge { color:var(--nofk); } li.lv2 .badge { color:var(--bill); } li.lv3 .badge { color:var(--mut); }
+nav a { color:var(--user); margin-right:14px; font-size:14px; white-space:nowrap; }
+nav { margin:10px 0; overflow-x:auto; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>アカウントまわりの ER 図</h1>
+<p class="meta">2026-11-18 ／ 正本：prisma/schema.prisma（6,367 行・266 モデル、枝 docs/doya-app-design-20261118 の cf09146ad 時点）</p>
+<p>ドヤバディ（ドヤAI）をアプリにするときに、Web とアプリでログインアカウントが食い違わないようにするための図です。表名は「モデル名」と「実際のテーブル名」の両方を書いています。同じ内容の Mermaid 版は account-er.md にあります。</p>
+<div class="note">本番の DB・Stripe・環境変数は読んでいません。本番に表があるか、実データ、実際の外部キーの制約は、この図からは分かりません。「推測」と書いた所は、スキーマだけでは断定できない所です。</div>
+
+<h2 id="legend" style="border-top:none">凡例</h2>
+<div class="legend"><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-user"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>User（アカウントの中心）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-auth"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>認証（NextAuth）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-admin"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>管理画面の認証（Userと別）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-company"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>会社・メンバー・役割</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-bill"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>課金（Stripe）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-power"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>ドヤパワー</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-tool"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>ツールのデータ（userId 持ち主）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-org"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>ツールの組織</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-nofk"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>外部キーなし（文字列だけの関係）</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-warn"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>削除を止める可能性</span><span class="lg"><svg width="18" height="14" aria-hidden="true"><g class="nd c-ext"><rect class="body" x="1" y="1" width="16" height="12" rx="3"/><rect class="hdr" x="1" y="1" width="16" height="5"/></g></svg>外部・未ログイン</span></div>
+<div class="lines">
+<span><svg width="40" height="8" aria-hidden="true"><line x1="0" y1="4" x2="40" y2="4" class="ln fk"/></svg>実線：外部キーあり（消したときの動きを添える）</span>
+<span><svg width="40" height="8" aria-hidden="true"><line x1="0" y1="4" x2="40" y2="4" class="ln nofk"/></svg>赤の点線：外部キーなし（列に ID が入る約束だけ）</span>
+</div>
+<p class="meta">スマホでは図を横にスクロールして読めます。</p>
+<nav><a href="#d1">1 認証</a><a href="#d2">2 会社とメンバー</a><a href="#d3">3 課金とドヤパワー</a><a href="#d4">4 ツールの持ち主</a><a href="#del">5 User を消したとき</a><a href="#find">6 気づいた点</a></nav>
+
+<h2 id="d1">1 認証（NextAuth）</h2>
+<p>ログイン方法は Google OAuth だけです（src/lib/auth.ts）。session.strategy を指定していないため、NextAuth v4 の既定どおり Session 表を使う方式と考えられます（推測）。管理画面の認証は User と無関係の別の仕組みです。</p>
+<div class="scroll"><svg class="er" viewBox="0 0 1000 800" width="1000" height="800" role="img" aria-label="認証まわりのER図" xmlns="http://www.w3.org/2000/svg">
+<line class="ln fk" x1="375.0" y1="249.2" x2="290.0" y2="93.8"/>
+<line class="ln fk" x1="375.0" y1="249.2" x2="290.0" y2="386.0"/>
+<line class="ln nofk" x1="625.0" y1="249.2" x2="835.0" y2="142.0"/>
+<line class="ln nofk" x1="625.0" y1="249.2" x2="710.0" y2="378.2"/>
+<line class="ln fk" x1="290.0" y1="586.0" x2="375.0" y2="578.2"/>
+<line class="ln fk" x1="165.0" y1="642.0" x2="165.0" y2="690.0"/>
+<g class="nd c-user">
+<rect class="body" x="375" y="170" width="250" height="158.5" rx="6"/>
+<path class="hdr" d="M375,208 V176 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V208 Z"/>
+<text class="tt" x="385" y="186">User</text>
+<text class="ts" x="385" y="201">表 User ／ id（cuid）</text>
+<text class="tr" x="385" y="226.0">id  PK</text>
+<text class="tr" x="385" y="241.5">email  一意（null可）</text>
+<text class="tr" x="385" y="257.0">role  USER か ADMIN（文字列）</text>
+<text class="tr" x="385" y="272.5">plan  FREE など（文字列）</text>
+<text class="tr" x="385" y="288.0">stripeCustomerId  一意</text>
+<text class="tr" x="385" y="303.5">stripeSubscriptionId  一意</text>
+<text class="tr" x="385" y="319.0">firstLoginAt</text>
+</g>
+<g class="nd c-auth">
+<rect class="body" x="40" y="30" width="250" height="127.5" rx="6"/>
+<path class="hdr" d="M40,68 V36 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V68 Z"/>
+<text class="tt" x="50" y="46">Account</text>
+<text class="ts" x="50" y="61">表 Account ／ OAuthの結び付き</text>
+<text class="tr" x="50" y="86.0">id  PK</text>
+<text class="tr" x="50" y="101.5">userId  FK → User</text>
+<text class="tr" x="50" y="117.0">provider + providerAccountId  一意</text>
+<text class="tr" x="50" y="132.5">access_token / refresh_token</text>
+<text class="tr" x="50" y="148.0">id_token</text>
+</g>
+<g class="nd c-auth">
+<rect class="body" x="40" y="330" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M40,368 V336 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V368 Z"/>
+<text class="tt" x="50" y="346">Session</text>
+<text class="ts" x="50" y="361">表 Session</text>
+<text class="tr" x="50" y="386.0">id  PK</text>
+<text class="tr" x="50" y="401.5">userId  FK → User</text>
+<text class="tr" x="50" y="417.0">sessionToken  一意</text>
+<text class="tr" x="50" y="432.5">expires</text>
+</g>
+<g class="nd c-auth">
+<rect class="body" x="710" y="30" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M710,68 V36 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V68 Z"/>
+<text class="tt" x="720" y="46">VerificationToken</text>
+<text class="ts" x="720" y="61">表 VerificationToken</text>
+<text class="tr" x="720" y="86.0">主キーなし</text>
+<text class="tr" x="720" y="101.5">identifier + token  一意</text>
+<text class="tr" x="720" y="117.0">token  一意</text>
+<text class="tr" x="720" y="132.5">expires</text>
+</g>
+<g class="nd c-ext">
+<rect class="body" x="710" y="330" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M710,368 V336 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V368 Z"/>
+<text class="tt" x="720" y="346">GuestSession</text>
+<text class="ts" x="720" y="361">表 guest_session</text>
+<text class="tr" x="720" y="386.0">id  PK</text>
+<text class="tr" x="720" y="401.5">guestId  一意（Cookie）</text>
+<text class="tr" x="720" y="417.0">firstAccessAt</text>
+</g>
+<g class="nd c-admin">
+<rect class="body" x="40" y="530" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M40,568 V536 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V568 Z"/>
+<text class="tt" x="50" y="546">AdminUser</text>
+<text class="ts" x="50" y="561">表 AdminUser ／ 管理画面の別認証</text>
+<text class="tr" x="50" y="586.0">id  PK</text>
+<text class="tr" x="50" y="601.5">username  一意</text>
+<text class="tr" x="50" y="617.0">email  一意（null可）</text>
+<text class="tr" x="50" y="632.5">totpEnabled</text>
+</g>
+<g class="nd c-admin">
+<rect class="body" x="375" y="530" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M375,568 V536 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V568 Z"/>
+<text class="tt" x="385" y="546">AdminSession</text>
+<text class="ts" x="385" y="561">表 AdminSession</text>
+<text class="tr" x="385" y="586.0">id  PK</text>
+<text class="tr" x="385" y="601.5">adminUserId  FK → AdminUser</text>
+<text class="tr" x="385" y="617.0">token  一意</text>
+</g>
+<g class="nd c-admin">
+<rect class="body" x="40" y="690" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M40,728 V696 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V728 Z"/>
+<text class="tt" x="50" y="706">AdminLoginAttempt</text>
+<text class="ts" x="50" y="721">表 AdminLoginAttempt</text>
+<text class="tr" x="50" y="746.0">id  PK</text>
+<text class="tr" x="50" y="761.5">adminUserId  FK（null可）</text>
+</g>
+<text class="el" x="332.5" y="163.5" text-anchor="middle">1:多 userId / Cascade</text>
+<text class="el" x="332.5" y="325.6" text-anchor="middle">1:多 userId / Cascade</text>
+<text class="el" x="730.0" y="187.6" text-anchor="middle">identifier = メール（FKなし）</text>
+<text class="el" x="667.5" y="323.8" text-anchor="middle">guestId（引き継ぎの表なし・FKなし）</text>
+<text class="el" x="332.5" y="582.1" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="215.0" y="666.0" text-anchor="middle">1:多 / Cascade</text>
+</svg></div>
+<div class="tw"><table><thead><tr><th scope="col">モデル</th><th scope="col">テーブル名</th><th scope="col">主キー</th><th scope="col">外部キー（→ 先）</th><th scope="col">一意制約</th><th scope="col">消したときの動き</th></tr></thead><tbody><tr><td>User</td><td>User</td><td>id</td><td>なし（親）</td><td>email / stripeCustomerId / stripeSubscriptionId</td><td>下の「User を消したとき」</td></tr><tr><td>Account</td><td>Account</td><td>id</td><td>userId → User.id</td><td>(provider, providerAccountId)</td><td>User を消すと Cascade</td></tr><tr><td>Session</td><td>Session</td><td>id</td><td>userId → User.id</td><td>sessionToken</td><td>User を消すと Cascade</td></tr><tr><td>VerificationToken</td><td>VerificationToken</td><td>なし</td><td>なし</td><td>token / (identifier, token)</td><td>親なし</td></tr><tr><td>GuestSession</td><td>guest_session</td><td>id</td><td>なし</td><td>guestId</td><td>親なし</td></tr><tr><td>AdminUser</td><td>AdminUser</td><td>id</td><td>なし</td><td>username / email</td><td>AdminSession・AdminLoginAttempt は Cascade</td></tr><tr><td>AdminSession</td><td>AdminSession</td><td>id</td><td>adminUserId → AdminUser.id</td><td>token</td><td>Cascade</td></tr><tr><td>AdminLoginAttempt</td><td>AdminLoginAttempt</td><td>id</td><td>adminUserId（null可）→ AdminUser.id</td><td>なし</td><td>Cascade</td></tr></tbody></table></div>
+
+<h2 id="d2">2 会社（チーム）とメンバーと役割</h2>
+<p>「1つのアカウントに会社は1つ」です。AccountCompany.userId が一意で、会社を作った人（持ち主）を表します。持ち主はメンバー表に行を持たず、1人目として数えます。メンバー表の userId は、招待中は null で、外部キーはありません。</p>
+<div class="scroll"><svg class="er" viewBox="0 0 1030 840" width="1030" height="840" role="img" aria-label="会社とメンバーと役割のER図" xmlns="http://www.w3.org/2000/svg">
+<line class="ln fk" x1="165.0" y1="200.0" x2="375.0" y2="86.0"/>
+<line class="ln fk" x1="500.0" y1="142.0" x2="500.0" y2="240.0"/>
+<line class="ln fk" x1="625.0" y1="86.0" x2="760.0" y2="86.0"/>
+<line class="ln fk" x1="625.0" y1="86.0" x2="885.0" y2="200.0"/>
+<line class="ln nofk" x1="500.0" y1="142.0" x2="885.0" y2="340.0"/>
+<line class="ln nofk" x1="500.0" y1="142.0" x2="885.0" y2="500.0"/>
+<line class="ln nofk" x1="500.0" y1="142.0" x2="525.0" y2="480.0"/>
+<line class="ln nofk" x1="375.0" y1="319.2" x2="290.0" y2="232.8"/>
+<line class="ln nofk" x1="165.0" y1="480.0" x2="165.0" y2="265.5"/>
+<line class="ln nofk" x1="885.0" y1="612.0" x2="885.0" y2="660.0"/>
+<g class="nd c-user">
+<rect class="body" x="40" y="200" width="250" height="65.5" rx="6"/>
+<path class="hdr" d="M40,238 V206 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V238 Z"/>
+<text class="tt" x="50" y="216">User</text>
+<text class="ts" x="50" y="231">表 User</text>
+<text class="tr" x="50" y="256.0">id  PK</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="375" y="30" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M375,68 V36 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V68 Z"/>
+<text class="tt" x="385" y="46">AccountCompany</text>
+<text class="ts" x="385" y="61">表 account_companies</text>
+<text class="tr" x="385" y="86.0">id  PK</text>
+<text class="tr" x="385" y="101.5">userId  FK → User ／ 一意</text>
+<text class="tr" x="385" y="117.0">name</text>
+<text class="tr" x="385" y="132.5">1アカウントに会社は1つ</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="375" y="240" width="250" height="158.5" rx="6"/>
+<path class="hdr" d="M375,278 V246 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V278 Z"/>
+<text class="tt" x="385" y="256">AccountCompanyMember</text>
+<text class="ts" x="385" y="271">表 account_company_members</text>
+<text class="tr" x="385" y="296.0">id  PK</text>
+<text class="tr" x="385" y="311.5">companyId  FK → 会社</text>
+<text class="tr" x="385" y="327.0">(companyId, email)  一意</text>
+<text class="tr" x="385" y="342.5">userId  FKなし（招待中はnull）</text>
+<text class="tr" x="385" y="358.0">invitedBy  FKなし</text>
+<text class="tr" x="385" y="373.5">inviteToken  一意</text>
+<text class="tr" x="385" y="389.0">role / status（文字列）</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="760" y="30" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M760,68 V36 a6,6 0 0 1 6,-6 H1004 a6,6 0 0 1 6,6 V68 Z"/>
+<text class="tt" x="770" y="46">AccountCompanyBilling</text>
+<text class="ts" x="770" y="61">表 account_company_billing</text>
+<text class="tr" x="770" y="86.0">id  PK</text>
+<text class="tr" x="770" y="101.5">companyId  FK ／ 一意</text>
+<text class="tr" x="770" y="117.0">stripeSubscriptionId  索引のみ</text>
+<text class="tr" x="770" y="132.5">seats（買った人数）</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="760" y="200" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M760,238 V206 a6,6 0 0 1 6,-6 H1004 a6,6 0 0 1 6,6 V238 Z"/>
+<text class="tt" x="770" y="216">AccountCompanyRoleSetting</text>
+<text class="ts" x="770" y="231">表 account_company_role_settings</text>
+<text class="tr" x="770" y="256.0">id  PK</text>
+<text class="tr" x="770" y="271.5">companyId  FK ／ 一意</text>
+<text class="tr" x="770" y="287.0">policy（Json）</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="760" y="340" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M760,378 V346 a6,6 0 0 1 6,-6 H1004 a6,6 0 0 1 6,6 V378 Z"/>
+<text class="tt" x="770" y="356">AccountCompanyRoleEvent</text>
+<text class="ts" x="770" y="371">表 account_company_role_events</text>
+<text class="tr" x="770" y="396.0">id  PK</text>
+<text class="tr" x="770" y="411.5">companyId  FKなし</text>
+<text class="tr" x="770" y="427.0">actorUserId  FKなし</text>
+<text class="tr" x="770" y="442.5">追記だけ（会社を消しても残る）</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="375" y="480" width="300" height="96.5" rx="6"/>
+<path class="hdr" d="M375,518 V486 a6,6 0 0 1 6,-6 H669 a6,6 0 0 1 6,6 V518 Z"/>
+<text class="tt" x="385" y="496">AccountCompanyMemberDepartment</text>
+<text class="ts" x="385" y="511">表 ..._member_departments</text>
+<text class="tr" x="385" y="536.0">id  PK</text>
+<text class="tr" x="385" y="551.5">(companyId, userId)  一意</text>
+<text class="tr" x="385" y="567.0">両方FKなし</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="40" y="480" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M40,518 V486 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V518 Z"/>
+<text class="tt" x="50" y="496">AccountCompanyRecordAuthor</text>
+<text class="ts" x="50" y="511">表 account_company_record_authors</text>
+<text class="tr" x="50" y="536.0">id  PK</text>
+<text class="tr" x="50" y="551.5">(tool, recordId)  一意</text>
+<text class="tr" x="50" y="567.0">userId  FKなし</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="760" y="500" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M760,538 V506 a6,6 0 0 1 6,-6 H1004 a6,6 0 0 1 6,6 V538 Z"/>
+<text class="tt" x="770" y="516">AccountCompanyToolOrg</text>
+<text class="ts" x="770" y="531">表 account_company_tool_orgs</text>
+<text class="tr" x="770" y="556.0">id  PK</text>
+<text class="tr" x="770" y="571.5">(tool, organizationId)  一意</text>
+<text class="tr" x="770" y="587.0">companyId  FKなし</text>
+<text class="tr" x="770" y="602.5">organizationId  文字列</text>
+</g>
+<g class="nd c-tool">
+<rect class="body" x="760" y="660" width="250" height="65.5" rx="6"/>
+<path class="hdr" d="M760,698 V666 a6,6 0 0 1 6,-6 H1004 a6,6 0 0 1 6,6 V698 Z"/>
+<text class="tt" x="770" y="676">各ツールの組織の表（10種）</text>
+<text class="ts" x="770" y="691">hr kintai sfa shodan aio ほか</text>
+<text class="tr" x="770" y="716.0">id  PK</text>
+</g>
+<text class="el" x="270.0" y="135.0" text-anchor="middle">1:1 userId / Cascade</text>
+<text class="el" x="500.0" y="191.0" text-anchor="middle">1:多 companyId / Cascade</text>
+<text class="el" x="692.5" y="76.0" text-anchor="middle">1:1 / Cascade</text>
+<text class="el" x="715.0" y="155.0" text-anchor="middle">1:1 / Cascade</text>
+<text class="el" x="622.5" y="227.0" text-anchor="middle">companyId（FKなし）</text>
+<text class="el" x="642.5" y="295.0" text-anchor="middle">companyId（FKなし）</text>
+<text class="el" x="442.5" y="431.0" text-anchor="middle">companyId（FKなし）</text>
+<text class="el" x="332.5" y="290.0" text-anchor="middle">userId（FKなし）</text>
+<text class="el" x="165.0" y="372.8" text-anchor="middle">userId（FKなし）</text>
+<text class="el" x="885.0" y="636.0" text-anchor="middle">organizationId（FKなし）</text>
+</svg></div>
+<div class="tw"><table><thead><tr><th scope="col">モデル</th><th scope="col">テーブル名</th><th scope="col">主キー</th><th scope="col">外部キー（→ 先）</th><th scope="col">一意制約</th><th scope="col">消したときの動き</th></tr></thead><tbody><tr><td>AccountCompany</td><td>account_companies</td><td>id</td><td>userId → User.id</td><td>userId</td><td>User を消すと Cascade。会社を消すと、メンバー・課金の控え・役割の設定・ドヤパワーの口座・追加購入の控えが Cascade</td></tr><tr><td>AccountCompanyMember</td><td>account_company_members</td><td>id</td><td>companyId → account_companies.id（userId・invitedBy はFKなし）</td><td>inviteToken / (companyId, email)</td><td>会社を消すと Cascade</td></tr><tr><td>AccountCompanyBilling</td><td>account_company_billing</td><td>id</td><td>companyId → account_companies.id</td><td>companyId</td><td>会社を消すと Cascade</td></tr><tr><td>AccountCompanyRoleSetting</td><td>account_company_role_settings</td><td>id</td><td>companyId → account_companies.id</td><td>companyId</td><td>会社を消すと Cascade</td></tr><tr><td>AccountCompanyRoleEvent</td><td>account_company_role_events</td><td>id</td><td>なし</td><td>なし</td><td>残る（設計）</td></tr><tr><td>AccountCompanyRecordAuthor</td><td>account_company_record_authors</td><td>id</td><td>なし</td><td>(tool, recordId)</td><td>残る</td></tr><tr><td>AccountCompanyToolOrg</td><td>account_company_tool_orgs</td><td>id</td><td>なし</td><td>(tool, organizationId)</td><td>残る</td></tr><tr><td>AccountCompanyMemberDepartment</td><td>account_company_member_departments</td><td>id</td><td>なし</td><td>(companyId, userId)</td><td>残る</td></tr></tbody></table></div>
+<div class="note">スキーマのコメントには、これらの表について「本番DBにはまだ無い」と書かれています。現在の本番の状態は未確認です。</div>
+
+<h2 id="d3">3 課金とドヤパワー</h2>
+<p>契約の状態は、User の列、Subscription、UserServiceSubscription、会社単位の account_company_billing の4か所に分かれます。ドヤHR とナグサメは、それぞれ別に Stripe の列を持ちます。課金の正本は reference/11-billing-spec.md で、料金判定は User.plan を単一の参照先とする方針です。</p>
+<div class="scroll"><svg class="er" viewBox="0 0 1000 800" width="1000" height="800" role="img" aria-label="課金とドヤパワーのER図" xmlns="http://www.w3.org/2000/svg">
+<line class="ln fk" x1="165.0" y1="190.0" x2="165.0" y2="152.0"/>
+<line class="ln fk" x1="165.0" y1="286.5" x2="165.0" y2="360.0"/>
+<line class="ln fk" x1="290.0" y1="238.2" x2="375.0" y2="230.5"/>
+<line class="ln fk" x1="500.0" y1="190.0" x2="500.0" y2="136.5"/>
+<line class="ln fk" x1="500.0" y1="271.0" x2="500.0" y2="350.0"/>
+<line class="ln fk" x1="625.0" y1="230.5" x2="710.0" y2="230.5"/>
+<line class="ln fk" x1="835.0" y1="271.0" x2="835.0" y2="340.0"/>
+<line class="ln fk" x1="835.0" y1="271.0" x2="835.0" y2="500.0"/>
+<line class="ln nofk" x1="835.0" y1="436.5" x2="835.0" y2="500.0"/>
+<line class="ln nofk" x1="500.0" y1="271.0" x2="500.0" y2="520.0"/>
+<line class="ln nofk" x1="500.0" y1="136.5" x2="500.0" y2="680.0"/>
+<line class="ln nofk" x1="710.0" y1="728.2" x2="625.0" y2="712.8"/>
+<g class="nd c-user">
+<rect class="body" x="40" y="190" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M40,228 V196 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V228 Z"/>
+<text class="tt" x="50" y="206">User</text>
+<text class="ts" x="50" y="221">表 User</text>
+<text class="tr" x="50" y="246.0">plan（料金判定の参照先）</text>
+<text class="tr" x="50" y="261.5">stripeCustomerId  一意</text>
+<text class="tr" x="50" y="277.0">stripeSubscriptionId  一意</text>
+</g>
+<g class="nd c-bill">
+<rect class="body" x="40" y="40" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M40,78 V46 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V78 Z"/>
+<text class="tt" x="50" y="56">Subscription</text>
+<text class="ts" x="50" y="71">表 Subscription</text>
+<text class="tr" x="50" y="96.0">userId  FK（一意でない）</text>
+<text class="tr" x="50" y="111.5">stripeSubscriptionId  一意</text>
+<text class="tr" x="50" y="127.0">stripeCustomerId  索引のみ</text>
+<text class="tr" x="50" y="142.5">status</text>
+</g>
+<g class="nd c-bill">
+<rect class="body" x="40" y="360" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M40,398 V366 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V398 Z"/>
+<text class="tt" x="50" y="376">UserServiceSubscription</text>
+<text class="ts" x="50" y="391">表 UserServiceSubscription</text>
+<text class="tr" x="50" y="416.0">userId  FK</text>
+<text class="tr" x="50" y="431.5">(userId, serviceId)  一意</text>
+<text class="tr" x="50" y="447.0">stripeSubscriptionId</text>
+<text class="tr" x="50" y="462.5">  全サービス行で同じ値（一意なし）</text>
+</g>
+<g class="nd c-bill">
+<rect class="body" x="40" y="540" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M40,578 V546 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V578 Z"/>
+<text class="tt" x="50" y="556">MitsuboshiNagusameSubscription</text>
+<text class="ts" x="50" y="571">表 mitsuboshi_nagusame_subscriptions</text>
+<text class="tr" x="50" y="596.0">userId  FK → User（Cascade）／ 一意</text>
+<text class="tr" x="50" y="611.5">stripeSubId  一意</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="375" y="190" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M375,228 V196 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V228 Z"/>
+<text class="tt" x="385" y="206">AccountCompany</text>
+<text class="ts" x="385" y="221">表 account_companies</text>
+<text class="tr" x="385" y="246.0">id  PK</text>
+<text class="tr" x="385" y="261.5">userId  一意（持ち主）</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="375" y="40" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M375,78 V46 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V78 Z"/>
+<text class="tt" x="385" y="56">AccountCompanyBilling</text>
+<text class="ts" x="385" y="71">表 account_company_billing</text>
+<text class="tr" x="385" y="96.0">companyId  FK ／ 一意</text>
+<text class="tr" x="385" y="111.5">stripeSubscriptionId  索引のみ</text>
+<text class="tr" x="385" y="127.0">seats</text>
+</g>
+<g class="nd c-power">
+<rect class="body" x="375" y="350" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M375,388 V356 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V388 Z"/>
+<text class="tt" x="385" y="366">PowerPackPurchase</text>
+<text class="ts" x="385" y="381">表 power_pack_purchases</text>
+<text class="tr" x="385" y="406.0">companyId  FK</text>
+<text class="tr" x="385" y="421.5">sourceKey  一意</text>
+</g>
+<g class="nd c-power">
+<rect class="body" x="710" y="190" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M710,228 V196 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V228 Z"/>
+<text class="tt" x="720" y="206">DoyaPowerAccount</text>
+<text class="ts" x="720" y="221">表 doya_power_accounts</text>
+<text class="tr" x="720" y="246.0">companyId  FK ／ 一意</text>
+<text class="tr" x="720" y="261.5">balance（表示用の写し）</text>
+</g>
+<g class="nd c-power">
+<rect class="body" x="710" y="340" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M710,378 V346 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V378 Z"/>
+<text class="tt" x="720" y="356">DoyaPowerGrant</text>
+<text class="ts" x="720" y="371">表 doya_power_grants</text>
+<text class="tr" x="720" y="396.0">accountId  FK</text>
+<text class="tr" x="720" y="411.5">(accountId, sourceKey)  一意</text>
+<text class="tr" x="720" y="427.0">remaining（残りの正）</text>
+</g>
+<g class="nd c-power">
+<rect class="body" x="710" y="500" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M710,538 V506 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V538 Z"/>
+<text class="tt" x="720" y="516">DoyaPowerTransaction</text>
+<text class="ts" x="720" y="531">表 doya_power_transactions</text>
+<text class="tr" x="720" y="556.0">accountId  FK</text>
+<text class="tr" x="720" y="571.5">operationId  一意</text>
+<text class="tr" x="720" y="587.0">refundOf  一意</text>
+<text class="tr" x="720" y="602.5">grantId  FKなし</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="375" y="520" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M375,558 V526 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V558 Z"/>
+<text class="tt" x="385" y="536">DoyaPowerStarterClaim</text>
+<text class="ts" x="385" y="551">表 doya_power_starter_claims</text>
+<text class="tr" x="385" y="576.0">emailHash  一意（SHA-256）</text>
+<text class="tr" x="385" y="591.5">userId  一意・FKなし</text>
+<text class="tr" x="385" y="607.0">companyId  FKなし</text>
+</g>
+<g class="nd c-bill">
+<rect class="body" x="710" y="40" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M710,78 V46 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V78 Z"/>
+<text class="tt" x="720" y="56">HrOrganization</text>
+<text class="ts" x="720" y="71">表 hr_organizations（HR独自の課金）</text>
+<text class="tr" x="720" y="96.0">stripeCustomerId  一意</text>
+<text class="tr" x="720" y="111.5">stripeSubscriptionId  一意</text>
+<text class="tr" x="720" y="127.0">plan</text>
+</g>
+<g class="nd c-ext">
+<rect class="body" x="375" y="680" width="250" height="65.5" rx="6"/>
+<path class="hdr" d="M375,718 V686 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V718 Z"/>
+<text class="tt" x="385" y="696">Stripe（外部）</text>
+<text class="ts" x="385" y="711">DBの外にある顧客・契約</text>
+<text class="tr" x="385" y="736.0">DBの削除では止まらない</text>
+</g>
+<g class="nd c-bill">
+<rect class="body" x="710" y="680" width="250" height="96.5" rx="6"/>
+<path class="hdr" d="M710,718 V686 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V718 Z"/>
+<text class="tt" x="720" y="696">StripeWebhookEvent</text>
+<text class="ts" x="720" y="711">表 StripeWebhookEvent</text>
+<text class="tr" x="720" y="736.0">id  PK（StripeのイベントID）</text>
+<text class="tr" x="720" y="751.5">再送の二重処理を防ぐ</text>
+<text class="tr" x="720" y="767.0">（Notification表もある）</text>
+</g>
+<text class="el" x="165.0" y="171.0" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="165.0" y="323.2" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="332.5" y="222.4" text-anchor="middle">1:1 / Cascade</text>
+<text class="el" x="546.0" y="163.2" text-anchor="middle">1:1 / Cascade</text>
+<text class="el" x="546.0" y="310.5" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="667.5" y="218.5" text-anchor="middle">1:1 / Cascade</text>
+<text class="el" x="881.0" y="305.5" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="897.0" y="490.5" text-anchor="middle">1:多 / Cascade</text>
+<text class="el" x="783.0" y="460.2" text-anchor="middle">grantId（FKなし）</text>
+<text class="el" x="540.0" y="415.5" text-anchor="middle">companyId（FKなし）</text>
+<text class="el" x="410.0" y="678.2" text-anchor="middle">subscriptionId</text>
+<text class="el" x="667.5" y="720.5" text-anchor="middle">event.id</text>
+</svg></div>
+<div class="tw"><table><thead><tr><th scope="col">モデル</th><th scope="col">テーブル名</th><th scope="col">主キー</th><th scope="col">外部キー（→ 先）</th><th scope="col">一意制約</th><th scope="col">消したときの動き</th></tr></thead><tbody><tr><td>Subscription</td><td>Subscription</td><td>id</td><td>userId → User.id</td><td>stripeSubscriptionId</td><td>User を消すと Cascade</td></tr><tr><td>UserServiceSubscription</td><td>UserServiceSubscription</td><td>id</td><td>userId → User.id</td><td>(userId, serviceId)</td><td>User を消すと Cascade</td></tr><tr><td>StripeWebhookEvent</td><td>StripeWebhookEvent</td><td>id（StripeのイベントID）</td><td>なし</td><td>主キー</td><td>親なし</td></tr><tr><td>StripeWebhookNotification</td><td>StripeWebhookNotification</td><td>eventId</td><td>なし</td><td>主キー</td><td>親なし</td></tr><tr><td>DoyaPowerAccount</td><td>doya_power_accounts</td><td>id</td><td>companyId → account_companies.id</td><td>companyId</td><td>会社を消すと Cascade</td></tr><tr><td>DoyaPowerGrant</td><td>doya_power_grants</td><td>id</td><td>accountId → doya_power_accounts.id</td><td>(accountId, sourceKey)</td><td>口座を消すと Cascade</td></tr><tr><td>DoyaPowerTransaction</td><td>doya_power_transactions</td><td>id</td><td>accountId → doya_power_accounts.id（grantId はFKなし）</td><td>operationId / refundOf</td><td>口座を消すと Cascade</td></tr><tr><td>DoyaPowerStarterClaim</td><td>doya_power_starter_claims</td><td>id</td><td>なし</td><td>emailHash / userId</td><td>残る（設計。二度付与しないため）</td></tr><tr><td>PowerPackPurchase</td><td>power_pack_purchases</td><td>id</td><td>companyId → account_companies.id</td><td>sourceKey</td><td>会社を消すと Cascade</td></tr><tr><td>MitsuboshiNagusameSubscription</td><td>mitsuboshi_nagusame_subscriptions</td><td>id</td><td>userId → User.id</td><td>userId / stripeSubId</td><td>Cascade</td></tr><tr><td>HrOrganization</td><td>hr_organizations</td><td>id</td><td>なし</td><td>slug / stripeCustomerId / stripeSubscriptionId</td><td>メンバー・部署などは Cascade</td></tr></tbody></table></div>
+
+<h2 id="d4">4 ツールのデータの持ち主</h2>
+<p>持ち主は、ユーザー（userId）、ツールごとの組織（organizationId。組織表は10種類）、プロマネのワークスペースの3種類です。未ログインでも使えるツールは guestId も持ちます。会社と各ツールの組織は、account_company_tool_orgs の文字列でつながるだけで、外部キーはありません。</p>
+<div class="scroll"><svg class="er" viewBox="0 0 1000 1140" width="1000" height="1140" role="img" aria-label="ツールのデータの持ち主のER図" xmlns="http://www.w3.org/2000/svg">
+<line class="ln nofk" x1="625.0" y1="881.5" x2="710.0" y2="850.5"/>
+<line class="ln fk" x1="290" y1="412.75" x2="335" y2="412.75"/>
+<line class="ln fk" x1="335" y1="44" x2="335" y2="1004"/>
+<line class="ln fk" x1="335" y1="44" x2="375" y2="44"/>
+<line class="ln fk" x1="335" y1="214" x2="375" y2="214"/>
+<line class="ln fk" x1="335" y1="384" x2="375" y2="384"/>
+<line class="ln fk" x1="335" y1="504" x2="375" y2="504"/>
+<line class="ln nofk" x1="335" y1="664" x2="375" y2="664"/>
+<line class="ln nofk" x1="335" y1="834" x2="375" y2="834"/>
+<line class="ln nofk" x1="335" y1="1004" x2="375" y2="1004"/>
+<g class="nd c-user">
+<rect class="body" x="40" y="380" width="250" height="65.5" rx="6"/>
+<path class="hdr" d="M40,418 V386 a6,6 0 0 1 6,-6 H284 a6,6 0 0 1 6,6 V418 Z"/>
+<text class="tt" x="50" y="396">User</text>
+<text class="ts" x="50" y="411">表 User</text>
+<text class="tr" x="50" y="436.0">id  PK</text>
+</g>
+<g class="nd c-tool">
+<rect class="body" x="375" y="20" width="250" height="143.0" rx="6"/>
+<path class="hdr" d="M375,58 V26 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V58 Z"/>
+<text class="tt" x="385" y="36">userId + FK（Cascade）</text>
+<text class="ts" x="385" y="51">32表（User を消すと一緒に消える）</text>
+<text class="tr" x="385" y="76.0">Generation（banner はここ）</text>
+<text class="tr" x="385" y="91.5">tenkai_* 5表 ／ lp_projects</text>
+<text class="tr" x="385" y="107.0">CopyProject ／ VoiceProject</text>
+<text class="tr" x="385" y="122.5">persona_* 3表 ／ drip_* 3表</text>
+<text class="tr" x="385" y="138.0">ad_sim_projects ／ support_ticket</text>
+<text class="tr" x="385" y="153.5">service_feedback ほか</text>
+</g>
+<g class="nd c-tool">
+<rect class="body" x="375" y="190" width="250" height="143.0" rx="6"/>
+<path class="hdr" d="M375,228 V196 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V228 Z"/>
+<text class="tt" x="385" y="206">userId + FK（SetNull）</text>
+<text class="ts" x="385" y="221">8表（行は残り持ち主が空になる）</text>
+<text class="tr" x="385" y="246.0">SeoArticle ／ SwipeSession</text>
+<text class="tr" x="385" y="261.5">SeoKnowledgeItem</text>
+<text class="tr" x="385" y="277.0">interview_project / recipe</text>
+<text class="tr" x="385" y="292.5">strategy_project</text>
+<text class="tr" x="385" y="308.0">OpeningProject ／ movie_projects</text>
+<text class="tr" x="385" y="323.5">多くが guestId も持つ</text>
+</g>
+<g class="nd c-warn">
+<rect class="body" x="375" y="360" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M375,398 V366 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V398 Z"/>
+<text class="tt" x="385" y="376">onDelete 指定なし</text>
+<text class="ts" x="385" y="391">1表（User の削除を止める可能性）</text>
+<text class="tr" x="385" y="416.0">InterviewXProject</text>
+<text class="tr" x="385" y="431.5">（interviewx_projects）</text>
+</g>
+<g class="nd c-tool">
+<rect class="body" x="375" y="480" width="250" height="127.5" rx="6"/>
+<path class="hdr" d="M375,518 V486 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V518 Z"/>
+<text class="tt" x="385" y="496">ワークスペース（プロマネ）</text>
+<text class="ts" x="385" y="511">FKあり</text>
+<text class="tr" x="385" y="536.0">PromaneWorkspace.userId FK</text>
+<text class="tr" x="385" y="551.5">PromaneMember (workspaceId,</text>
+<text class="tr" x="385" y="567.0">  userId) 一意 ／ 両方FK</text>
+<text class="tr" x="385" y="582.5">PromaneInvitation.invitedById</text>
+<text class="tr" x="385" y="598.0">  FK（Cascade）</text>
+</g>
+<g class="nd c-nofk">
+<rect class="body" x="375" y="640" width="250" height="143.0" rx="6"/>
+<path class="hdr" d="M375,678 V646 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V678 Z"/>
+<text class="tt" x="385" y="656">userId + FKなし</text>
+<text class="ts" x="385" y="671">約40表（行が残る）</text>
+<text class="tr" x="385" y="696.0">cunning_* 6表 ／ doyalist_*</text>
+<text class="tr" x="385" y="711.5">doyaslide_projects ／ shanai_*</text>
+<text class="tr" x="385" y="727.0">popup ／ asklink_run</text>
+<text class="tr" x="385" y="742.5">stored_file ／ home_agent_*</text>
+<text class="tr" x="385" y="758.0">adbanner / adimage ほか</text>
+<text class="tr" x="385" y="773.5">InterviewXTemplate</text>
+</g>
+<g class="nd c-org">
+<rect class="body" x="375" y="810" width="250" height="143.0" rx="6"/>
+<path class="hdr" d="M375,848 V816 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V848 Z"/>
+<text class="tt" x="385" y="826">組織（ツールごとの10種）</text>
+<text class="ts" x="385" y="841">組織→メンバー→データ</text>
+<text class="tr" x="385" y="866.0">hr kintai sfa shodan aio</text>
+<text class="tr" x="385" y="881.5">mensetsu quote aishodan</text>
+<text class="tr" x="385" y="897.0">income expense</text>
+<text class="tr" x="385" y="912.5">組織 → メンバー  FK / Cascade</text>
+<text class="tr" x="385" y="928.0">メンバー.userId  HR以外FKなし</text>
+<text class="tr" x="385" y="943.5">データ  約50表FKあり・約12表なし</text>
+</g>
+<g class="nd c-ext">
+<rect class="body" x="375" y="980" width="250" height="112.0" rx="6"/>
+<path class="hdr" d="M375,1018 V986 a6,6 0 0 1 6,-6 H619 a6,6 0 0 1 6,6 V1018 Z"/>
+<text class="tt" x="385" y="996">guestId（未ログイン）</text>
+<text class="ts" x="385" y="1011">16モデル。引き継ぎの表なし</text>
+<text class="tr" x="385" y="1036.0">SeoArticle ／ InterviewProject</text>
+<text class="tr" x="385" y="1051.5">CopyProject ／ VoiceProject</text>
+<text class="tr" x="385" y="1067.0">LpProject ／ MovieProject ほか</text>
+<text class="tr" x="385" y="1082.5">GuestSession（guestId 一意）</text>
+</g>
+<g class="nd c-company">
+<rect class="body" x="710" y="810" width="250" height="81.0" rx="6"/>
+<path class="hdr" d="M710,848 V816 a6,6 0 0 1 6,-6 H954 a6,6 0 0 1 6,6 V848 Z"/>
+<text class="tt" x="720" y="826">AccountCompany（会社）</text>
+<text class="ts" x="720" y="841">組織と会社はFKでつながらない</text>
+<text class="tr" x="720" y="866.0">account_company_tool_orgs で</text>
+<text class="tr" x="720" y="881.5">  文字列で対応付けるだけ</text>
+</g>
+<text class="el" x="667.5" y="858.0" text-anchor="middle">organizationId（FKなし）</text>
+<text class="el" x="343.0" y="39.0" text-anchor="start">FKあり</text>
+<text class="el" x="343.0" y="209.0" text-anchor="start">FKあり</text>
+<text class="el" x="343.0" y="379.0" text-anchor="start">FKあり</text>
+<text class="el" x="343.0" y="499.0" text-anchor="start">FKあり</text>
+<text class="el" x="343.0" y="659.0" text-anchor="start">FKなし</text>
+<text class="el" x="343.0" y="829.0" text-anchor="start">FKなし</text>
+<text class="el" x="343.0" y="999.0" text-anchor="start">guestId</text>
+</svg></div>
+<div class="tw"><table><thead><tr><th scope="col">ツール</th><th scope="col">持ち主の主な表（テーブル名）</th><th scope="col">持ち主</th><th scope="col">User への FK と消したときの動き</th></tr></thead><tbody><tr><td>banner</td><td>Generation（serviceId=banner）／ banner_template は持ち主なし</td><td>userId</td><td>Generation は Cascade</td></tr><tr><td>seo / interview / strategy / opening / movie</td><td>SeoArticle・SwipeSession・SeoKnowledgeItem、interview_project・interview_recipe、strategy_project、OpeningProject、movie_projects</td><td>userId（null可）と guestId</td><td>SetNull</td></tr><tr><td>tenkai / persona / lp / voice / copy / adsim</td><td>tenkai_*、persona_*、lp_projects、VoiceProject、Copy*、ad_sim_projects</td><td>userId</td><td>Cascade</td></tr><tr><td>interviewx</td><td>interviewx_projects ／ InterviewXTemplate</td><td>userId</td><td>onDelete 指定なし（Restrict 扱い）／ FKなし</td></tr><tr><td>hr</td><td>hr_organizations ／ hr_organization_members ／ HrInvitation</td><td>組織</td><td>メンバーはFKあり・Cascade。HrAuditLog.userId はFKなし</td></tr><tr><td>kintai</td><td>kintai_organizations ／ kintai_members</td><td>組織</td><td>FKなし（userId 必須）</td></tr><tr><td>promane</td><td>promane_workspaces ／ promane_members ／ promane_invitations</td><td>ワークスペース</td><td>Cascade（招待は invitedById も Cascade）</td></tr><tr><td>sfa</td><td>sfa_organizations ／ sfa_members（取引先・商談など7表は organizationId にFKなし）</td><td>組織</td><td>FKなし（null可）</td></tr><tr><td>shodan / aio / mensetsu / quote / aishodan</td><td>各 *_organizations ／ *_members</td><td>組織</td><td>FKなし（null可）</td></tr><tr><td>income / expense</td><td>income_* ／ expense_*（companyId は会社へのFKなし）</td><td>組織</td><td>FKなし（null可）</td></tr><tr><td>doyalist / doyaslide / cunning / shanai / popup / asklink</td><td>doyalist_projects、doyaslide_projects、cunning_*、shanai_*、popup、asklink_run</td><td>userId</td><td>FKなし</td></tr><tr><td>共通</td><td>Drip*、service_feedback、support_ticket（Cascade）／ stored_file、direct_upload_session、home_agent_*（FKなし）</td><td>userId</td><td>左のとおり</td></tr></tbody></table></div>
+<p class="meta">数の目安（スキーマから数えた値）：User への外部キーを持つモデルは41（Cascade 32、SetNull 8、指定なし 1）。userId 系の列（createdByUserId 2表を含む）を持ち、外部キーが無いモデルは43。guestId を持つモデルは、GuestSession を除いて16。</p>
+
+<h2 id="del">5 User を消したとき</h2>
+<p>直接の子の動きです。子の子は、各モデルの onDelete に従います（全部は追い切れていません）。</p>
+<div class="tw"><table><thead><tr><th scope="col">動き</th><th scope="col">該当する表</th></tr></thead><tbody><tr><td>消せない（Restrict 扱い）</td><td>interviewx_projects（onDelete 指定なし。実際のDBの制約は未確認）</td></tr><tr><td>一緒に消える（Cascade 32本）</td><td>Account / Session / UserServiceSubscription / Subscription / Generation / tenkai_* 5表 / CopyBrandVoice / CopyProject / lp_projects / VoiceProject / drip_* 3表 / ad_sim_projects / mitsuboshi_nagusame_* 2表 / hr_organization_members / promane_workspaces・members・invitations / service_feedback / feedback_prompt_state / persona_* 3表 / tenjikai_project / account_companies / support_ticket</td></tr><tr><td>行は残り持ち主が空（SetNull 8本）</td><td>SeoArticle / SwipeSession / SeoKnowledgeItem / interview_project / interview_recipe / strategy_project / OpeningProject / movie_projects</td></tr><tr><td>何も起きない（存在しない userId を指したまま残る）</td><td>FKなしの約40表（各ツールのメンバー表、cunning_*、doyalist_*、doyaslide_projects、shanai_*、stored_file、home_agent_*、account_company_members ほか）</td></tr><tr><td>会社が消えたあと</td><td>消える：members / billing / role_settings / doya_power_accounts（grants・transactions）/ power_pack_purchases。残る：role_events / tool_orgs / member_departments / record_authors / doya_power_starter_claims。各ツールの組織は消えない</td></tr></tbody></table></div>
+<p>会社の持ち主が消えると、各ツールの組織とそのデータは、持ち主のいない形で残ります（推測：アプリ側に退会時の後始末があるかは未確認）。Stripe の顧客や契約は DB の外にあり、DB の削除では止まりません。</p>
+
+<h2 id="find">6 気づいた点</h2>
+<p>重大なものを上に並べます。行番号は prisma/schema.prisma のものです。</p>
+<ul class="f"><li class="lv1"><span class="badge">重大</span><div><strong>User の削除が止まる可能性がある</strong><p>InterviewXProject.user だけ onDelete の指定が無い（L1613）。必須の関係なので Restrict 扱いとなり、この行を持つユーザーは削除できない。退会機能とアプリのストア審査のアカウント削除に直結する。実際の本番DBの制約は未確認。</p></div></li><li class="lv1"><span class="badge">重大</span><div><strong>User を消すと、ツールのメンバー行が持ち主を失って残る</strong><p>KintaiMember L2417、SfaMember L3131、ShodanMember L3388、AioMember L3521、MensetsuMember L3656、QuoteMember L3908、AishodanMember L4068、IncomeMember L5296、ExpenseMember L5676 の userId に外部キーが無い。HrOrganizationMember（L2139）だけは外部キーがある。</p></div></li><li class="lv1"><span class="badge">重大</span><div><strong>「同じ人」を表す列が、外部キーの無い文字列になっている</strong><p>AccountCompanyMember.userId L5985、AccountCompanyMemberDepartment.userId L6092、AccountCompanyRecordAuthor.userId L6064、DoyaPowerStarterClaim.userId L6108。Web とアプリで同じ User ID を使う前提を、DB は守らない。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>会社のメンバーは、メールで招待して userId を後から入れる作り</strong><p>一意制約は (companyId, email) だけ（L5996）で、(companyId, userId) は無い（L5985）。同じ User が別メールの行で同じ会社に2回入る可能性がある（推測：アプリ側で防いでいるかは未確認）。User.email（L60）は DB 側で小文字にそろえる制約が無く、招待メールと Google のメールで大文字小文字が違うと一致しない可能性がある（推測）。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>契約の状態が4か所にある</strong><p>User の列 L140〜144、Subscription L205、UserServiceSubscription L171、account_company_billing L6004。ほかに HrOrganization L2114〜2118 と MitsuboshiNagusameSubscription L2082〜2084。plan の値の表記が表ごとに違う（L144、L178、L2083）。アプリ内課金を足すと5か所目になる。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>Stripe との結び付きが一意でない所がある</strong><p>Subscription.stripeCustomerId L212 は索引のみ、User.stripeCustomerId L140 は一意。account_company_billing.stripeSubscriptionId L6008 は索引のみで、同じ契約が複数の会社に付くことがスキーマ上は排除されていない。account_company_billing に Stripe の顧客IDの列は無い。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>持ち主が userId・organizationId・companyId で混在している</strong><p>会社と各ツールの組織は外部キーでつながらず、account_company_tool_orgs（L6074）の文字列でつなぐ。IncomeOrganization.companyId L5271 と ExpenseOrganization.companyId L5651 も外部キーなし。ドヤパワーは会社単位、旧プランは User 単位。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>未ログインの guestId から User へ引き継ぐ表・列が無い</strong><p>16モデルが guestId を持つ（SeoArticle L421 付近ほか）。引き継ぎ処理はコード側の話で、スキーマには痕跡が無い（推測：実装は未確認）。</p></div></li><li class="lv2"><span class="badge">重要</span><div><strong>モバイルアプリ用のトークン・端末の表が無い</strong><p>端末の登録、リフレッシュトークン、プッシュ通知トークンの表が見当たらない（TenkaiApiKey は別物）。ログイン方法は Google OAuth だけで、Cookie のセッションが前提に見える（推測）。Apple でのログインを足すなら、同じメールの Account を結び付ける方針が要る（allowDangerousEmailAccountLinking は src/lib/auth.ts に無い）。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>FKなしの子の表</strong><p>SfaAccount L3182 ほか7表（L3209・L3232・L3256・L3284・L3329・L3351）の organizationId、IncomeInvoiceSequence L5535。組織を消すとこれらが残る。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>索引が足りない可能性</strong><p>Account L18 と Session L37 に userId の索引が無い（推測：行数が少ないうちは影響しない）。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>トークンの保管</strong><p>Account.access_token・refresh_token・id_token（L24〜27）は Text で、暗号化の指定は見当たらない（推測：アプリ側で暗号化しているかは未確認）。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>役割と状態の語がツールごとに違う</strong><p>KintaiMember L2422 は system_admin など、HrOrganizationMember L2146 は MEMBER、AccountCompanyMember L5986 は admin | member | guest。status も ACTIVE と active が混在。すべて文字列で列挙型ではない。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>「消さない」を DB が守っていない</strong><p>DoyaPowerTransaction L6161 の「消さない・書き換えない」はコメントのみ。grantId L6170 は外部キーなし。AccountCompanyRoleEvent は DB のトリガーで守るとコメントにある（L6024）が、スキーマには現れない。</p></div></li><li class="lv3"><span class="badge">軽微</span><div><strong>本番に無い表が混在している可能性</strong><p>会社のメンバーと課金の控え（L5976）、役割の3表（L6023）、ドヤパワー（L6121）、HomeAgentRun・HomeAgentTask（L6183）に「本番DBにはまだ無い」とのコメントがある。現在の本番の状態は未確認。</p></div></li></ul>
+
+<h2>確かめきれなかった点</h2>
+<ul>
+<li>本番 DB・Stripe・環境変数は読んでいません。本番に表があるか、実データの件数、実際の外部キーの制約は未確認です。</li>
+<li>session.strategy を明示していないため、Session 表に実際に行が入るかは、実行を見ていません（NextAuth v4 の既定の挙動からの推測）。</li>
+<li>User 削除の「子の子」までの全経路は追っていません（直接の子のみ）。</li>
+<li>退会・アカウント削除の処理、ゲストからの引き継ぎ処理が、アプリのコード側にあるかは確認していません。</li>
+</ul>
+</div>
+</body>
+</html>

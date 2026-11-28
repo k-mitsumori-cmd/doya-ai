@@ -1,0 +1,211 @@
+{
+  "checkedAt": "2026-11-18T06:07:37.127Z",
+  "conditions": 39,
+  "passed": 39,
+  "results": [
+    {
+      "name": "owner is implicit first seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "distinct active accounts",
+      "expected": 3,
+      "actual": 3
+    },
+    {
+      "name": "same account under different emails counts once",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "distinct user IDs must not merge by stale email",
+      "expected": 3,
+      "actual": 3
+    },
+    {
+      "name": "same ID and email counts once",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "duplicate normalized invitation counts once",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "invitation matching identified active email counts once",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "invitation ordering does not change identity count",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "both known emails of same ID cover duplicate invitations",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "owner user ID excludes old email row",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "owner known old email does not consume invitation seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "different user with owner stale email still consumes seat",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "owner email invitation alone consumes no extra seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "removed member never hides new invitation",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "expired invite no longer reserves seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "future dated invite is invalid",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "missing dated invitation is invalid",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "legacy invitation with omitted date preserves reservation",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "invalid dates do not reserve seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "unknown status does not reserve seat",
+      "expected": 1,
+      "actual": 1
+    },
+    {
+      "name": "unidentifiable rows conservatively reserve separate seats",
+      "expected": 3,
+      "actual": 3
+    },
+    {
+      "name": "identified invalid-email duplicate still counts one ID",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "expired old email is not a known identity alias",
+      "expected": 2,
+      "actual": 2
+    },
+    {
+      "name": "ordinary invitation joins within capacity",
+      "status": 200,
+      "syntheticWrites": 1
+    },
+    {
+      "name": "already active ID under old email capacity 5",
+      "status": 409,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "already active ID under old email capacity 2",
+      "status": 409,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "another account membership does not block join",
+      "status": 200,
+      "syntheticWrites": 1
+    },
+    {
+      "name": "removed membership can join by valid new invitation",
+      "status": 200,
+      "syntheticWrites": 1
+    },
+    {
+      "name": "expired invitation stays unusable",
+      "status": 410,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "already consumed invitation stays unusable",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "owner cannot consume own invitation",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "capacity overflow blocks new account",
+      "status": 409,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "valid reserved invitation at exact capacity joins",
+      "status": 200,
+      "syntheticWrites": 1
+    },
+    {
+      "name": "old session address cannot claim invite after database email changed",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "current database address authorizes invite despite stale session address",
+      "status": 200,
+      "syntheticWrites": 1
+    },
+    {
+      "name": "deleted database account cannot claim invitation",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "database account without email cannot claim invitation",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "email change before guarded reread leaves invitation unchanged",
+      "status": 404,
+      "syntheticWrites": 0
+    },
+    {
+      "name": "authenticated account ID with valid database email does not need session email",
+      "status": 200,
+      "syntheticWrites": 1
+    }
+  ],
+  "sourceBindings": {
+    "src/lib/pricing-v2/team.ts": "cd4e78a98ff1dbc2366dc037a90ff7454c9dc055c9ea97fa86af749b5aed90e5",
+    "src/lib/pricing-v2/plans.ts": "2d9c54746a129df75ba00d67210accd6c9c766d6a76f19d7c8cedf90b1a5d139",
+    "src/lib/pricing-v2/company-membership-seat.server.ts": "a43d37e548d6cf08c3c91e7fc72ee822eb1b2e8bd840fea628c472d951c6dbfe",
+    "src/app/api/pricing/members/accept/route.ts": "45c193e87bf5af789b9f5bc734728d7a364121528c42df9c31628d26fb515391",
+    "scripts/security-regression/verify-tool-seat-identity.cjs": "0c84556c4480f7d1476c666e718d8e5e59e5734e31a77696d5aa0b1cd787c930"
+  },
+  "realDbOrNetworkOrFinancialWrites": 0,
+  "scope": "Actual candidate seatsUsed and company acceptance handler in controlled synthetic session/Prisma/guard. No real email-change lifecycle, SQL concurrency, financial operations, customer writes, tool integration or production acceptance."
+}

@@ -1,0 +1,103 @@
+{
+  "checkedAt": "2026-11-18T06:08:49.845Z",
+  "passed": 17,
+  "failed": 0,
+  "expectedCases": 17,
+  "results": [
+    {
+      "name": "ordinary audience switch updates the current result",
+      "passed": true
+    },
+    {
+      "name": "nullable banner copy remains accepted for an otherwise valid response",
+      "passed": true
+    },
+    {
+      "name": "late audience switch cannot replace a newly created result",
+      "passed": true
+    },
+    {
+      "name": "late audience response preserves newer banner acknowledgements in same result",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch missing-run retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch wrong-id retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch wrong-audience retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch missing-links retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch empty-links retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch null-link retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch duplicate-key retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch missing-check retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch invalid-question retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "invalid successful switch invalid-banner-copy retains current result and exposes recovery",
+      "passed": true
+    },
+    {
+      "name": "switch 401 retains result and releases explicit retry",
+      "passed": true
+    },
+    {
+      "name": "switch 500 retains result and releases explicit retry",
+      "passed": true
+    },
+    {
+      "name": "switch network retains result and releases explicit retry",
+      "passed": true
+    }
+  ],
+  "observations": [
+    {
+      "scenario": "late-switch-after-new-create",
+      "createRequests": 2,
+      "newSiteVisible": true,
+      "oldSiteVisible": false,
+      "newImages": 3,
+      "oldImages": 0
+    },
+    {
+      "scenario": "late-switch-after-banner-acks",
+      "images": 3,
+      "question": "New ToC question understand",
+      "toCPressed": "true"
+    }
+  ],
+  "sources": {
+    "src/app/(shell)/asklink/Tool.tsx": "2351138cca12b27b8eb032ffd3dbdf29c3c68d370c3bc9d033af5bc443bbd141",
+    "src/components/asklink/useBannerQueue.ts": "d9202c0ea91c97a42209645a721a95de66f0910928d3f2b3c6a086527f4c6652",
+    "src/components/asklink/RunResult.tsx": "bebf2a4f079210e84595efc99a2c1768c9873421cdc81274a9efe28ca29ee0dd",
+    "src/lib/asklink/link.ts": "34bc77d0c8039da89b5cd825f53f48a27e40219f75ed5d9432385593e87aab49",
+    "src/components/ds/feedback.tsx": "652215495057515ade0092d8bf6bb389a12bbc7e58b1031a7e9ec8449c129106",
+    "src/components/ds/feedback.module.css": "c4a89c7dc22ba0e3d62c060254fdcaf3bdbd11bbc7f4e4a052172addd7dd0410",
+    "src/lib/asklink/types.ts": "9aa1a21366603e5cb89df6d916a15fb1536626a76740607a18042e2ecacc57d1",
+    "src/components/asklink/errors.ts": "4d2cf322a7a8889e2e6fc61b68707c71975c3e374a398a116d91114ad4b56730"
+  },
+  "scope": "Audience-switch response ordering and acknowledgement validation. Actual Tool create form, RunResult/LinkCard/BannerCard, useBannerQueue and link builder mounted in React18 StrictMode/JSDOM. Actual ds/DoneBanner and ErrorNotice also mounted, with CSS class names and unused motion helper mocked. Only visual shell, prefill, next wrappers and one-button context are peripheral mocks. No CSS layout or physical image rendering measured. Controlled synthetic creation and banner acknowledgements only, no real browser/network/provider/API/DB or customer records. Demonstrates actual parent create/queue wiring, not production impact, actual generated image pixels or all queue/cancellation behaviors."
+}

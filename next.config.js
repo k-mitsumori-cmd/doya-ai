@@ -212,6 +212,14 @@ const nextConfig = {
         ],
       },
       {
+        // アプリ用の認証 API（web-handoff の consume は、URL にコードを含むので、Referer に出さない）
+        source: '/api/app/auth/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+      {
         source: '/api/banner/test/templates/:path+',
         headers: [
           { key: 'Cache-Control', value: 'private, no-store' },

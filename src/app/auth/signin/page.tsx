@@ -28,7 +28,9 @@ const errorMessages: Record<string, string> = {
   OAuthSignin: 'ログインを開始できませんでした。',
   OAuthCallback: 'ログイン処理に失敗しました。',
   OAuthCreateAccount: 'アカウントの作成に失敗しました。',
-  OAuthAccountNotLinked: 'このメールは別の方法で登録されています。',
+  OAuthAccountNotLinked: 'このメールアドレスは、別のログイン方法ですでに登録されています。前にお使いのログイン方法でログインしてください。心当たりがない場合や、ログインできない場合は、ドヤバディのお問い合わせ窓口までご連絡ください。',
+  LinkConfirmationRequired: 'このメールアドレスのアカウントがすでにあります。前にお使いのログイン方法でログインしてください。',
+  HandoffInvalid: 'アプリからの画面の引き渡しの有効期限が切れたか、すでに使われています。アプリに戻って、もう一度開いてください。',
   Default: 'ログインに失敗しました。もう一度お試しください。',
 }
 
