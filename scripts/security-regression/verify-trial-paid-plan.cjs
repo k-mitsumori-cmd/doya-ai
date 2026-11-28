@@ -205,8 +205,11 @@ async function postCheckout(api) {
     const { id, stripePriceId, ...checkoutRest } = a.select
     assert.equal(id, true)
     assert.equal(stripePriceId, true)
-    sameShape(checkoutRest, b.select)
-    sameShape(b.select, mod.TRIAL_USER_SELECT)
+    // trial-eligibility も、同じ人の別の User（findTrialSiblings）を探すために id を読む（2026-11-24）。トライアルの判定の列は TRIAL_USER_SELECT にそろえる
+    const { id: eligibilityId, ...eligibilityRest } = b.select
+    assert.equal(eligibilityId, true)
+    sameShape(checkoutRest, eligibilityRest)
+    sameShape(eligibilityRest, mod.TRIAL_USER_SELECT)
   })
 
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))
