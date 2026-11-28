@@ -2,6 +2,7 @@
 // https://llmstxt.org/ の拡張。SERVICES（正本）から自動生成する。
 import { SERVICES, HIDDEN_SERVICE_IDS } from '@/lib/services'
 import { SITE_CONFIG } from '@/lib/seo'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 export const dynamic = 'force-static'
 
@@ -14,10 +15,10 @@ export function GET() {
   const lines: string[] = [
     '# ドヤAI — 詳細版',
     '',
-    '> 株式会社スリスタ（代表: 三森 捷暉）が運営するAI SaaSサービス群。マーケティング・営業・人事・業務を支援するAIツールを、1つのアカウント・統一プランで利用できます。無料プランと、全ツールのプロ機能が使えるプロプラン（月額9,980円）の2プラン方式。',
+    '> 株式会社スリスタ（代表: 三森 捷暉）が運営するAI SaaSサービス群。マーケティング・営業・人事・業務を支援するAIツールを、1つのアカウント・統一プランで利用できます。料金は会社ごとです。',
     '',
     `- 運営会社: 株式会社スリスタ`,
-    `- 料金: 無料 / プロ 月額9,980円（1契約で全ツールのPRO機能）`,
+    `- 料金: ${PUBLIC_PRICE_SENTENCE}`,
     `- 料金ページ: ${base}/pricing`,
     '',
     '---',
@@ -41,12 +42,11 @@ export function GET() {
       lines.push(...s.useCases.map(u => `- ${u}`))
       lines.push('')
     }
-    const plans = [s.pricing.free, s.pricing.pro].filter(Boolean)
-    if (plans.length) {
-      lines.push('料金プラン:')
-      lines.push(...plans.map(p => `- ${p!.name}: ${p!.price === 0 ? '無料' : `月額${p!.price.toLocaleString()}円`}（${p!.limit}）`))
-      lines.push('')
-    }
+    // 金額はここに出さない。会社ごとの料金は冒頭の「料金」と /pricing に集約する
+    lines.push('料金:')
+    lines.push(`- 無料の枠: ${s.pricing.free.limit}`)
+    lines.push('- 有料のチームの料金は、冒頭の「料金」と料金ページを参照')
+    lines.push('')
     lines.push('---')
     lines.push('')
   }

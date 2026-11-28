@@ -11,7 +11,10 @@ import {
 import { LpShell, CtaBand, HowItWorks } from "@/components/lp";
 import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
+import { CountUp, OutputGallery } from "@/components/lp/renewal/TopExtras";
 import { getListedServiceCount } from "@/lib/services";
+import { EXAMPLE_LINE, FREE_LINE, UPGRADE_LEAD } from "@/lib/pricing-v2/public-copy";
+
 
 export default function HomePage() {
   return (
@@ -51,8 +54,22 @@ export default function HomePage() {
                 無料の資料3点を見る <ArrowRight size={18} />
               </a>
             </div>
+            {/* 2026-11-10: 無料で使える回数と料金を、最初のボタンの近くに出す（それまでは一番下にしか無かった） */}
+            <p className="doya-home-free">
+              <span>
+                <Check size={15} aria-hidden="true" />
+                {FREE_LINE}。登録すれば、すぐに使えます
+              </span>
+              <span>
+                {UPGRADE_LEAD}（{EXAMPLE_LINE}）
+                <Link href="/pricing">料金を見る</Link>
+              </span>
+            </p>
             <div className="doya-home-signature">
-              <span>{getListedServiceCount()}</span>の得意を、あなたのチームに。
+              <span>
+                <CountUp to={getListedServiceCount()} />
+              </span>
+              の得意を、あなたのチームに。
             </div>
           </div>
           <HomeMotionScene />
@@ -73,6 +90,7 @@ export default function HomePage() {
         </span>
       </div>
       <ServiceDirectory />
+      <OutputGallery />
       <section className="doya-home-use">
         <div className="doya-section-inner">
           <span className="doya-eyebrow">A DAY WITH DOYA</span>

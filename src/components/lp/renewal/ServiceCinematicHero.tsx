@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowDown, ArrowRight, Check, Play, RotateCcw } from "lucide-react";
@@ -8,6 +8,19 @@ import { MotionContext, ServiceMotion } from "./HeroMotion";
 import { CINEMATIC_SCENES } from "./cinematic-scenes";
 import { DEMOS } from "./OperationDemo";
 import "./banner-cinematic.css";
+
+// 画面には出さず、読み上げと検索にだけ渡す（h1 の先頭のサービス名）
+const VISUALLY_HIDDEN: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 export function ServiceCinematicHero({
   serviceId,
@@ -82,17 +95,19 @@ export function ServiceCinematicHero({
         </div>
         <div className="doya-atelier-content">
           <div className="doya-atelier-copy">
-            {/* 指名検索の受け皿: h1 はサービス名そのもの。キャッチコピーは見た目だけ大見出し */}
-            <h1 className="doya-atelier-eyebrow">
+            {/* 指名検索の受け皿: h1 は「サービス名＋価値の一文」。英語の札（category）は h1 の外に出す。
+                サービス名は見出しの先頭に置く（上の札と重なるので、画面には出さず読み上げと検索だけに渡す）。 */}
+            <div className="doya-atelier-eyebrow">
               <span />
               {serviceName}{" "}
               <span className="doya-atelier-en">{config.category}</span>
-            </h1>
-            <div className="doya-atelier-title">
+            </div>
+            <h1 className="doya-atelier-title">
+              <span style={VISUALLY_HIDDEN}>{serviceName}　</span>
               {config.title[0]}
               <br />
               <em>{config.title[1]}</em>
-            </div>
+            </h1>
             <p className="doya-atelier-lead">
               <span>{config.lead[0]}</span>
               <span>{config.lead[1]}</span>

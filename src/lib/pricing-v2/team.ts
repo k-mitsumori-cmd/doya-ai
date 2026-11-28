@@ -8,7 +8,7 @@
 // - 人数を増やしたら、その場で日割りを請求する。減らしたら、返金はせず、その場で減らす（設計書 §10.2）。
 // - 人数を増やした月は、増えた席の分のドヤパワーを、その月の残りの日数の割合で足す。同じ席の番号には月に1回だけ（seatAddGrants）。
 //   減らしてまた増やしても、同じ席の番号は同じ月に二重にはもらえない（増やす・減らすの繰り返しでポイントを稼げない）。
-import { ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, TEAM_MONTHLY_POINTS_PER_SEAT, isEnterpriseSeatCount, isTeamSeatCount, teamMonthlyPoints } from './plans'
+import { ENTERPRISE_MIN_SEATS, FREE_MAX_MEMBERS, isEnterpriseSeatCount, isTeamSeatCount, seatMonthlyPoints, teamMonthlyPoints, type PricingModel } from './plans'
 
 export type MemberStatus = 'invited' | 'active' | 'removed'
 export type MemberRole = 'admin' | 'member'
@@ -131,10 +131,12 @@ export function jstMonthRemainingFraction(now: Date): number {
  * 増えた席ごとの付与（席の番号ごとに、その月に1回だけ）。量は 1人分 × 今月の残りの割合（切り捨て）。
  * sourceKey に席の番号を入れるので、減らしてまた増やしても、同じ月に同じ席の番号では二重に付かない。
  */
-export function seatAddGrants(input: { subscriptionId: string; monthKey: string; addedSeats: number[]; now: Date }): { sourceKey: string; amount: number }[] {
-  const amount = Math.floor(TEAM_MONTHLY_POINTS_PER_SEAT * jstMonthRemainingFraction(input.now))
-  if (amount <= 0) return []
-  return input.addedSeats.map((n) => ({ sourceKey: `seat-add:${input.subscriptionId}:${input.monthKey}:seat-${n}`, amount }))
+export function seatAddGrants(input: { subscriptionId: string; monthKey: string; addedSeats: number[]; now: Date; /** 契約の料金の形。省くと基本料あり（今までどおり） */ model?: PricingModel }): { sourceKey: string; amount: number }[] {
+  const fraction = jstMonthRemainingFraction(input.now)
+  // 席の番号ごとに量が違う（1人いくらの料金は、段ごとに 1人 500・400・350）
+  return input.addedSeats
+    .map((n) => ({ sourceKey: `seat-add:${input.subscriptionId}:${input.monthKey}:seat-${n}`, amount: Math.floor(seatMonthlyPoints(n, input.model) * fraction) }))
+    .filter((g) => g.amount > 0)
 }
 
 /** 人数の変更の操作 ID（クライアントが確かめの画面ごとに作る）。Stripe の冪等キーに入れる */
@@ -153,9 +155,9 @@ export function memberLimit(kind: 'none' | 'legacy' | 'team', teamSeats: number 
 }
 
 /** 毎月の付与の量（チームは人数から。人数が分からない・範囲外なら null で、呼び出し側が今までの量を使う） */
-export function teamMonthlyGrant(seats: number | null | undefined): number | null {
+export function teamMonthlyGrant(seats: number | null | undefined, model: PricingModel = 'base_plus_seat'): number | null {
   if (typeof seats !== 'number') return null
-  return teamMonthlyPoints(seats)
+  return teamMonthlyPoints(seats, model)
 }
 
 /** 契約の明細から、人数の明細（新しい料金の人数の価格）を探す */

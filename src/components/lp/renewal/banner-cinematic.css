@@ -83,6 +83,10 @@
   -webkit-text-fill-color: #0059e5;
   font-style: normal;
 }
+/* 大見出しを h1 にしたので、見出しの共通指定（text-wrap: balance）で折り返しが変わらないよう戻す */
+.doya-service-cinema .doya-atelier h1.doya-atelier-title {
+  text-wrap: wrap;
+}
 .doya-atelier-break {
   display: none;
 }

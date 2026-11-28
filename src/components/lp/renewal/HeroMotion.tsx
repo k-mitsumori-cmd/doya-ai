@@ -102,53 +102,13 @@ export function HomeMotionScene() {
       data-scene="home"
       data-frame={scene.active}
     >
+      {/* 2026-11-10: 浮いた札3つ・光の粒8個・吹き出しをやめ、見せる物を「操作の見本」1つに絞った（メインの指摘「右側が込み合っている」）。 */}
       <div className="doya-orbit-field" aria-hidden="true">
         <div className="doya-orbit doya-orbit-one" />
         <div className="doya-orbit doya-orbit-two" />
-        <div className="doya-orbit doya-orbit-three" />
-        {Array.from({ length: 8 }, (_, i) => (
-          <i
-            key={i}
-            className="doya-spark"
-            style={{ "--i": i } as CSSProperties}
-          />
-        ))}
       </div>
       <div className="doya-scene-heading">
         <span /> YOUR AI TEAM <span className="doya-scene-count">{getListedServiceCount()} TOOLS</span>
-      </div>
-      <div className="doya-flying-tool doya-flying-tool-one" aria-hidden="true">
-        <Image
-          src="/renewal/icons/seo.webp"
-          alt=""
-          width={52}
-          height={52}
-          unoptimized
-        />
-        <span>記事づくり</span>
-      </div>
-      <div className="doya-flying-tool doya-flying-tool-two" aria-hidden="true">
-        <Image
-          src="/renewal/icons/persona.webp"
-          alt=""
-          width={52}
-          height={52}
-          unoptimized
-        />
-        <span>顧客理解</span>
-      </div>
-      <div
-        className="doya-flying-tool doya-flying-tool-three"
-        aria-hidden="true"
-      >
-        <Image
-          src="/renewal/icons/sfa.webp"
-          alt=""
-          width={52}
-          height={52}
-          unoptimized
-        />
-        <span>営業管理</span>
       </div>
       <div
         className="doya-scene-output"
@@ -178,9 +138,6 @@ export function HomeMotionScene() {
           unoptimized
           priority
         />
-      </div>
-      <div className="doya-scene-message">
-        <Sparkles size={16} /> 得意なAIと、仕事が動き出す。
       </div>
       <div className="doya-scene-selector" aria-label="サービス紹介デモ">
         {featured.map((item, i) => (

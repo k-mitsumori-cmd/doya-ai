@@ -1,5 +1,6 @@
 // ドヤコピーAI LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 
 export const ACCENT = '#f59e0b' // アンバー（コピーの差し色）
 export const CTA = '/auth/signin?callbackUrl=/copy/new'
@@ -17,7 +18,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで月10回まで生成をお試しいただけます。より多く生成したい場合はプロプラン（月額9,980円・税込／月200回）をご用意しています。ドヤAIの統一プランなので、1契約で全サービスのプロ機能をご利用いただけます。' },
+  { q: '無料で使えますか？', a: `無料プランで月10回まで生成をお試しいただけます。より多く生成したい場合は有料のチームをご用意しています。${PUBLIC_PRICE_SENTENCE}` },
   { q: 'どの広告媒体に対応していますか？', a: 'ディスプレイ広告、検索広告（Google／Yahoo!のRSA）、SNS広告（Meta／X／LINE／TikTok）に対応しています。媒体ごとの文字数や体裁に合わせたコピーを生成します。' },
   { q: '生成したコピーはどう書き出せますか？', a: 'Google広告・Yahoo!広告のインポート形式に準拠したCSV／Excelで一括エクスポートできます。そのまま入稿作業に活用いただけます。' },
   { q: '薬機法や景品表示法への配慮はできますか？', a: 'プロジェクトごとにNG表現・必須キーワード・文字数制限をレギュレーションとして設定できます。設定に沿って生成することで、表現のばらつきや行き過ぎた表現を抑えやすくなります。' },

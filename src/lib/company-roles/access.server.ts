@@ -10,7 +10,7 @@
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { newPricingRollout } from '@/lib/pricing-v2/rollout'
-import { teamPriceConfig } from '@/lib/pricing-v2/prices'
+import { teamPricingOperable } from '@/lib/pricing-v2/prices'
 import { applyCompanyCeiling, authorizeCompanyAction, loadRolePolicy, resolveCompanyRole, type CompanyAuthorization, type CompanyRoleContext, type CompanyRoleDb, type RoleEventRecord, type ShadowDenial } from './access'
 import type { CompanyPermission, PermissionTarget } from './permissions'
 import type { CompanyRolePolicy } from './policy'
@@ -20,7 +20,7 @@ import { companyOfToolOrg, readCompanyOfToolOrgInTransaction } from './tool-orgs
 
 // team.server.ts の teamTablesAllowed と同じ判定（Stripe を読み込まないよう、ここで同じことを書く）
 function teamTablesAllowed(): boolean {
-  return newPricingRollout() !== 'off' && teamPriceConfig().ok
+  return newPricingRollout() !== 'off' && teamPricingOperable()
 }
 
 // ⚠️ 会社のメンバーの表（新しい料金）を使えないときは、会社の役割を何も決めない（どの判定も止めない）。監査の軽微7

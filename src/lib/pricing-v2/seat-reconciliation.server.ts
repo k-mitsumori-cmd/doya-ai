@@ -1,6 +1,6 @@
 import { stripe } from '@/lib/stripe'
 import { monthlyGrantExpiresAt } from '@/lib/doya-power/rules'
-import { teamPriceConfig } from './prices'
+import { seatItemInterval, seatItemPriceIds } from './prices'
 import type { SeatOperationClaim } from './seat-operation'
 import { classifySeatReconciliation, type SeatReconciliationProof } from './seat-reconciliation-proof'
 
@@ -29,12 +29,15 @@ export async function readSeatReconciliationEvidence(claim: SeatOperationClaim, 
   // failure from an empty result outside the supported retrieval window.
   if (now - active.firstSentAt >= 29 * 24 * 60 * 60_000) return fail('EVENT_RETENTION_REVIEW_REQUIRED')
   if (active.request.grantPoints && monthlyGrantExpiresAt(new Date(active.request.pointsAt)).getTime() <= now) return fail('POINT_ENTITLEMENT_REVIEW_REQUIRED')
-  const config = teamPriceConfig()
-  if (!config.ok) return fail('PRICE_CONFIG_UNAVAILABLE')
-  const seatPriceId = active.request.interval === 'year' ? config.seat.yearly : config.seat.monthly
+  const seatIds = seatItemPriceIds()
+  if (seatIds.size === 0) return fail('PRICE_CONFIG_UNAVAILABLE')
   try {
     getRequests++
     const subscription = await source.subscriptions.retrieve(active.request.subscriptionId)
+    // 人数の明細の価格は、契約の明細から選ぶ（基本料ありの人数の価格か、1人いくらの価格。間隔が合うほう）
+    const seatPriceId = ((subscription as { items?: { data?: { price?: { id?: string } }[] } }).items?.data ?? [])
+      .map((i) => i.price?.id).find((id): id is string => !!id && seatIds.has(id) && seatItemInterval(id) === active.request.interval)
+    if (!seatPriceId) return fail('PRICE_CONFIG_UNAVAILABLE')
     let after: string | undefined
     const invoices = new Map<string, Awaited<ReturnType<StripeReads['invoices']['retrieve']>>>()
     let lastReason = 'NO_MATCHING_EVENT'

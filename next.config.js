@@ -38,6 +38,13 @@ const nextConfig = {
     NEXT_PUBLIC_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
       || process.env.GIT_COMMIT_SHA?.slice(0, 7)
       || 'dev',
+    // 「1人いくら」の料金を、ログイン前のページ（クライアントの部品を含む）に出すか。ビルド時に決めて埋め込む。
+    // PER_SEAT_PRICING_ROLLOUT と NEW_PRICING_ROLLOUT がどちらも all のときだけ 'on'（src/lib/pricing-v2/rollout.ts の isPerSeatPricingPublic）。
+    NEXT_PUBLIC_PER_SEAT_PRICING_PUBLIC:
+      (process.env.PER_SEAT_PRICING_ROLLOUT || '').trim().toLowerCase() === 'all'
+      && (process.env.NEW_PRICING_ROLLOUT || '').trim().toLowerCase() === 'all'
+        ? 'on'
+        : '',
   },
   // NOTE:
   // outputFileTracing を無効化すると、Vercel のServerless同梱で

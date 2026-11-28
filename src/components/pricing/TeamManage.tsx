@@ -13,7 +13,7 @@ import { BillingResponseError, readBillingResponse } from '@/lib/billing-respons
 import { parseTeamSeatsView, type PendingSeatChange } from '@/lib/pricing-v2/seat-operation-view'
 import { Minus, Plus, Copy, Check } from 'lucide-react'
 import { confirmDialog } from '@/components/ds'
-import { POWER_PACK, TEAM_MONTHLY_POINTS_PER_SEAT, teamPrice, withTax, type BillingInterval } from '@/lib/pricing-v2/plans'
+import { POWER_PACK, seatMonthlyPoints, teamPrice, withTax, type BillingInterval, type PricingModel } from '@/lib/pricing-v2/plans'
 import { claimThanksOnce, thanksStorage, type PaymentThanksView } from '@/lib/pricing-v2/payment-thanks'
 import PaymentThanks from './PaymentThanks'
 import { COMPANY_ROLE_LABEL, isMemberRowRole } from '@/lib/company-roles/roles'
@@ -65,6 +65,8 @@ export function TeamManage({ membershipOnly = false }: { membershipOnly?: boolea
 
 function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; membershipOnly: boolean }) {
   const [seats, setSeats] = useState<number | null>(null)
+  // 契約の料金の形（サーバーが渡す。1人いくらの契約だけ per_seat）
+  const [model, setModel] = useState<PricingModel>('base_plus_seat')
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('monthly')
   const [used, setUsed] = useState<number | null>(null)
   const [draft, setDraft] = useState(1)
@@ -112,7 +114,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
         setLoadFailed(usage === null)
       } else if (view?.kind === 'ready') {
         setBillingInterval(view.interval === 'year' ? 'yearly' : 'monthly')
-        setSeats(view.seats); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
+        setSeats(view.seats); setModel(view.perSeat ? 'per_seat' : 'base_plus_seat'); setUsed(view.used); setDraft(view.seats); setPending(null); setLoadFailed(false)
       } else if (view?.kind === 'pending') {
         setSeats(null); setUsed(null); setDraft(view.pending.requested); setPending(view.pending); setLoadFailed(false)
       } else {
@@ -132,7 +134,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
   }, [reload])
 
   const priceLabel = billingInterval === 'yearly' ? '年額' : '月額'
-  const diff = seats === null ? 0 : (teamPrice(draft, billingInterval) ?? 0) - (teamPrice(seats, billingInterval) ?? 0)
+  const diff = seats === null ? 0 : (teamPrice(draft, billingInterval, model) ?? 0) - (teamPrice(seats, billingInterval, model) ?? 0)
   const recurringChange = `${priceLabel}（税抜）が ${diff > 0 ? '+' : '−'}${yen(Math.abs(diff))} 変わります（税込 ${yen(withTax(Math.abs(diff)))}）`
 
   const clearInvitePreview = () => { setInviteUrl(null); setInviteLabel(null); setCopied(false) }
@@ -149,7 +151,7 @@ function OwnerTeamManage({ actorId, membershipOnly }: { actorId: string; members
       const approved = await confirmDialog({
         title: `人数を${requested}人に${up ? '増やします' : '減らします'}`,
         message: up
-          ? `${recurringChange}。今回の請求は今日から次の請求日までの日割りです。日割りの金額はこの画面には表示されません。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${(requested - from) * TEAM_MONTHLY_POINTS_PER_SEAT} 増え、今月は残りの日数の分を足します。`
+          ? `${recurringChange}。今回の請求は今日から次の請求日までの日割りです。日割りの金額はこの画面には表示されません。お支払いが済まないときは、人数は変わりません。毎月のドヤパワーは来月から ${Array.from({ length: requested - from }, (_, i) => seatMonthlyPoints(from + 1 + i, model)).reduce((a, b) => a + b, 0)} 増え、今月は残りの日数の分を足します。`
           : `${recurringChange}。減らした分の返金はありません。人数はすぐに減ります。`,
         confirmLabel: up ? '増やして請求する' : '減らす',
       })

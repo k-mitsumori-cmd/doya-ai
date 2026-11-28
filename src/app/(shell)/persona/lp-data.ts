@@ -1,5 +1,5 @@
 import { getServiceById } from '@/lib/services'
-import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
+import { PUBLIC_PRICE_SENTENCE } from '@/lib/pricing-v2/public-copy'
 // ドヤペルソナAI LPコンテンツ
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -19,7 +19,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: `無料プランは${getServiceById('persona')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('persona')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
+  { q: '無料で使えますか？', a: `無料の枠は${getServiceById('persona')!.pricing.free.limit}ご利用いただけます。${PUBLIC_PRICE_SENTENCE}` },
   { q: '出てきたペルソナはそのまま使えますか？', a: '叩き台としてお使いください。実際の顧客像とずれる部分は編集していただく前提です。ゼロから考えるより速く形になります。' },
   { q: 'どんな場面で使われていますか？', a: 'LPの構成案、制作会社への指示書、コピーの方向性決め、広告のターゲット設定などです。' },
 ]
