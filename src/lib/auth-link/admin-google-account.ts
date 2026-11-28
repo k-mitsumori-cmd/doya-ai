@@ -34,13 +34,19 @@ export type AdminAccountRow = {
 export function isAdminGoogleAccount(args: { userEmail: unknown; accounts: ReadonlyArray<AdminAccountRow> | null | undefined }): boolean {
   const { userEmail, accounts } = args
   if (!accounts || accounts.length === 0) return false
+  // Google 以外のログイン手段（Apple など）が1つでもあるユーザーかどうか。控えの無い既存の行の代用（規則3）の可否に使う
+  const hasNonGoogle = accounts.some((a) => a && a.provider !== 'google')
   return accounts.some((a) => {
     // 規則1: provider が google の Account だけを見る（Apple など、ほかの手段は数えない）
     if (!a || a.provider !== 'google') return false
-    // 確認済みでないと明示されている Google は通さない（null は不明として、規則2で扱う）
+    // 確認済みでないと明示されている Google は通さない
     if (a.emailVerified === false) return false
-    // 規則2: その Google が返したメールで判定する。控えが無い既存の行は、User.email で代用する
-    const email = a.providerEmail ?? userEmail
-    return isAdminGoogleEmail(email)
+    // 規則2: その Google が返したメールの控えがあるときは、そのメールで判定する。
+    //   控えがあるのに「確認済み」と記録されていない行（null）は、確認の根拠が無いので通さない。
+    if (a.providerEmail != null) return a.emailVerified === true && isAdminGoogleEmail(a.providerEmail)
+    // 規則3: 控えが無い既存の行（Web の Google ログインだけで作られた古い行）は、User.email で代用する。
+    //   ただし Apple などをあとで足したユーザーは、User.email が Apple 由来かもしれないので代用しない（Google の控えのある行だけで判定する）。
+    if (hasNonGoogle) return false
+    return isAdminGoogleEmail(userEmail)
   })
 }

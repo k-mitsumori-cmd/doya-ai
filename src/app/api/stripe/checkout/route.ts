@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { isTrialEligible, TRIAL_USER_SELECT } from '@/lib/trial'
+import { findTrialSiblings } from '@/lib/trial-siblings.server'
 import { prisma } from '@/lib/prisma'
 import { CheckoutReservationError, createReservedCheckoutSession } from '@/lib/checkout-reservation'
 import { isNewPricingEnabledFor } from '@/lib/pricing-v2/rollout'
@@ -271,11 +272,14 @@ export async function POST(request: NextRequest) {
     let trialDays: number | undefined
     if (trialablePlan) {
       try {
+        // 同じ人の別の User（正規化メールが同じ行）の契約状態とメールも見る。Apple の隠しメールは対象外（trial.ts）
+        const siblings = await findTrialSiblings(dbUser.id, session.user.email)
         if (await isTrialEligible({
           email: session.user.email,
           stripeCustomerId: dbUser.stripeCustomerId,
           plan: dbUser.plan,
-          servicePlans: dbUser.serviceSubscriptions?.map(s => s.plan),
+          servicePlans: [...(dbUser.serviceSubscriptions?.map(s => s.plan) || []), ...siblings.plans],
+          siblingEmails: siblings.emails,
         })) trialDays = isTeam ? TEAM_TRIAL_DAYS : UNIFIED_TRIAL_DAYS
       } catch {
         return NextResponse.json({

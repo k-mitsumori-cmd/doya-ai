@@ -366,12 +366,62 @@ export async function devLogin(deps: AuthDeps, raw: unknown): Promise<ServiceRes
 }
 
 // ---------------------------------------------------------------------------
+// 審査用の限定ログイン（POST /api/app/auth/review-login）。2026-11-25 三森さんの決定（案 A）
+// ---------------------------------------------------------------------------
+/** 15分の枠ごとに、試せる回数。枠ごとの行は、結び付けの待ち（auth_link_request）の表を借りて数える（新しい表は作らない） */
+export const REVIEW_LOGIN_PROVIDER = 'review-login'
+export const REVIEW_LOGIN_MAX_ATTEMPTS = 5
+export const REVIEW_LOGIN_WINDOW_MS = 15 * 60 * 1000
+
+/**
+ * 審査用のメール1件とコードだけで、あらかじめ用意した審査用のユーザーに入る。ユーザーは作らない（無ければ失敗）。
+ * 失敗の理由は出さない（メール違い・コード違い・ユーザー無し・管理者・退会済みは、すべて同じ 401）。
+ * 管理者（role が ADMIN）と、管理画面に入れるドメインのメールは、通さない。
+ * 回数の上限は、審査用のユーザーごとに15分で5回。超えたら 429。コードは、ハッシュにして一定の時間で比べる。
+ * ログには、メールもコードも出さない。
+ */
+export async function reviewLogin(deps: AuthDeps, raw: unknown, cfg: { email: string; code: string }): Promise<ServiceResult> {
+  const invalid = fail(401, 'INVALID_CREDENTIALS')
+  if (!isObj(raw)) return fail(400, 'INVALID_REQUEST')
+  const email = normalizeEmail(typeof raw.email === 'string' ? raw.email.slice(0, 320) : null)
+  const code = typeof raw.code === 'string' ? raw.code.slice(0, 200) : ''
+  const platform = raw.platform === undefined ? 'ios' : typeof raw.platform === 'string' ? raw.platform : ''
+  if (!PLATFORMS.has(platform)) return fail(400, 'INVALID_REQUEST')
+  const found = await deps.repo.findUserByEmail(cfg.email)
+  const user = found ? await deps.repo.getUser(found.id) : null
+  const usable = !!user && !user.deletedAt && user.role !== 'ADMIN'
+  // メールが違うときも、同じ時間をかけて比べる（違いを時間から読ませない）
+  const a = Buffer.from(sha256Hex(`review-code:${code}`), 'hex')
+  const b = Buffer.from(sha256Hex(`review-code:${cfg.code}`), 'hex')
+  const codeOk = timingSafeEqual(a, b)
+  const emailOk = email !== null && email === cfg.email
+  if (!usable || !user) { console.warn('[review-login] failed'); return invalid }
+  if (!emailOk) { console.warn('[review-login] failed'); return invalid }
+  // 回数は、メールが合ったときだけ数える（合わないメールで、審査用の枠を使い切らせない）
+  const now = deps.now()
+  const bucket = Math.floor(now.getTime() / REVIEW_LOGIN_WINDOW_MS)
+  const windowId = `review-login-${bucket}`
+  try {
+    await deps.repo.createLinkRequest({
+      id: windowId, userId: user.id, provider: REVIEW_LOGIN_PROVIDER, providerAccountId: 'window', providerEmail: null,
+      expiresAt: new Date((bucket + 1) * REVIEW_LOGIN_WINDOW_MS),
+    })
+  } catch { /* すでに同じ枠の行がある（2回目以降）。続ける */ }
+  const attempt = await deps.repo.takeLinkAttempt(windowId, REVIEW_LOGIN_MAX_ATTEMPTS)
+  if (attempt === null) { console.warn('[review-login] throttled'); return fail(429, 'TOO_MANY_ATTEMPTS') }
+  if (!codeOk) { console.warn('[review-login] failed'); return invalid }
+  console.warn('[review-login] succeeded')
+  return issueFor(deps, user, { deviceLabel: optStr(raw.deviceLabel, 100) ?? '審査用ログイン', platform })
+}
+
+// ---------------------------------------------------------------------------
 // 結び付けの確認（link/send-code、link/confirm）
 // ---------------------------------------------------------------------------
 async function liveRequest(deps: AuthDeps, requestId: unknown): Promise<{ request: LinkRequestRecord } | { error: ServiceResult }> {
   if (typeof requestId !== 'string' || !isSafeTokenValue(requestId)) return { error: fail(400, 'INVALID_REQUEST') }
   const request = await deps.repo.getLinkRequest(requestId)
-  if (!request || request.consumedAt || request.expiresAt.getTime() <= deps.now().getTime() || !request.userId) {
+  // 審査用ログインの回数の枠（provider が review-login。id は推測できる）は、結び付けの待ちとして使わせない
+  if (!request || request.provider === REVIEW_LOGIN_PROVIDER || request.consumedAt || request.expiresAt.getTime() <= deps.now().getTime() || !request.userId) {
     return { error: fail(410, 'LINK_REQUEST_EXPIRED') }
   }
   return { request }

@@ -15,7 +15,7 @@ export async function hasAdminGoogleSession(): Promise<boolean> {
       return await decideAdminGoogleSession({
         session: session as { user?: { id?: string | null; email?: string | null } | null } | null,
         appAuthOn: true,
-        listGoogleAccounts: (userId) => prisma.account.findMany({ where: { userId, provider: 'google' }, select: { provider: true, providerEmail: true, emailVerified: true } }),
+        listGoogleAccounts: (userId) => prisma.account.findMany({ where: { userId }, select: { provider: true, providerEmail: true, emailVerified: true } }),
       })
     }
     return isAdminGoogleEmail(session?.user?.email)
