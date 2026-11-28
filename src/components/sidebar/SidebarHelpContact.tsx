@@ -28,8 +28,9 @@ interface SidebarHelpContactProps {
 
 type Category = 'improvement' | 'feature' | 'bug' | 'other'
 
-const CATEGORIES: { id: Category; label: string; icon: typeof Lightbulb; color: string }[] = [
-  { id: 'improvement', label: '改善したほうがいいこと', icon: Wand2, color: 'text-sky-600' },
+// parts: 2行に分かれるときに区切ってよい所（言葉の途中で改行しないように、ここ以外では折り返さない）
+const CATEGORIES: { id: Category; label: string; parts?: string[]; icon: typeof Lightbulb; color: string }[] = [
+  { id: 'improvement', label: '改善したほうがいいこと', parts: ['改善したほうが', 'いいこと'], icon: Wand2, color: 'text-sky-600' },
   { id: 'feature', label: '追加の機能要望', icon: Lightbulb, color: 'text-amber-600' },
   { id: 'bug', label: 'エラー報告', icon: Bug, color: 'text-rose-600' },
   { id: 'other', label: 'その他', icon: Sparkles, color: 'text-purple-600' },
@@ -183,7 +184,11 @@ export function SidebarHelpContact({ showLabel, isCollapsed, trigger }: SidebarH
                         }`}
                       >
                         <Icon className={`w-4 h-4 flex-shrink-0 ${c.color}`} />
-                        <span className="text-xs font-bold text-gray-700">{c.label}</span>
+                        <span className="text-xs font-bold text-gray-700 [word-break:keep-all]">
+                          {(c.parts ?? [c.label]).map((part, i) => (
+                            <span key={part}>{i > 0 ? <wbr /> : null}{part}</span>
+                          ))}
+                        </span>
                       </button>
                     )
                   })}
