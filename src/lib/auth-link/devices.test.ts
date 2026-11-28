@@ -241,9 +241,9 @@ test('旗オフ: 一覧・失効・push-token は 404 { code: NOT_FOUND }。セ�
       const r = await mod.GET(req('GET'))
       assert.equal(r.status, 404)
     }
-    const rr = await (await import('../../app/api/app/auth/devices/[id]/route')).DELETE(req('DELETE'), { params: { id: 'x' } })
+    const rr = await (await import('../../app/api/app/auth/devices/[id]/route')).DELETE(req('DELETE'), { params: Promise.resolve({ id: 'x' }) })
     assert.equal(rr.status, 404)
-    const rp = await (await import('../../app/api/app/auth/devices/[id]/push-token/route')).POST(req('POST', { token: TOKEN }), { params: { id: 'x' } })
+    const rp = await (await import('../../app/api/app/auth/devices/[id]/push-token/route')).POST(req('POST', { token: TOKEN }), { params: Promise.resolve({ id: 'x' }) })
     assert.equal(rp.status, 404)
   } finally {
     if (before !== undefined) process.env.APP_AUTH_ENABLED = before
